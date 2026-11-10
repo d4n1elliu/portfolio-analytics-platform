@@ -1,1 +1,1 @@
-# portfolio-analytics-platfor
+# portfolio-analytics-platform
