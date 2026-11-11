@@ -1,0 +1,34 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Logs
+*.log
+
+# Environment files: ignore real ones, keep the committed templates
+.env
+.env.*
+!.env.example
+
+# Data files: ignore CSVs (may be large or sensitive) except the bundled samples
+*.csv
+!backend/sample_data/*.csv
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
