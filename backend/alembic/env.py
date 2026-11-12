@@ -10,6 +10,7 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import create_engine, pool
 
+import app.models  # noqa: F401  (imported only so the models are registered)
 from app.config import DATABASE_URL
 from app.database import CONNECT_TIMEOUT_SECONDS, Base
 
@@ -21,8 +22,8 @@ if config.config_file_name is not None:
 
 # "alembic revision --autogenerate" compares these tables with the real
 # database to work out what a new migration should contain. A model only
-# appears here if its file has been imported, so import new model files in
-# this file (or somewhere this file imports).
+# appears here once its file has been imported. The "import app.models" line
+# above does that for every model listed in app/models/__init__.py.
 target_metadata = Base.metadata
 
 
