@@ -6,14 +6,14 @@ A full-stack web app for tracking portfolio holdings, performance and sector exp
 
 ## Status
 
-Scaffold, database layer and core data model. The database has tables for securities, trades and prices, with a seed script for a starting set of securities. The backend exposes health checks for the API and the database, and the frontend displays whether it can reach the API. There are no feature endpoints yet.
+The first feature is in place: trades can be imported from a CSV file and viewed in a table. The database has tables for securities, trades and prices, with a seed script for a starting set of securities. Holdings, prices, charts and authentication are not built yet.
 
 ## Tech stack
 
 | Layer    | Technology                                                    |
 | -------- | ------------------------------------------------------------- |
 | Frontend | React, TypeScript, Vite, Tailwind CSS v4                      |
-| Backend  | Python, FastAPI, uvicorn, python-dotenv                       |
+| Backend  | Python, FastAPI, uvicorn, python-dotenv, pytest               |
 | Database | PostgreSQL on Neon, SQLAlchemy 2, Alembic, psycopg 3          |
 
 ## Project structure
@@ -21,34 +21,48 @@ Scaffold, database layer and core data model. The database has tables for securi
 ```
 backend/
   app/
-    __init__.py       Marks app/ as a Python package
-    main.py           FastAPI app, CORS config, health endpoints
+    main.py           FastAPI app, CORS config, health endpoints, router registration
     config.py         Loads .env and exposes settings such as DATABASE_URL
     database.py       Engine, session factory, Base class, get_db dependency
-    models/
-      __init__.py     Imports every model so Alembic can see all the tables
-      common.py       Column types and columns shared by more than one model
-      security.py     Security model (securities table)
-      trade.py        Trade model (trades table) and the TradeSide values
-      price.py        Price model (prices table)
-  alembic/
-    env.py            Connects Alembic to the app's database URL and models
-    script.py.mako    Template used to generate new migration files
-    versions/         Migration files, one per schema change
-  scripts/
-    seed.py           Inserts the starting set of securities
+    models/           Database tables: Security, Trade, Price
+    routes/           HTTP endpoints. Read the request, call a service, return the response
+      dependencies.py Shared paging and CSV upload handling
+      errors.py       Turns import errors into HTTP responses for every endpoint
+    schemas/          Pydantic shapes of the JSON the API returns
+      common.py       Shapes shared by endpoints: Page, ImportResult, ImportRejected
+    services/         Business logic. No HTTP code
+      csv_parsing.py  Reads and checks any CSV file (shared by all imports)
+      trade_csv.py    The rules for one row of a trades CSV
+      trade_import.py Saves a validated trades CSV in one transaction
+      market_time.py  Today's date in the market's time zone
+      trades.py       Queries for listing trades
+      securities.py   Queries for listing securities
+  alembic/            Migration setup and the migration files in versions/
+  scripts/seed.py     Inserts the starting set of securities
+  sample_data/        Example CSV files for the trade import
+  tests/              pytest unit tests
   alembic.ini         Alembic settings (no database URL is stored here)
+  pytest.ini          pytest settings
   requirements.txt    Pinned Python dependencies
   .env.example        Template for backend environment variables
 frontend/
   src/
     main.tsx          React entry point
-    App.tsx           Root component with the API status check
+    App.tsx           Root component
+    config.ts         App-wide settings: API address, locale, currency, page size
+    api/              The only code that calls the backend, with typed functions per endpoint
+    hooks/            useApiQuery: loads data and tracks loading and error states
+    lib/format.ts     Shared date, currency, quantity and count formatting
+    pages/            One component per screen (TradesPage)
+    components/       Reusable pieces: Button, Alert, Card, PageLayout, DataTable,
+                      Pagination, CsvImportForm, and TradeTable built on DataTable
     index.css         Tailwind CSS import
   index.html          HTML shell that Vite serves
   vite.config.ts      Vite config (React and Tailwind plugins)
   .env.example        Template for frontend environment variables
 ```
+
+A request flows through the backend in one direction: a route calls a service, and a service uses the models. Routes contain no business rules and services contain no HTTP code, so each can be changed and tested separately.
 
 ## Data model
 
@@ -71,6 +85,76 @@ A security has many trades and many prices. The database enforces the basic rule
 | `trades.quantity`                           | `Numeric(18, 6)` | Allows fractional units as well as whole shares                        |
 | `trades.price`, `prices.close`              | `Numeric(18, 6)` | Covers sub-cent prices and average fill prices with several decimals   |
 | `trades.fees`                               | `Numeric(18, 2)` | A cash amount in dollars and cents                                     |
+
+## API
+
+| Method | Path             | What it does                                                    |
+| ------ | ---------------- | --------------------------------------------------------------- |
+| `GET`  | `/health`        | Confirms the API is running                                     |
+| `GET`  | `/health/db`     | Confirms the API can reach the database                         |
+| `GET`  | `/securities`    | Lists every security, ordered by ticker                         |
+| `GET`  | `/trades`        | Lists trades, newest first, with the ticker and security name   |
+| `POST` | `/trades/import` | Imports trades from a CSV file                                  |
+
+`GET /trades` takes `limit` (1 to 500, default 50) and `offset` (default 0), and returns `{"items": [...], "total": 30, "limit": 50, "offset": 0}`. Decimal values are returned as strings, such as `"45.250000"`, so no precision is lost.
+
+The interactive docs at http://localhost:8000/docs list every endpoint and let you try them.
+
+### Importing trades from CSV
+
+`POST /trades/import` takes a multipart upload with the file in a field named `file`:
+
+```bash
+curl -F "file=@sample_data/trades_sample.csv" http://localhost:8000/trades/import
+# {"imported":30}
+```
+
+The first row of the file must be a header. Column order does not matter and extra columns are ignored.
+
+| Column       | Required | Rules                                                              |
+| ------------ | -------- | ------------------------------------------------------------------ |
+| `trade_date` | Yes      | `YYYY-MM-DD`, not in the future (in the market's time zone)        |
+| `ticker`     | Yes      | Must match a security in the database. Case-insensitive            |
+| `side`       | Yes      | `BUY` or `SELL`. Case-insensitive                                  |
+| `quantity`   | Yes      | Greater than 0, at most 6 decimal places                           |
+| `price`      | Yes      | Greater than 0, at most 6 decimal places                           |
+| `fees`       | No       | 0 or more, at most 2 decimal places. Defaults to 0 if left out     |
+
+Numbers must be plain digits with an optional decimal point, such as `1500` or `45.25`. Thousands separators and currency symbols are rejected.
+
+```csv
+trade_date,ticker,side,quantity,price,fees
+2026-03-10,BHP,BUY,400,41.85,29.95
+2026-03-17,TLS,SELL,1500,4.385,19.95
+```
+
+**The import is all or nothing.** Every row is checked before anything is saved. If any row is invalid, no trades are saved and the response lists every problem, so the file can be fixed and uploaded again without creating a partial import.
+
+| Status | Meaning                                                                                      |
+| ------ | -------------------------------------------------------------------------------------------- |
+| `201`  | Every row was saved. The body is `{"imported": <count>}`                                     |
+| `400`  | The file is not a readable trades CSV: wrong extension, empty, missing a required column, or more than 5000 rows |
+| `413`  | The file is larger than 1 MB                                                                 |
+| `422`  | One or more rows are invalid. Nothing was saved                                              |
+
+A `422` response lists each problem with its row number (the header is row 1), the column, and a message:
+
+```json
+{
+  "detail": "The import was rejected and nothing was saved. Fix 2 errors and upload the file again.",
+  "errors": [
+    {"row": 4, "column": "ticker", "message": "'XYZ' is not a known security."},
+    {"row": 6, "column": "quantity", "message": "quantity must be greater than 0."}
+  ]
+}
+```
+
+Two example files are in `backend/sample_data/`: `trades_sample.csv` (30 valid trades) and `trades_invalid.csv` (rows that each break a different rule).
+
+### Known limitations
+
+- **Importing the same file twice creates duplicate trades.** The import has no way to tell a repeated upload from two genuine trades with the same details.
+- **Sells are not checked against holdings.** A file can sell more of a security than was ever bought, because positions are not calculated yet.
 
 ## Local setup
 
@@ -138,6 +222,16 @@ python -m scripts.seed
 
 The script is safe to run more than once. A security whose ticker already exists is skipped, so no duplicates are created. It adds securities only, not trades or prices.
 
+### Tests
+
+Run the backend tests from `backend/` with the virtual environment active:
+
+```bash
+pytest
+```
+
+The tests cover the CSV validation rules. They do not connect to a database, so they run without a `.env` file.
+
 ### Frontend
 
 ```bash
@@ -147,7 +241,7 @@ cp .env.example .env
 npm run dev
 ```
 
-The app runs at http://localhost:5173 and shows `API status: ok` when the backend is running.
+The app runs at http://localhost:5173. It shows the Trades page, where you can upload a CSV file and see the saved trades. The backend must be running for it to load data.
 
 ### Environment variables
 
@@ -158,4 +252,8 @@ Real `.env` files are git-ignored and must never be committed. The `.env.example
 | `backend/.env.example`  | `DATABASE_URL`        | Neon PostgreSQL connection string (required)         |
 | `backend/.env.example`  | `JWT_SECRET`          | Secret for signing auth tokens (not used yet)        |
 | `backend/.env.example`  | `MARKET_DATA_API_KEY` | Market data provider API key (not used yet)          |
+| `backend/.env.example`  | `CORS_ORIGINS`        | Optional. Comma-separated addresses allowed to call the API. Defaults to `http://localhost:5173` |
+| `backend/.env.example`  | `MARKET_TIMEZONE`     | Optional. Time zone that decides "today" for trade dates. Defaults to `Australia/Sydney` |
+| `backend/.env.example`  | `IMPORT_MAX_FILE_BYTES`, `IMPORT_MAX_ROWS` | Optional. CSV upload limits. Default to 1 MB and 5000 rows |
+| `backend/.env.example`  | `DEFAULT_PAGE_SIZE`, `MAX_PAGE_SIZE` | Optional. Page sizes for list endpoints. Default to 50 and 500 |
 | `frontend/.env.example` | `VITE_API_URL`        | Backend base URL, defaults to `http://localhost:8000` |

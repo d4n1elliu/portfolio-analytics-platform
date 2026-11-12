@@ -12,22 +12,30 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from app.config import CORS_ORIGINS
 from app.database import get_db
+from app.routes import securities, trades
+from app.routes.errors import register_error_handlers
 
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Portfolio Analytics API")
 
 # CORS: browsers block a web page from calling an API on a different address
-# unless the API allows it. The frontend runs on port 5173 and this API on
-# port 8000, so the frontend's address has to be listed here.
+# unless the API lists that address as allowed.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+register_error_handlers(app)
+
+# Each router holds the endpoints for one area of the API.
+app.include_router(securities.router)
+app.include_router(trades.router)
 
 
 @app.get("/health")
