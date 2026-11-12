@@ -45,4 +45,30 @@ def _require(name: str) -> str:
     return value
 
 
+def _optional_int(name: str, default: int) -> int:
+    """Return an environment variable as a whole number, or the default if unset."""
+    value = os.getenv(name, "").strip()
+    return int(value) if value else default
+
+
+def _optional_list(name: str, default: list[str]) -> list[str]:
+    """Return a comma-separated environment variable as a list, or the default."""
+    value = os.getenv(name, "").strip()
+    return [item.strip() for item in value.split(",") if item.strip()] if value else default
+
+
 DATABASE_URL = _use_psycopg_driver(_require("DATABASE_URL"))
+
+# Web addresses allowed to call the API from a browser.
+CORS_ORIGINS = _optional_list("CORS_ORIGINS", ["http://localhost:5173"])
+
+# Time zone that decides what "today" is for trade dates.
+MARKET_TIMEZONE = os.getenv("MARKET_TIMEZONE", "").strip() or "Australia/Sydney"
+
+# Limits on uploaded CSV files.
+IMPORT_MAX_FILE_BYTES = _optional_int("IMPORT_MAX_FILE_BYTES", 1024 * 1024)
+IMPORT_MAX_ROWS = _optional_int("IMPORT_MAX_ROWS", 5000)
+
+# Page sizes for endpoints that return lists.
+DEFAULT_PAGE_SIZE = _optional_int("DEFAULT_PAGE_SIZE", 50)
+MAX_PAGE_SIZE = _optional_int("MAX_PAGE_SIZE", 500)
