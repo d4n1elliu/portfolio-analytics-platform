@@ -6,7 +6,7 @@ A full-stack web app for tracking portfolio holdings, performance and sector exp
 
 ## Status
 
-Scaffold and database layer. The backend connects to PostgreSQL and exposes health checks for the API and the database, and the frontend displays whether it can reach the API. There are no tables or features yet.
+Scaffold, database layer and core data model. The database has tables for securities, trades and prices, with a seed script for a starting set of securities. The backend exposes health checks for the API and the database, and the frontend displays whether it can reach the API. There are no feature endpoints yet.
 
 ## Tech stack
 
@@ -25,10 +25,18 @@ backend/
     main.py           FastAPI app, CORS config, health endpoints
     config.py         Loads .env and exposes settings such as DATABASE_URL
     database.py       Engine, session factory, Base class, get_db dependency
+    models/
+      __init__.py     Imports every model so Alembic can see all the tables
+      common.py       Column types and columns shared by more than one model
+      security.py     Security model (securities table)
+      trade.py        Trade model (trades table) and the TradeSide values
+      price.py        Price model (prices table)
   alembic/
     env.py            Connects Alembic to the app's database URL and models
     script.py.mako    Template used to generate new migration files
-    versions/         Migration files (empty until the first model is added)
+    versions/         Migration files, one per schema change
+  scripts/
+    seed.py           Inserts the starting set of securities
   alembic.ini         Alembic settings (no database URL is stored here)
   requirements.txt    Pinned Python dependencies
   .env.example        Template for backend environment variables
@@ -41,6 +49,28 @@ frontend/
   vite.config.ts      Vite config (React and Tailwind plugins)
   .env.example        Template for frontend environment variables
 ```
+
+## Data model
+
+Three tables hold everything the analytics will be built on.
+
+| Table        | One row is                       | Key columns                                                        |
+| ------------ | -------------------------------- | ------------------------------------------------------------------ |
+| `securities` | An instrument the fund can hold  | `ticker` (unique), `name`, `sector`, `asset_class`, `currency`     |
+| `trades`     | One buy or sell of a security    | `security_id`, `trade_date`, `side`, `quantity`, `price`, `fees`   |
+| `prices`     | One day's closing price          | `security_id`, `price_date`, `close`                               |
+
+A security has many trades and many prices. The database enforces the basic rules itself: `side` must be `BUY` or `SELL`, quantities and prices must be greater than zero, fees cannot be negative, and a security can have only one closing price per day.
+
+**Why there is no holdings table.** The current position in a security is calculated by adding up its trades (buys minus sells). Storing positions in a second table would mean keeping two copies of the same fact in sync, and any bug that updates one but not the other would leave them disagreeing. With the trade ledger as the single source of truth, a position can always be recalculated and can be worked out as at any past date.
+
+**Why Numeric, not Float.** Money and quantity columns use exact decimal types. Floating-point numbers cannot represent values like 0.1 exactly, and the small errors add up across many trades.
+
+| Column                                      | Type             | Reason                                                                 |
+| ------------------------------------------- | ---------------- | ---------------------------------------------------------------------- |
+| `trades.quantity`                           | `Numeric(18, 6)` | Allows fractional units as well as whole shares                        |
+| `trades.price`, `prices.close`              | `Numeric(18, 6)` | Covers sub-cent prices and average fill prices with several decimals   |
+| `trades.fees`                               | `Numeric(18, 2)` | A cash amount in dollars and cents                                     |
 
 ## Local setup
 
@@ -66,6 +96,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env    # then set DATABASE_URL in .env
+alembic upgrade head    # create the database tables
 uvicorn app.main:app --reload
 ```
 
@@ -89,13 +120,23 @@ Schema changes are managed with Alembic. Run these from `backend/` with the virt
 
 | Command                                            | What it does                                                   |
 | -------------------------------------------------- | -------------------------------------------------------------- |
-| `alembic revision --autogenerate -m "add holdings"` | Creates a migration by comparing the models with the database |
+| `alembic revision --autogenerate -m "add accounts"` | Creates a migration by comparing the models with the database |
 | `alembic upgrade head`                             | Applies all migrations that have not been run yet              |
 | `alembic downgrade -1`                             | Reverts the most recent migration                              |
 | `alembic current`                                  | Shows which migration the database is on                       |
 | `alembic history`                                  | Lists all migrations in order                                  |
 
 Always read an autogenerated migration before applying it. Autogenerate does not detect everything, for example table or column renames, which it sees as a drop and an add.
+
+### Seed data
+
+After `alembic upgrade head` has created the tables, load the starting set of 10 ASX securities. Run this from `backend/` with the virtual environment active:
+
+```bash
+python -m scripts.seed
+```
+
+The script is safe to run more than once. A security whose ticker already exists is skipped, so no duplicates are created. It adds securities only, not trades or prices.
 
 ### Frontend
 
