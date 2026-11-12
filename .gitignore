@@ -14,12 +14,12 @@ dist/
 # Logs
 *.log
 
-# Environment files: ignore real ones, keep the committed templates
+# Environment files: real ones hold secrets, so ignore them. Keep the .env.example templates
 .env
 .env.*
 !.env.example
 
-# Data files: ignore CSVs (may be large or sensitive) except the bundled samples
+# CSV files can be large or contain private data, so ignore them, except the sample data
 *.csv
 !backend/sample_data/*.csv
 

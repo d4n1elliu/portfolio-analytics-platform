@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-// Vite exposes variables prefixed with VITE_ to browser code at build time.
+// Set VITE_API_URL in frontend/.env to point at a different backend.
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
 type ApiStatus = 'checking' | 'ok' | 'unreachable'
@@ -9,7 +9,8 @@ function App() {
   const [status, setStatus] = useState<ApiStatus>('checking')
 
   useEffect(() => {
-    // Abort the request if the component unmounts before it completes.
+    // Lets the cleanup function below cancel the request if this component
+    // is removed from the page before the response arrives.
     const controller = new AbortController()
 
     fetch(`${API_URL}/health`, { signal: controller.signal })
