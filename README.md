@@ -14,7 +14,7 @@ Project scaffold only. The backend exposes a health check and the frontend displ
 | -------- | ------------------------------------------------------------- |
 | Frontend | React, TypeScript, Vite, Tailwind CSS v4                      |
 | Backend  | Python, FastAPI, uvicorn, python-dotenv                       |
-| Database | PostgreSQL on Neon with SQLAlchemy and Alembic (planned)      |
+| Database | PostgreSQL on Neon with SQLAlchemy and Alembic                |
 
 ## Project structure
 
