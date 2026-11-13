@@ -10,7 +10,7 @@ A full-stack web app for tracking portfolio holdings, performance and sector exp
 
 ## Status
 
-The first feature is in place: trades can be imported from a CSV file and viewed in a table. The database has tables for securities, trades and prices, with a seed script for a starting set of securities. Holdings, prices, charts and authentication are not built yet.
+Two features are in place. Trades can be imported from a CSV file and viewed in a table, and the Holdings page shows the fund's current positions, calculated from those trades. The database has tables for securities, trades and prices, with a seed script for a starting set of securities. Market prices, unrealised profit, charts and authentication are not built yet.
 
 ## Tech stack
 
@@ -39,14 +39,15 @@ portfolio-analytics-platform/
 │
 ├── frontend/
 │   ├── src/
-│   │   ├── api/              Typed calls to the backend such as trades
-│   │   ├── components/       Shared components such as DataTable and Pagination
-│   │   ├── hooks/            Data loading hooks such as useApiQuery
-│   │   ├── lib/              Shared helpers such as date and currency formatting
-│   │   ├── pages/            One component per screen such as TradesPage
-│   │   ├── App.tsx           Root component
+│   │   ├── api/              Typed calls to the backend such as holdings
+│   │   ├── components/       Shared components such as DataTable and NavBar
+│   │   ├── hooks/            Shared hooks such as useApiQuery and useSortedRows
+│   │   ├── lib/              Helpers such as formatting and holdings filters
+│   │   ├── pages/            One component per screen such as HoldingsPage
+│   │   ├── App.tsx           Root component and page routes
 │   │   ├── config.ts         API address, locale, currency and page size
-│   │   └── main.tsx          React entry point
+│   │   ├── main.tsx          React entry point
+│   │   └── routes.ts         Address of each page
 │   ├── .dockerignore
 │   ├── .env.example          Template for frontend environment variables
 │   ├── .oxlintrc.json        Linter settings
@@ -64,15 +65,15 @@ portfolio-analytics-platform/
     ├── alembic/              Migration setup and the files in versions/
     ├── app/
     │   ├── models/           Database tables such as Security and Trade
-    │   ├── routes/           HTTP endpoints such as trades and securities
+    │   ├── routes/           HTTP endpoints such as trades and holdings
     │   ├── schemas/          Shapes of the JSON the API returns
-    │   ├── services/         Business logic such as CSV parsing and import
+    │   ├── services/         Business logic such as positions and CSV import
     │   ├── config.py         Reads settings from environment variables
     │   ├── database.py       Engine, sessions and the get_db dependency
     │   └── main.py           FastAPI app, CORS and health endpoints
     ├── sample_data/          Example CSV files for the trade import
     ├── scripts/              One-off scripts such as seed.py
-    ├── tests/                pytest tests such as CSV rules and health
+    ├── tests/                pytest tests such as CSV rules and positions
     ├── .dockerignore
     ├── .env.example          Template for backend environment variables
     ├── alembic.ini           Alembic settings with no database URL
@@ -113,13 +114,37 @@ A security has many trades and many prices. The database enforces the basic rule
 | ------ | ---------------- | --------------------------------------------------------------- |
 | `GET`  | `/health`        | Confirms the API is running                                     |
 | `GET`  | `/health/db`     | Confirms the API can reach the database                         |
+| `GET`  | `/holdings`      | Lists the current position in each security, ordered by ticker  |
 | `GET`  | `/securities`    | Lists every security, ordered by ticker                         |
 | `GET`  | `/trades`        | Lists trades, newest first, with the ticker and security name   |
 | `POST` | `/trades/import` | Imports trades from a CSV file                                  |
 
 `GET /trades` takes `limit` (1 to 500, default 50) and `offset` (default 0), and returns `{"items": [...], "total": 30, "limit": 50, "offset": 0}`. Decimal values are returned as strings, such as `"45.250000"`, so no precision is lost.
 
+`GET /holdings` returns one item per security that has trades, with `ticker`, `security_name`, `sector`, `asset_class`, `currency`, `quantity`, `average_cost`, `cost_basis`, `realised_pnl` and `oversold_quantity`. Positions that have been fully sold are left out unless `include_closed=true` is added.
+
 The interactive docs at http://localhost:8000/docs list every endpoint and let you try them.
+
+### Holdings and average cost
+
+Positions are worked out from the trades on every request, using the weighted average cost method:
+
+- **A buy** adds `quantity × price + fees` to the cost basis. The average cost is the cost basis divided by the quantity held, so a buy changes it.
+- **A sell** removes units at the current average cost, so it does not change the average. The realised profit or loss is what the sale brought in, less its fees, minus the cost of the units sold.
+- Trades are applied oldest first. Trades on the same day are applied in the order they were imported.
+- The calculation uses exact decimals and is not rounded. The response rounds money to cents and average cost to six decimal places.
+
+For example, the three BHP trades in `sample_data/trades_sample.csv`:
+
+| Trade                          | Quantity | Cost basis | Average cost | Realised P&L |
+| ------------------------------ | -------- | ---------- | ------------ | ------------ |
+| Buy 400 at 41.85, fees 29.95   | 400      | 16,769.95  | 41.924875    | 0            |
+| Buy 200 at 43.10, fees 19.95   | 600      | 25,409.90  | 42.349833    | 0            |
+| Sell 250 at 45.72, fees 29.95  | 350      | 14,822.44  | 42.349833    | 812.59       |
+
+The sell brings in `250 × 45.72 − 29.95 = 11,400.05`. The 250 units cost `250 × 42.349833 = 10,587.46`, so the realised profit is `812.59`.
+
+**Sells that exceed the position.** The import does not check a sell against what is held. A sell is applied only to the units actually held, the quantity stops at zero, and the rest is reported as `oversold_quantity`. An oversold position is always returned, even when closed, and the Holdings page shows a warning naming the security.
 
 ### Importing trades from CSV
 
@@ -175,7 +200,9 @@ Two example files are in `backend/sample_data/`: `trades_sample.csv` (30 valid t
 ### Known limitations
 
 - **Importing the same file twice creates duplicate trades.** The import has no way to tell a repeated upload from two genuine trades with the same details.
-- **Sells are not checked against holdings.** A file can sell more of a security than was ever bought, because positions are not calculated yet.
+- **Sells are not checked against holdings on import.** A file can sell more of a security than was ever bought. The position is then reported as oversold instead of the import being rejected.
+- **Every trade is read on each `/holdings` request.** This is fine at the current size and would need revisiting for a much larger ledger.
+- **No market prices yet.** Holdings show what positions cost, not what they are worth today.
 
 ## Local setup
 
@@ -251,7 +278,7 @@ Run the backend tests from `backend/` with the virtual environment active:
 pytest
 ```
 
-The tests cover the CSV validation rules. They do not connect to a database, so they run without a `.env` file.
+The tests cover the CSV validation rules, the position calculation and the holdings endpoint. They do not connect to a database, so they run without a `.env` file.
 
 ### Linting
 
@@ -272,7 +299,7 @@ cp .env.example .env
 npm run dev
 ```
 
-The app runs at http://localhost:5173. It shows the Trades page, where you can upload a CSV file and see the saved trades. The backend must be running for it to load data.
+The app runs at http://localhost:5173 and has two pages. Holdings shows the current positions, with sorting, a search box, filters for sector and asset class, and summary figures. Trades is where you upload a CSV file and see the saved trades. The backend must be running for either page to load data.
 
 ### Environment variables
 
