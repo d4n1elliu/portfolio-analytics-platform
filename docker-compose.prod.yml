@@ -1,0 +1,42 @@
+# Production setup. Run on the server with:
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+#
+# Settings come from .env.prod (see .env.prod.example).
+
+services:
+  backend:
+    image: ghcr.io/d4n1elliu/portfolio-analytics-platform-backend:${IMAGE_TAG:-latest}
+    build: ./backend
+    restart: unless-stopped
+    env_file: .env.prod
+    environment:
+      CORS_ORIGINS: https://${SITE_DOMAIN:?Set SITE_DOMAIN in .env.prod}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  web:
+    image: ghcr.io/d4n1elliu/portfolio-analytics-platform-web:${IMAGE_TAG:-latest}
+    build: ./frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      SITE_ADDRESS: ${SITE_DOMAIN}
+    # Only the web container is open to the internet.
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    # Keeps the HTTPS certificates between deploys.
+    volumes:
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  caddy-data:
+  caddy-config:
