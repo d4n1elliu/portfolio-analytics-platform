@@ -14,7 +14,6 @@ interface HoldingsFiltersProps {
   onShowClosedChange: (showClosed: boolean) => void
 }
 
-/** The controls above the holdings table: search, two dropdowns and a tick box. */
 function HoldingsFilters({
   filters,
   sectors,

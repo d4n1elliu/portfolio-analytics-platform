@@ -12,7 +12,6 @@ const BASE = `rounded-md px-3 py-2 text-sm font-medium ${COLOUR_TRANSITION}`
 const ACTIVE = 'bg-slate-900 text-white'
 const INACTIVE = 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
 
-/** Links to every page. The current page is highlighted. */
 function NavBar() {
   return (
     <nav aria-label="Main" className="flex gap-1">

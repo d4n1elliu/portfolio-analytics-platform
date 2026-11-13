@@ -4,7 +4,6 @@ import { profitColour } from '../lib/profit'
 import DataTable from './DataTable'
 import type { Column } from './DataTable'
 
-// Decimal places shown for average cost.
 const UNIT_COST_DECIMALS = 4
 
 const COLUMNS: Column<Holding>[] = [
@@ -63,7 +62,6 @@ const COLUMNS: Column<Holding>[] = [
   },
 ]
 
-/** A table of positions. Every column can be sorted. */
 function HoldingsTable({ holdings }: { holdings: Holding[] }) {
   return <DataTable columns={COLUMNS} rows={holdings} getRowKey={(holding) => holding.ticker} />
 }

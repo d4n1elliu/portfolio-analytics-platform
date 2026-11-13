@@ -5,7 +5,6 @@ export interface Stat {
   value: ReactNode
 }
 
-/** A row of headline figures, each in its own box. */
 function StatTiles({ stats }: { stats: Stat[] }) {
   return (
     <dl className="grid gap-4 sm:grid-cols-3">

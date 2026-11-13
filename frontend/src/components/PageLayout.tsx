@@ -5,7 +5,6 @@ import { APP_NAME, APP_TAGLINE } from '../config'
 import NavBar from './NavBar'
 
 interface PageLayoutProps {
-  /** Heading of the page, for example "Holdings". */
   title: string
   children: ReactNode
 }

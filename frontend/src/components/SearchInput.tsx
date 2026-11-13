@@ -8,7 +8,6 @@ interface SearchInputProps {
   onChange: (value: string) => void
 }
 
-/** A text box for searching. */
 function SearchInput({ label, value, placeholder, onChange }: SearchInputProps) {
   return (
     <input

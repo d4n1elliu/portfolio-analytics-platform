@@ -38,7 +38,6 @@ export function useSortedRows<T>(rows: T[], columns: SortableColumn<T>[]) {
     }))
   }
 
-  /** The direction a column is sorted in, if it is the sorted column. */
   function directionOf(header: string): SortDirection | undefined {
     return sort?.header === header ? sort.direction : undefined
   }

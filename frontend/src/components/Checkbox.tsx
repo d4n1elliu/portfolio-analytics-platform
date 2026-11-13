@@ -8,7 +8,6 @@ interface CheckboxProps {
   title?: string
 }
 
-/** A tick box with its label. */
 function Checkbox({ label, checked, onChange, disabled = false, title }: CheckboxProps) {
   return (
     <label

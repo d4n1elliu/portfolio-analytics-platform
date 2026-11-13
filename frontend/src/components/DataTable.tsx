@@ -81,7 +81,6 @@ interface SortButtonProps {
   onClick: () => void
 }
 
-/** A column heading that sorts the table when clicked. */
 function SortButton({ label, direction, alignRight, onClick }: SortButtonProps) {
   return (
     <button

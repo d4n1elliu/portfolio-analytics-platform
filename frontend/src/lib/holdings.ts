@@ -1,5 +1,3 @@
-// Helpers for a list of holdings.
-
 import type { Holding } from '../api/types'
 
 export interface HoldingFilters {
@@ -40,7 +38,6 @@ export function countClosed(holdings: Holding[]): number {
   return holdings.length - selectByStatus(holdings, false).length
 }
 
-/** The holdings that match every filter. */
 export function filterHoldings(holdings: Holding[], filters: HoldingFilters): Holding[] {
   const search = filters.search.trim().toLowerCase()
   return holdings.filter(
@@ -53,22 +50,18 @@ export function filterHoldings(holdings: Holding[], filters: HoldingFilters): Ho
   )
 }
 
-/** True when at least one filter is set. */
 export function hasFilters(filters: HoldingFilters): boolean {
   return filters.search.trim() !== '' || filters.sector !== '' || filters.assetClass !== ''
 }
 
-/** The sectors that appear in the holdings, in alphabetical order. */
 export function sectorsOf(holdings: Holding[]): string[] {
   return uniqueSorted(holdings.map((holding) => holding.sector))
 }
 
-/** The asset classes that appear in the holdings, in alphabetical order. */
 export function assetClassesOf(holdings: Holding[]): string[] {
   return uniqueSorted(holdings.map((holding) => holding.asset_class))
 }
 
-/** Count the holdings and add up their cost basis and realised profit. */
 export function summariseHoldings(holdings: Holding[]): HoldingsSummary {
   const currencies = new Set(holdings.map((holding) => holding.currency))
   return {
