@@ -43,7 +43,8 @@ backend/
   tests/              pytest unit tests
   alembic.ini         Alembic settings (no database URL is stored here)
   pytest.ini          pytest settings
-  requirements.txt    Pinned Python dependencies
+  requirements.txt    Pinned dependencies the app needs to run
+  requirements-dev.txt  The same, plus the test tools
   .env.example        Template for backend environment variables
 frontend/
   src/
@@ -178,7 +179,7 @@ Neon suspends a database after a few minutes without activity, so the first requ
 cd backend
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 cp .env.example .env    # then set DATABASE_URL in .env
 alembic upgrade head    # create the database tables
 uvicorn app.main:app --reload
