@@ -1,5 +1,9 @@
 # portfolio-analytics-platform
 
+[![CI](https://github.com/d4n1elliu/portfolio-analytics-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/d4n1elliu/portfolio-analytics-platform/actions/workflows/ci.yml)
+
+**Live site:** https://portfolio-analytics.daniel-liu.dev
+
 A full-stack web app for tracking portfolio holdings, performance and sector exposure, modelled on the kind of internal tool portfolio managers and analysts use at an investment fund.
 
 > **Personal project.** This is a learning project built around a fictional fund. It contains no real client data, no real holdings, and is not affiliated with any investment firm.
@@ -15,6 +19,7 @@ The first feature is in place: trades can be imported from a CSV file and viewed
 | Frontend | React, TypeScript, Vite, Tailwind CSS v4                      |
 | Backend  | Python, FastAPI, uvicorn, python-dotenv, pytest               |
 | Database | PostgreSQL on Neon, SQLAlchemy 2, Alembic, psycopg 3          |
+| Hosting  | Docker, Caddy, GitHub Actions, GitHub Container Registry      |
 
 ## Project structure
 
@@ -47,6 +52,7 @@ backend/
   requirements-dev.txt  The same, plus the test and lint tools
   ruff.toml           Linter settings
   .env.example        Template for backend environment variables
+  Dockerfile          Production image for the API
 frontend/
   src/
     main.tsx          React entry point
@@ -62,6 +68,13 @@ frontend/
   index.html          HTML shell that Vite serves
   vite.config.ts      Vite config (React and Tailwind plugins)
   .env.example        Template for frontend environment variables
+  Dockerfile          Production image: builds the app, then serves it with Caddy
+  Caddyfile           Caddy settings: HTTPS, index.html fallback, /api proxy
+.github/workflows/
+  ci.yml              Lint, tests, type check and Docker builds on every pull request
+  deploy.yml          Publishes the images and deploys after CI passes on main
+docker-compose.prod.yml  Production setup for the server
+.env.prod.example     Template for the server's settings
 ```
 
 A request flows through the backend in one direction: a route calls a service, and a service uses the models. Routes contain no business rules and services contain no HTTP code, so each can be changed and tested separately.
@@ -269,3 +282,52 @@ Real `.env` files are git-ignored and must never be committed. The `.env.example
 | `backend/.env.example`  | `IMPORT_MAX_FILE_BYTES`, `IMPORT_MAX_ROWS` | Optional. CSV upload limits. Default to 1 MB and 5000 rows |
 | `backend/.env.example`  | `DEFAULT_PAGE_SIZE`, `MAX_PAGE_SIZE` | Optional. Page sizes for list endpoints. Default to 50 and 500 |
 | `frontend/.env.example` | `VITE_API_URL`        | Backend base URL, defaults to `http://localhost:8000` |
+
+## Deployment
+
+The site runs on a VPS as two Docker containers. The database stays on Neon.
+
+| Container | What it does |
+| --------- | ------------ |
+| `web`     | Caddy. Serves the built React app, gets the HTTPS certificate, and passes `/api/*` to the backend. The only container open to the internet |
+| `backend` | The FastAPI app, run by uvicorn as a non-root user |
+
+### How a change goes live
+
+1. A pull request runs the CI workflow: lint, tests, type check and a build of both Docker images.
+2. When the pull request is merged, CI runs again on `main`.
+3. If it passes, the Deploy workflow builds both images and pushes them to the GitHub Container Registry, tagged with the commit.
+4. The workflow then connects to the server over SSH, pulls those images, runs `alembic upgrade head`, and restarts the containers.
+5. It finishes by checking `https://<domain>/api/health/db`. The run fails if the site does not come up healthy.
+
+### One-time server setup
+
+The server needs Docker with the Compose plugin, and ports 80 and 443 open.
+
+1. Add the SSH user to the `docker` group.
+2. Create the folder `~/portfolio-analytics` in that user's home folder.
+3. Copy `.env.prod.example` to `~/portfolio-analytics/.env.prod` and fill in real values. `SITE_DOMAIN` must already point at the server.
+
+The Deploy workflow needs these repository secrets:
+
+| Secret            | Value |
+| ----------------- | ----- |
+| `SSH_HOST`        | Address of the server |
+| `SSH_USER`        | User the workflow logs in as |
+| `SSH_PRIVATE_KEY` | Private key for that user, used only for deploys |
+| `SSH_KNOWN_HOSTS` | The server's host key, from `ssh-keyscan -t ed25519 <host>` |
+
+### Running the production setup by hand
+
+From the folder holding `docker-compose.prod.yml` and `.env.prod`:
+
+```bash
+docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+docker compose -f docker-compose.prod.yml --env-file .env.prod logs -f
+```
+
+To load the starting securities on a new database:
+
+```bash
+docker compose -f docker-compose.prod.yml --env-file .env.prod run --rm backend python -m scripts.seed
+```
