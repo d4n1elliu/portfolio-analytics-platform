@@ -1,0 +1,14 @@
+# Settings for ruff, the linter. Run "ruff check ." from backend/.
+target-version = "py312"
+
+[lint]
+# Keep writing Decimal("0"), not Decimal(0).
+ignore = ["FURB157"]
+
+[lint.isort]
+# alembic is an installed package, not the local alembic/ folder.
+known-third-party = ["alembic"]
+
+[lint.flake8-bugbear]
+# FastAPI routes use Depends(...) as a default argument.
+extend-immutable-calls = ["fastapi.Depends"]

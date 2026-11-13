@@ -44,7 +44,8 @@ backend/
   alembic.ini         Alembic settings (no database URL is stored here)
   pytest.ini          pytest settings
   requirements.txt    Pinned dependencies the app needs to run
-  requirements-dev.txt  The same, plus the test tools
+  requirements-dev.txt  The same, plus the test and lint tools
+  ruff.toml           Linter settings
   .env.example        Template for backend environment variables
 frontend/
   src/
@@ -232,6 +233,16 @@ pytest
 ```
 
 The tests cover the CSV validation rules. They do not connect to a database, so they run without a `.env` file.
+
+### Linting
+
+Check the backend code for common mistakes from `backend/`:
+
+```bash
+ruff check .
+```
+
+The settings are in `backend/ruff.toml`.
 
 ### Frontend
 
