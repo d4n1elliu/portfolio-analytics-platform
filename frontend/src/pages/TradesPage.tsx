@@ -9,7 +9,7 @@ import CsvImportForm from '../components/CsvImportForm'
 import PageLayout from '../components/PageLayout'
 import Pagination from '../components/Pagination'
 import TradeTable from '../components/TradeTable'
-import { APP_NAME, APP_TAGLINE, PAGE_SIZE } from '../config'
+import { PAGE_SIZE } from '../config'
 import { useApiQuery } from '../hooks/useApiQuery'
 import { formatRange } from '../lib/format'
 
@@ -32,7 +32,7 @@ function TradesPage() {
   const page = trades.status === 'loaded' ? trades.data : null
 
   return (
-    <PageLayout title={APP_NAME} subtitle={APP_TAGLINE}>
+    <PageLayout title="Trades">
       <Card title="Import trades">
         <CsvImportForm
           upload={importTrades}
