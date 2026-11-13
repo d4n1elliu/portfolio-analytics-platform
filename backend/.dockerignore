@@ -1,0 +1,20 @@
+# Files Docker should not send to the build or copy into the image.
+
+# Secrets: real settings are passed in as environment variables.
+.env
+.env.*
+
+# Local environment and caches
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.DS_Store
+
+# Development only
+tests/
+sample_data/
+pytest.ini
+ruff.toml
+requirements-dev.txt
