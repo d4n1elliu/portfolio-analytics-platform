@@ -95,15 +95,29 @@ jobs:
           set -euo pipefail
           cd "$APP_DIR"
           export IMAGE_TAG
-          trap 'docker logout ghcr.io' EXIT
+          trap 'docker logout ghcr.io < /dev/null' EXIT
 
-          compose() { docker compose -f docker-compose.prod.yml --env-file .env.prod "$@"; }
+          # This script reaches bash on standard input. A command that reads
+          # standard input would swallow the lines after it, so every command
+          # gets /dev/null instead.
+          compose() { docker compose -f docker-compose.prod.yml --env-file .env.prod "$@" < /dev/null; }
 
           compose pull
           # Update the database before the new code starts using it.
-          compose run --rm backend alembic upgrade head
+          compose run --rm -T backend alembic upgrade head
           compose up -d --remove-orphans
-          docker image prune -f
+
+          running=$(compose ps --status running --services)
+          for service in backend web; do
+            if ! grep -qx "$service" <<< "$running"; then
+              echo "::error::The $service container is not running after the deploy." >&2
+              compose ps --all
+              exit 1
+            fi
+          done
+          echo "backend and web are running."
+
+          docker image prune -f < /dev/null
           REMOTE
 
       - name: Check the live site
