@@ -37,6 +37,17 @@ export function formatCurrency(
   }).format(amount)
 }
 
+/** Format a profit or loss with its sign, such as "+$812.59" or "-$120.00". */
+export function formatProfit(value: string | number, currency = DEFAULT_CURRENCY): string {
+  const amount = Number(value)
+  if (Number.isNaN(amount)) return String(value)
+  return new Intl.NumberFormat(LOCALE, {
+    style: 'currency',
+    currency,
+    signDisplay: 'exceptZero',
+  }).format(amount)
+}
+
 /** Format a number of shares or units, for example "1,500" or "0.25". */
 export function formatQuantity(value: string | number): string {
   const amount = Number(value)
