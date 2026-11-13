@@ -1,5 +1,8 @@
 import type { ReactNode } from 'react'
 
+import { useSortedRows } from '../hooks/useSortedRows'
+import type { SortDirection, SortValue } from '../hooks/useSortedRows'
+
 export interface Column<T> {
   header: string
   /** Returns what to show in this column for one row. */
@@ -8,6 +11,8 @@ export interface Column<T> {
   align?: 'left' | 'right'
   /** Extra classes for this column's cells. */
   className?: string
+  /** Add this to make the column sortable. Returns the value to sort a row by. */
+  sortValue?: (row: T) => SortValue
 }
 
 interface DataTableProps<T> {
@@ -19,23 +24,39 @@ interface DataTableProps<T> {
 
 /** A table for any kind of row. The columns decide what is shown. */
 function DataTable<T>({ columns, rows, getRowKey }: DataTableProps<T>) {
+  const { sortedRows, toggleSort, directionOf } = useSortedRows(rows, columns)
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-left text-sm">
         <thead className="border-y border-slate-200 text-xs uppercase tracking-wide text-slate-500">
           <tr>
-            {columns.map((column) => (
-              <th
-                key={column.header}
-                className={`px-6 py-3 font-medium ${column.align === 'right' ? 'text-right' : ''}`}
-              >
-                {column.header}
-              </th>
-            ))}
+            {columns.map((column) => {
+              const alignRight = column.align === 'right'
+              const direction = directionOf(column.header)
+              return (
+                <th
+                  key={column.header}
+                  aria-sort={column.sortValue ? (direction ?? 'none') : undefined}
+                  className={`px-6 py-3 font-medium ${alignRight ? 'text-right' : ''}`}
+                >
+                  {column.sortValue ? (
+                    <SortButton
+                      label={column.header}
+                      direction={direction}
+                      alignRight={alignRight}
+                      onClick={() => toggleSort(column.header)}
+                    />
+                  ) : (
+                    column.header
+                  )}
+                </th>
+              )
+            })}
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
-          {rows.map((row) => (
+          {sortedRows.map((row) => (
             <tr key={getRowKey(row)}>
               {columns.map((column) => (
                 <td
@@ -50,6 +71,30 @@ function DataTable<T>({ columns, rows, getRowKey }: DataTableProps<T>) {
         </tbody>
       </table>
     </div>
+  )
+}
+
+interface SortButtonProps {
+  label: string
+  direction: SortDirection | undefined
+  alignRight: boolean
+  onClick: () => void
+}
+
+/** A column heading that sorts the table when clicked. */
+function SortButton({ label, direction, alignRight, onClick }: SortButtonProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      // The arrow goes before a right-aligned label, so the label stays above its numbers.
+      className={`inline-flex items-center gap-1 uppercase tracking-wide hover:text-slate-900 ${alignRight ? 'flex-row-reverse' : ''}`}
+    >
+      {label}
+      <span aria-hidden="true" className={direction ? '' : 'invisible'}>
+        {direction === 'descending' ? '↓' : '↑'}
+      </span>
+    </button>
   )
 }
 

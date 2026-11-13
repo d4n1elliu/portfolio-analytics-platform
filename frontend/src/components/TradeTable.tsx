@@ -17,7 +17,11 @@ const COLUMNS: Column<Trade>[] = [
     render: (trade) => formatDate(trade.trade_date),
     className: 'whitespace-nowrap',
   },
-  { header: 'Ticker', render: (trade) => trade.ticker, className: 'font-medium' },
+  { header: 'Ticker', 
+    render: (trade) => trade.ticker, 
+    className: 'font-medium', 
+    sortValue: (trade) => trade.ticker, 
+  },
   { header: 'Security', render: (trade) => trade.security_name, className: 'text-slate-600' },
   {
     header: 'Side',
@@ -27,7 +31,11 @@ const COLUMNS: Column<Trade>[] = [
       </span>
     ),
   },
-  { header: 'Quantity', align: 'right', render: (trade) => formatQuantity(trade.quantity) },
+  { header: 'Quantity', 
+    align: 'right', 
+    render: (trade) => formatQuantity(trade.quantity), 
+    sortValue: (trade) => Number(trade.quantity), 
+  },
   {
     header: 'Price',
     align: 'right',
