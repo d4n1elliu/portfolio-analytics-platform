@@ -2,8 +2,13 @@
 target-version = "py312"
 
 [lint]
-# Keep writing Decimal("0"), not Decimal(0).
-ignore = ["FURB157"]
+ignore = [
+    # Keep writing Decimal("0"), not Decimal(0).
+    "FURB157",
+    # The Generic[T] syntax in Page and validate_all is intentional.
+    "UP046",
+    "UP047",
+]
 
 [lint.isort]
 # alembic is an installed package, not the local alembic/ folder.
