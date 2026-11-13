@@ -30,6 +30,22 @@ export interface Security {
   currency: string
 }
 
+/** The position in one security. Decimals arrive as text, like Trade. */
+export interface Holding {
+  ticker: string
+  security_name: string
+  sector: string
+  asset_class: string
+  currency: string
+  quantity: string
+  /** Null when nothing is held. */
+  average_cost: string | null
+  cost_basis: string
+  realised_pnl: string
+  /** Units sold that were never held. */
+  oversold_quantity: string
+}
+
 export type TradeSide = 'BUY' | 'SELL'
 
 export interface Trade {
