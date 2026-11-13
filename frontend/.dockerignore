@@ -1,0 +1,12 @@
+# Files Docker should not send to the build or copy into the image.
+
+# Installed and built inside the image instead.
+node_modules/
+dist/
+
+# Local settings: the build sets VITE_API_URL itself.
+.env
+.env.*
+
+*.tsbuildinfo
+.DS_Store

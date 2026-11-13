@@ -1,0 +1,25 @@
+# Caddy serves the website and passes API requests on to the backend.
+#
+# SITE_ADDRESS is the address to serve. Set it to a domain name, such as
+# example.com, and Caddy gets and renews an HTTPS certificate for it by
+# itself. Left unset, it serves plain HTTP on port 80, for testing locally.
+#
+# BACKEND_ADDRESS is where the API is running. The default is the backend
+# container on the same Docker network.
+{$SITE_ADDRESS::80} {
+	encode gzip
+
+	# /api/trades is sent to the backend as /trades: the backend's routes
+	# have no /api in front.
+	handle_path /api/* {
+		reverse_proxy {$BACKEND_ADDRESS:backend:8000}
+	}
+
+	# Everything else is the React app. A path with no matching file, such as
+	# a page opened from a bookmark, gets index.html so the app can show it.
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}
