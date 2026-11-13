@@ -1,7 +1,7 @@
 import type { Holding } from '../api/types'
 import Alert from './Alert'
 
-/** Names the securities that were sold more than they were bought. Shows nothing if there are none. */
+/** Warns about securities that were sold more than they were bought. */
 function OversoldWarning({ holdings }: { holdings: Holding[] }) {
   if (holdings.length === 0) return null
 

@@ -1,3 +1,5 @@
+import { FOCUS_OUTLINE } from '../lib/styles'
+
 interface CheckboxProps {
   label: string
   checked: boolean
@@ -12,7 +14,7 @@ function Checkbox({ label, checked, onChange }: CheckboxProps) {
         type="checkbox"
         checked={checked}
         onChange={(event) => onChange(event.target.checked)}
-        className="size-4 rounded border-slate-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
+        className={`size-4 rounded border-slate-300 ${FOCUS_OUTLINE}`}
       />
       {label}
     </label>

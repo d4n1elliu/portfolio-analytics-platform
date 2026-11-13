@@ -1,6 +1,8 @@
 import type { ButtonHTMLAttributes } from 'react'
 
-const BASE = 'rounded-md px-4 py-2 text-sm font-medium disabled:cursor-not-allowed'
+import { COLOUR_TRANSITION } from '../lib/styles'
+
+const BASE = `rounded-md px-4 py-2 text-sm font-medium disabled:cursor-not-allowed ${COLOUR_TRANSITION}`
 
 const VARIANTS = {
   primary: 'bg-slate-900 text-white hover:bg-slate-700 disabled:bg-slate-300',

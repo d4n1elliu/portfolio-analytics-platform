@@ -1,3 +1,5 @@
+import { FOCUS_OUTLINE } from '../lib/styles'
+
 interface SelectProps {
   /** Describes the list for screen readers. */
   label: string
@@ -16,7 +18,7 @@ function Select({ label, value, options, allLabel, onChange }: SelectProps) {
         aria-label={label}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-10 w-full appearance-none rounded-md border border-slate-300 bg-white pr-9 pl-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
+        className={`h-10 w-full appearance-none rounded-md border border-slate-300 bg-white pr-9 pl-3 text-sm ${FOCUS_OUTLINE}`}
       >
         <option value="">{allLabel}</option>
         {options.map((option) => (
@@ -25,7 +27,7 @@ function Select({ label, value, options, allLabel, onChange }: SelectProps) {
           </option>
         ))}
       </select>
-      {/* Replaces the browser's own arrow, which sits against the edge. */}
+      {/* Replaces the browser's own arrow. */}
       <svg
         aria-hidden="true"
         viewBox="0 0 20 20"

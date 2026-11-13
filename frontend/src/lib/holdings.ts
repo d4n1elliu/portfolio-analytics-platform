@@ -1,4 +1,4 @@
-// Questions the app asks about a list of holdings.
+// Helpers for a list of holdings.
 
 import type { Holding } from '../api/types'
 
@@ -69,7 +69,7 @@ function uniqueSorted(values: string[]): string[] {
   return [...new Set(values)].sort((a, b) => a.localeCompare(b))
 }
 
-/** Add amounts in whole cents, so the total has no rounding error. */
+/** Add amounts in whole cents to avoid rounding errors. */
 function sumMoney(amounts: string[]): number {
   const cents = amounts.reduce((total, amount) => total + Math.round(Number(amount) * 100), 0)
   return cents / 100

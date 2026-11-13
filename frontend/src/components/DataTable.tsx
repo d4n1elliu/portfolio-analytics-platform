@@ -87,7 +87,7 @@ function SortButton({ label, direction, alignRight, onClick }: SortButtonProps) 
     <button
       type="button"
       onClick={onClick}
-      // The arrow goes before a right-aligned label, so the label stays above its numbers.
+      // Arrow first when right-aligned, so the heading lines up with its numbers.
       className={`inline-flex items-center gap-1 uppercase tracking-wide hover:text-slate-900 ${alignRight ? 'flex-row-reverse' : ''}`}
     >
       {label}

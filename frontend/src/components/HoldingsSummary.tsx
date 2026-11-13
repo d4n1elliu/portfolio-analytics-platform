@@ -4,10 +4,10 @@ import { summariseHoldings } from '../lib/holdings'
 import { profitColour } from '../lib/profit'
 import StatTiles from './StatTiles'
 
-/** Headline figures for the holdings given: how many, what they cost, and profit taken. */
+/** Headline figures for the holdings shown. */
 function HoldingsSummary({ holdings }: { holdings: Holding[] }) {
   const summary = summariseHoldings(holdings)
-  // Amounts in different currencies cannot be added together.
+  // Null when the holdings mix currencies, so no total can be shown.
   const currency = summary.currency
 
   return (
