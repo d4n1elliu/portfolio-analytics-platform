@@ -24,57 +24,63 @@ The first feature is in place: trades can be imported from a CSV file and viewed
 ## Project structure
 
 ```
-backend/
-  app/
-    main.py           FastAPI app, CORS config, health endpoints, router registration
-    config.py         Loads .env and exposes settings such as DATABASE_URL
-    database.py       Engine, session factory, Base class, get_db dependency
-    models/           Database tables: Security, Trade, Price
-    routes/           HTTP endpoints. Read the request, call a service, return the response
-      dependencies.py Shared paging and CSV upload handling
-      errors.py       Turns import errors into HTTP responses for every endpoint
-    schemas/          Pydantic shapes of the JSON the API returns
-      common.py       Shapes shared by endpoints: Page, ImportResult, ImportRejected
-    services/         Business logic. No HTTP code
-      csv_parsing.py  Reads and checks any CSV file (shared by all imports)
-      trade_csv.py    The rules for one row of a trades CSV
-      trade_import.py Saves a validated trades CSV in one transaction
-      market_time.py  Today's date in the market's time zone
-      trades.py       Queries for listing trades
-      securities.py   Queries for listing securities
-  alembic/            Migration setup and the migration files in versions/
-  scripts/seed.py     Inserts the starting set of securities
-  sample_data/        Example CSV files for the trade import
-  tests/              pytest unit tests
-  alembic.ini         Alembic settings (no database URL is stored here)
-  pytest.ini          pytest settings
-  requirements.txt    Pinned dependencies the app needs to run
-  requirements-dev.txt  The same, plus the test and lint tools
-  ruff.toml           Linter settings
-  .env.example        Template for backend environment variables
-  Dockerfile          Production image for the API
-frontend/
-  src/
-    main.tsx          React entry point
-    App.tsx           Root component
-    config.ts         App-wide settings: API address, locale, currency, page size
-    api/              The only code that calls the backend, with typed functions per endpoint
-    hooks/            useApiQuery: loads data and tracks loading and error states
-    lib/format.ts     Shared date, currency, quantity and count formatting
-    pages/            One component per screen (TradesPage)
-    components/       Reusable pieces: Button, Alert, Card, PageLayout, DataTable,
-                      Pagination, CsvImportForm, and TradeTable built on DataTable
-    index.css         Tailwind CSS import
-  index.html          HTML shell that Vite serves
-  vite.config.ts      Vite config (React and Tailwind plugins)
-  .env.example        Template for frontend environment variables
-  Dockerfile          Production image: builds the app, then serves it with Caddy
-  Caddyfile           Caddy settings: HTTPS, index.html fallback, /api proxy
-.github/workflows/
-  ci.yml              Lint, tests, type check and Docker builds on every pull request
-  deploy.yml          Publishes the images and deploys after CI passes on main
-docker-compose.prod.yml  Production setup for the server
-.env.prod.example     Template for the server's settings
+portfolio-analytics-platform/
+├── .env.prod.example         Template for the server's settings
+├── .gitignore
+├── .nvmrc                    Node version for local use and CI
+├── .python-version           Python version for local use and CI
+├── docker-compose.prod.yml   Production setup that runs both containers
+├── README.md
+│
+├── .github/
+│   └── workflows/
+│       ├── ci.yml            Lint, tests, type check and Docker builds
+│       └── deploy.yml        Publishes images and deploys after CI passes
+│
+├── frontend/
+│   ├── src/
+│   │   ├── api/              Typed calls to the backend such as trades
+│   │   ├── components/       Shared components such as DataTable and Pagination
+│   │   ├── hooks/            Data loading hooks such as useApiQuery
+│   │   ├── lib/              Shared helpers such as date and currency formatting
+│   │   ├── pages/            One component per screen such as TradesPage
+│   │   ├── App.tsx           Root component
+│   │   ├── config.ts         API address, locale, currency and page size
+│   │   └── main.tsx          React entry point
+│   ├── .dockerignore
+│   ├── .env.example          Template for frontend environment variables
+│   ├── .oxlintrc.json        Linter settings
+│   ├── Caddyfile             Caddy settings for HTTPS and the /api proxy
+│   ├── Dockerfile            Builds the app and serves it with Caddy
+│   ├── index.html            HTML shell that Vite serves
+│   ├── package-lock.json
+│   ├── package.json          Dependencies and npm scripts
+│   ├── tsconfig.app.json     TypeScript settings for the app code
+│   ├── tsconfig.json         Points to the two TypeScript configs
+│   ├── tsconfig.node.json    TypeScript settings for vite.config.ts
+│   └── vite.config.ts        Vite settings with React and Tailwind plugins
+│
+└── backend/
+    ├── alembic/              Migration setup and the files in versions/
+    ├── app/
+    │   ├── models/           Database tables such as Security and Trade
+    │   ├── routes/           HTTP endpoints such as trades and securities
+    │   ├── schemas/          Shapes of the JSON the API returns
+    │   ├── services/         Business logic such as CSV parsing and import
+    │   ├── config.py         Reads settings from environment variables
+    │   ├── database.py       Engine, sessions and the get_db dependency
+    │   └── main.py           FastAPI app, CORS and health endpoints
+    ├── sample_data/          Example CSV files for the trade import
+    ├── scripts/              One-off scripts such as seed.py
+    ├── tests/                pytest tests such as CSV rules and health
+    ├── .dockerignore
+    ├── .env.example          Template for backend environment variables
+    ├── alembic.ini           Alembic settings with no database URL
+    ├── Dockerfile            Production image for the API
+    ├── pytest.ini            pytest settings
+    ├── requirements-dev.txt  Runtime packages plus test and lint tools
+    ├── requirements.txt      Pinned packages the app needs to run
+    └── ruff.toml             Linter settings
 ```
 
 A request flows through the backend in one direction: a route calls a service, and a service uses the models. Routes contain no business rules and services contain no HTTP code, so each can be changed and tested separately.
