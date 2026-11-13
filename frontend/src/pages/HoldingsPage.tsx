@@ -15,6 +15,7 @@ import { formatCount } from '../lib/format'
 import {
   NO_FILTERS,
   assetClassesOf,
+  countClosed,
   filterHoldings,
   findOversold,
   hasFilters,
@@ -53,6 +54,7 @@ function HoldingsPage() {
           sectors={holdings ? sectorsOf(holdings) : []}
           assetClasses={holdings ? assetClassesOf(holdings) : []}
           showClosed={showClosed}
+          closedCount={holdings ? countClosed(holdings) : 0}
           onFiltersChange={setFilters}
           onShowClosedChange={setShowClosed}
         />

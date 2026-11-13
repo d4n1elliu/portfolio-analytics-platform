@@ -35,6 +35,11 @@ export function selectByStatus(holdings: Holding[], showClosed: boolean): Holdin
   )
 }
 
+/** How many positions are hidden until closed ones are asked for. */
+export function countClosed(holdings: Holding[]): number {
+  return holdings.length - selectByStatus(holdings, false).length
+}
+
 /** The holdings that match every filter. */
 export function filterHoldings(holdings: Holding[], filters: HoldingFilters): Holding[] {
   const search = filters.search.trim().toLowerCase()

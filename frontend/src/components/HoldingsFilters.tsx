@@ -8,6 +8,8 @@ interface HoldingsFiltersProps {
   sectors: string[]
   assetClasses: string[]
   showClosed: boolean
+  /** The tick box is disabled when this is 0. */
+  closedCount: number
   onFiltersChange: (filters: Filters) => void
   onShowClosedChange: (showClosed: boolean) => void
 }
@@ -18,6 +20,7 @@ function HoldingsFilters({
   sectors,
   assetClasses,
   showClosed,
+  closedCount,
   onFiltersChange,
   onShowClosedChange,
 }: HoldingsFiltersProps) {
@@ -43,7 +46,13 @@ function HoldingsFilters({
         value={filters.assetClass}
         onChange={(assetClass) => onFiltersChange({ ...filters, assetClass })}
       />
-      <Checkbox label="Show closed positions" checked={showClosed} onChange={onShowClosedChange} />
+      <Checkbox
+        label={`Show closed positions (${closedCount})`}
+        checked={showClosed}
+        onChange={onShowClosedChange}
+        disabled={closedCount === 0}
+        title={closedCount === 0 ? 'No closed positions yet' : undefined}
+      />
     </div>
   )
 }
