@@ -7,6 +7,11 @@ on:
     types: [completed]
     branches: [main]
 
+# One deploy at a time. A newer one waits instead of cutting this one off.
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
 jobs:
   publish:
     name: Publish image (${{ matrix.image }})
@@ -44,3 +49,75 @@ jobs:
             ghcr.io/d4n1elliu/portfolio-analytics-platform-${{ matrix.image }}:latest
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+
+  deploy:
+    name: Deploy to server
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    env:
+      SSH_TARGET: ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}
+      IMAGE_TAG: ${{ github.event.workflow_run.head_sha }}
+      # Folder on the server, inside the SSH user's home folder.
+      APP_DIR: portfolio-analytics
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Set up SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          # Only the server's known key is trusted, so the job cannot be
+          # tricked into connecting to a different machine.
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      - name: Copy the Compose file
+        run: scp docker-compose.prod.yml "$SSH_TARGET:$APP_DIR/"
+
+      # The images are private, so the server logs in with this run's token.
+      - name: Log the server in to GHCR
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: printf '%s' "$GHCR_TOKEN" | ssh "$SSH_TARGET" "docker login ghcr.io -u '${{ github.actor }}' --password-stdin"
+
+      - name: Pull, migrate and restart
+        run: |
+          ssh "$SSH_TARGET" "APP_DIR='$APP_DIR' IMAGE_TAG='$IMAGE_TAG' bash -s" <<'REMOTE'
+          set -euo pipefail
+          cd "$APP_DIR"
+          export IMAGE_TAG
+          trap 'docker logout ghcr.io' EXIT
+
+          compose() { docker compose -f docker-compose.prod.yml --env-file .env.prod "$@"; }
+
+          compose pull
+          # Update the database before the new code starts using it.
+          compose run --rm backend alembic upgrade head
+          compose up -d --remove-orphans
+          docker image prune -f
+          REMOTE
+
+      - name: Check the live site
+        run: |
+          domain=$(ssh "$SSH_TARGET" "grep '^SITE_DOMAIN=' '$APP_DIR/.env.prod' | cut -d= -f2")
+          url="https://$domain/api/health/db"
+          for attempt in $(seq 1 12); do
+            if curl --fail --silent --show-error --max-time 10 "$url"; then
+              echo
+              echo "$url is healthy."
+              exit 0
+            fi
+            echo "Attempt $attempt of 12 failed, retrying in 10 seconds."
+            sleep 10
+          done
+          echo "::error::$url did not become healthy."
+          exit 1
