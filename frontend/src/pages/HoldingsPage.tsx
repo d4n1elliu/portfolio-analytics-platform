@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router'
 
 import { listHoldings } from '../api/holdings'
@@ -19,21 +19,24 @@ import {
   findOversold,
   hasFilters,
   sectorsOf,
+  selectByStatus,
 } from '../lib/holdings'
 import { ROUTES } from '../routes'
+
+/** Every position is fetched once. Closed ones are hidden in the browser. */
+function loadAllHoldings(signal: AbortSignal) {
+  return listHoldings({ includeClosed: true }, signal)
+}
 
 function HoldingsPage() {
   const [showClosed, setShowClosed] = useState(false)
   const [filters, setFilters] = useState(NO_FILTERS)
 
-  const loadHoldings = useCallback(
-    (signal: AbortSignal) => listHoldings({ includeClosed: showClosed }, signal),
-    [showClosed],
-  )
-  const { state, reload } = useApiQuery(loadHoldings)
+  const { state, reload } = useApiQuery(loadAllHoldings, { keepPreviousData: true })
 
   const holdings = state.status === 'loaded' ? state.data : null
-  const shown = holdings ? filterHoldings(holdings, filters) : []
+  const listed = holdings ? selectByStatus(holdings, showClosed) : []
+  const shown = filterHoldings(listed, filters)
 
   return (
     <PageLayout title="Holdings">
@@ -43,7 +46,7 @@ function HoldingsPage() {
       <Card
         title="Positions"
         padded={false}
-        aside={holdings && holdings.length > 0 && positionCount(shown.length, holdings.length)}
+        aside={holdings && positionCount(shown.length, listed.length)}
       >
         <HoldingsFilters
           filters={filters}
@@ -69,7 +72,7 @@ function HoldingsPage() {
 
         {holdings && holdings.length === 0 && (
           <p className="px-6 pb-6 text-sm text-slate-500">
-            {showClosed ? 'No positions yet.' : 'No open positions.'}{' '}
+            No positions yet.{' '}
             <Link to={ROUTES.trades} className="font-medium text-slate-900 underline">
               Import trades
             </Link>{' '}
@@ -77,7 +80,13 @@ function HoldingsPage() {
           </p>
         )}
 
-        {holdings && holdings.length > 0 && shown.length === 0 && (
+        {holdings && holdings.length > 0 && listed.length === 0 && (
+          <p className="px-6 pb-6 text-sm text-slate-500">
+            No open positions. Tick "Show closed positions" to see the ones that have been sold.
+          </p>
+        )}
+
+        {listed.length > 0 && shown.length === 0 && (
           <div className="space-y-3 px-6 pb-6">
             <p className="text-sm text-slate-500">No positions match the search and filters.</p>
             {hasFilters(filters) && (

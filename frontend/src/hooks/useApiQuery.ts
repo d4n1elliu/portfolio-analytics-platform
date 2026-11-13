@@ -9,13 +9,21 @@ export type QueryState<T> =
 
 type Outcome<T> = Exclude<QueryState<T>, { status: 'loading' }>
 
+interface QueryOptions {
+  /** Keep showing the last data while newer data loads, instead of 'loading'. */
+  keepPreviousData?: boolean
+}
+
 /**
  * Load data from the API and track whether it is loading, loaded or failed.
  *
  * Wrap `load` in useCallback. The data is fetched again whenever `load`
  * changes or `reload` is called.
  */
-export function useApiQuery<T>(load: (signal: AbortSignal) => Promise<T>) {
+export function useApiQuery<T>(
+  load: (signal: AbortSignal) => Promise<T>,
+  { keepPreviousData = false }: QueryOptions = {},
+) {
   const [reloadCount, setReloadCount] = useState(0)
   // The latest outcome, kept with the request that produced it.
   const [result, setResult] = useState<{
@@ -43,7 +51,11 @@ export function useApiQuery<T>(load: (signal: AbortSignal) => Promise<T>) {
 
   // An outcome from an earlier request means the current one is still loading.
   const isCurrent = result !== null && result.load === load && result.reloadCount === reloadCount
-  const state: QueryState<T> = isCurrent ? result.outcome : { status: 'loading' }
+  const canKeep = keepPreviousData && result?.outcome.status === 'loaded'
+  const state: QueryState<T> = isCurrent || canKeep ? result.outcome : { status: 'loading' }
 
-  return { state, reload }
+  /** True while newer data loads behind the data on screen. */
+  const isRefreshing = !isCurrent && canKeep
+
+  return { state, reload, isRefreshing }
 }

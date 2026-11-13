@@ -26,6 +26,15 @@ export function findOversold(holdings: Holding[]): Holding[] {
   return holdings.filter((holding) => Number(holding.oversold_quantity) > 0)
 }
 
+/** The holdings to list: open positions, plus closed ones when asked for. */
+export function selectByStatus(holdings: Holding[], showClosed: boolean): Holding[] {
+  if (showClosed) return holdings
+  // An oversold position is always listed, because it means the trades are wrong.
+  return holdings.filter(
+    (holding) => Number(holding.quantity) > 0 || Number(holding.oversold_quantity) > 0,
+  )
+}
+
 /** The holdings that match every filter. */
 export function filterHoldings(holdings: Holding[], filters: HoldingFilters): Holding[] {
   const search = filters.search.trim().toLowerCase()
