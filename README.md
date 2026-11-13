@@ -160,7 +160,7 @@ Two example files are in `backend/sample_data/`: `trades_sample.csv` (30 valid t
 
 ## Local setup
 
-Prerequisites: Python 3.12+ and Node.js 20.19+.
+Prerequisites: Python 3.12+ and Node.js 24+.
 
 Run the backend and frontend in two separate terminals.
 
