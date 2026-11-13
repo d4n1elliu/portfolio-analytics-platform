@@ -1,5 +1,6 @@
 import type { Holding } from '../api/types'
 import { formatCurrency, formatProfit, formatQuantity } from '../lib/format'
+import { profitColour } from '../lib/profit'
 import DataTable from './DataTable'
 import type { Column } from './DataTable'
 
@@ -61,14 +62,6 @@ const COLUMNS: Column<Holding>[] = [
     sortValue: (holding) => Number(holding.realised_pnl),
   },
 ]
-
-/** Green for a profit, red for a loss. */
-function profitColour(value: string): string {
-  const amount = Number(value)
-  if (amount > 0) return 'text-emerald-700'
-  if (amount < 0) return 'text-red-700'
-  return ''
-}
 
 /** A table of positions. Every column can be sorted. */
 function HoldingsTable({ holdings }: { holdings: Holding[] }) {
