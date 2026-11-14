@@ -8,9 +8,11 @@ from fastapi.testclient import TestClient
 
 from app.database import get_db
 from app.main import app
-from app.models import Security, Trade, TradeSide
+from app.models import Price, Security, Trade, TradeSide
 from app.schemas.holding import HoldingRead
 from app.services.holdings import build_holdings
+
+PRICE_DATE = date(2026, 11, 13)
 
 
 def make_security(ticker: str, sector: str = "Materials") -> Security:
@@ -40,6 +42,10 @@ def _trade(security: Security, side: TradeSide, quantity: str, price: str, fees:
         price=Decimal(price),
         fees=Decimal(fees),
     )
+
+
+def price(security: Security, close: str) -> Price:
+    return Price(security=security, price_date=PRICE_DATE, close=Decimal(close))
 
 
 def tickers(holdings) -> list[str]:
@@ -91,6 +97,63 @@ def test_oversold_position_is_always_returned():
     assert holdings[0].position.oversold_quantity == 50
 
 
+# --- Valuing holdings ---
+
+
+def test_open_position_with_a_price_is_valued():
+    bhp = make_security("BHP")
+    trades = [buy(bhp, "100", "40")]
+
+    holding = build_holdings(trades, include_closed=False, prices={"BHP": price(bhp, "46")})[0]
+
+    assert holding.valuation.last_price == 46
+    assert holding.valuation.price_date == PRICE_DATE
+    assert holding.valuation.market_value == 4600
+    assert holding.valuation.unrealised_pnl == 600
+    assert holding.weight == 1
+
+
+def test_position_without_a_price_has_no_valuation_or_weight():
+    bhp = make_security("BHP")
+
+    holding = build_holdings([buy(bhp, "100", "40")], include_closed=False)[0]
+
+    assert holding.valuation is None
+    assert holding.weight is None
+
+
+def test_closed_position_is_not_valued_even_with_a_price():
+    cba = make_security("CBA")
+    trades = [buy(cba, "10", "150"), sell(cba, "10", "160")]
+
+    holding = build_holdings(trades, include_closed=True, prices={"CBA": price(cba, "165")})[0]
+
+    assert holding.valuation is None
+    assert holding.weight is None
+
+
+def test_weights_are_each_market_value_over_the_total():
+    bhp, cba = make_security("BHP"), make_security("CBA")
+    trades = [buy(bhp, "100", "40"), buy(cba, "10", "150")]
+    prices = {"BHP": price(bhp, "30"), "CBA": price(cba, "100")}
+
+    holdings = build_holdings(trades, include_closed=False, prices=prices)
+
+    # BHP is worth 3,000 and CBA 1,000.
+    assert holdings[0].weight == Decimal("0.75")
+    assert holdings[1].weight == Decimal("0.25")
+
+
+def test_unpriced_holding_is_left_out_of_the_weights():
+    bhp, cba = make_security("BHP"), make_security("CBA")
+    trades = [buy(bhp, "100", "40"), buy(cba, "10", "150")]
+
+    holdings = build_holdings(trades, include_closed=False, prices={"BHP": price(bhp, "30")})
+
+    assert holdings[0].weight == 1
+    assert holdings[1].weight is None
+
+
 # --- Response shape ---
 
 
@@ -122,23 +185,58 @@ def test_response_has_no_average_cost_for_a_closed_position():
     assert str(holding.cost_basis) == "0.00"
 
 
+def test_response_rounds_valuation_money_to_cents_and_fractions_to_six_places():
+    bhp, cba = make_security("BHP"), make_security("CBA")
+    trades = [
+        buy(bhp, "400", "41.85", fees="29.95"),
+        buy(bhp, "200", "43.10", fees="19.95"),
+        sell(bhp, "250", "45.72", fees="29.95"),
+        buy(cba, "110", "155.353788"),
+    ]
+    prices = {"BHP": price(bhp, "46.10"), "CBA": price(cba, "158")}
+
+    holding = HoldingRead.from_holding(build_holdings(trades, include_closed=False, prices=prices)[0])
+
+    assert str(holding.last_price) == "46.10"
+    assert holding.price_date == PRICE_DATE
+    assert str(holding.market_value) == "16135.00"
+    assert str(holding.unrealised_pnl) == "1312.56"
+    assert str(holding.unrealised_return) == "0.088552"
+    assert str(holding.weight) == "0.481426"
+
+
+def test_response_has_no_valuation_fields_without_a_price():
+    bhp = make_security("BHP")
+
+    holding = HoldingRead.from_holding(build_holdings([buy(bhp, "100", "40")], include_closed=False)[0])
+
+    assert holding.last_price is None
+    assert holding.price_date is None
+    assert holding.market_value is None
+    assert holding.unrealised_pnl is None
+    assert holding.unrealised_return is None
+    assert holding.weight is None
+
+
 # --- Endpoint ---
 
 
 class FakeSession:
-    """Stands in for the database session and returns the given trades."""
+    """Stands in for the database session. Returns trades or prices to match the query."""
 
-    def __init__(self, trades: list[Trade]):
+    def __init__(self, trades: list[Trade], prices: list[Price]):
         self.trades = trades
+        self.prices = prices
 
     def scalars(self, statement):
-        return self.trades
+        asks_for_prices = statement.column_descriptions[0]["entity"] is Price
+        return self.prices if asks_for_prices else self.trades
 
 
 @pytest.fixture
 def client_with_trades():
-    def make_client(trades: list[Trade]) -> TestClient:
-        app.dependency_overrides[get_db] = lambda: FakeSession(trades)
+    def make_client(trades: list[Trade], prices: list[Price] | None = None) -> TestClient:
+        app.dependency_overrides[get_db] = lambda: FakeSession(trades, prices or [])
         return TestClient(app)
 
     yield make_client
@@ -164,8 +262,29 @@ def test_endpoint_returns_open_positions(client_with_trades):
             "cost_basis": "4020.00",
             "realised_pnl": "0.00",
             "oversold_quantity": "0",
+            "last_price": None,
+            "price_date": None,
+            "market_value": None,
+            "unrealised_pnl": None,
+            "unrealised_return": None,
+            "weight": None,
         }
     ]
+
+
+def test_endpoint_returns_the_valuation_when_a_price_is_stored(client_with_trades):
+    bhp = make_security("BHP")
+    trades = [buy(bhp, "100", "40", fees="20")]
+
+    response = client_with_trades(trades, [price(bhp, "46")]).get("/holdings")
+
+    holding = response.json()[0]
+    assert holding["last_price"] == "46"
+    assert holding["price_date"] == "2026-11-13"
+    assert holding["market_value"] == "4600.00"
+    assert holding["unrealised_pnl"] == "580.00"
+    assert holding["unrealised_return"] == "0.144279"
+    assert holding["weight"] == "1.000000"
 
 
 def test_endpoint_includes_closed_positions_when_asked(client_with_trades):
