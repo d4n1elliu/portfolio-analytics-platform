@@ -8,16 +8,14 @@ const UNIT_COST_DECIMALS = 4
 
 const COLUMNS: Column<Holding>[] = [
   {
-    header: 'Ticker',
-    render: (holding) => holding.ticker,
-    className: 'font-medium',
-    sortValue: (holding) => holding.ticker,
-  },
-  {
     header: 'Security',
-    render: (holding) => holding.security_name,
-    className: 'text-slate-600',
-    sortValue: (holding) => holding.security_name,
+    render: (holding) => (
+      <>
+        <div className="font-medium">{holding.ticker}</div>
+        <div className="text-xs whitespace-nowrap text-slate-500">{holding.security_name}</div>
+      </>
+    ),
+    sortValue: (holding) => holding.ticker,
   },
   {
     header: 'Sector',
