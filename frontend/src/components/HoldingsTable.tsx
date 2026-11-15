@@ -1,72 +1,90 @@
+import type { ReactNode } from 'react'
+
 import type { Holding } from '../api/types'
-import { NO_VALUE, formatCurrency, formatProfit, formatQuantity } from '../lib/format'
-import { profitColour } from '../lib/profit'
+import { NO_VALUE, formatCurrency, formatPercent, formatQuantity } from '../lib/format'
 import DataTable from './DataTable'
 import type { Column } from './DataTable'
+import Profit from './Profit'
 
 const UNIT_COST_DECIMALS = 4
 
 const COLUMNS: Column<Holding>[] = [
   {
     header: 'Security',
-    render: (holding) => (
-      <>
-        <div className="font-medium">{holding.ticker}</div>
-        <div className="text-xs whitespace-nowrap text-slate-500">{holding.security_name}</div>
-      </>
-    ),
+    render: (holding) => <TwoLines main={holding.ticker} detail={holding.security_name} bold />,
     sortValue: (holding) => holding.ticker,
   },
   {
     header: 'Sector',
-    render: (holding) => holding.sector,
+    render: (holding) => <TwoLines main={holding.sector} detail={holding.asset_class} />,
     sortValue: (holding) => holding.sector,
   },
-  {
-    header: 'Asset class',
-    render: (holding) => holding.asset_class,
-    sortValue: (holding) => holding.asset_class,
-  },
-  {
-    header: 'Quantity',
-    align: 'right',
-    render: (holding) => formatQuantity(holding.quantity),
-    sortValue: (holding) => Number(holding.quantity),
-  },
+  numberColumn('Quantity', (holding) => holding.quantity, formatQuantity),
   moneyColumn('Avg cost', (holding) => holding.average_cost, formatUnitCost),
   moneyColumn('Last price', (holding) => holding.last_price),
   moneyColumn('Cost basis', (holding) => holding.cost_basis),
   moneyColumn('Market value', (holding) => holding.market_value),
-  {
-    header: 'Realised P&L',
-    align: 'right',
-    render: (holding) => (
-      <span className={profitColour(holding.realised_pnl)}>
-        {formatProfit(holding.realised_pnl, holding.currency)}
-      </span>
+  numberColumn(
+    'Unrealised P&L',
+    (holding) => holding.unrealised_pnl,
+    (pnl, holding) => (
+      <Profit amount={pnl} currency={holding.currency} returnOnCost={holding.unrealised_return} />
     ),
-    sortValue: (holding) => Number(holding.realised_pnl),
-  },
+  ),
+  numberColumn(
+    'Weight',
+    (holding) => holding.weight,
+    (weight) => formatPercent(Number(weight)),
+  ),
+  numberColumn(
+    'Realised P&L',
+    (holding) => holding.realised_pnl,
+    (pnl, holding) => <Profit amount={pnl} currency={holding.currency} />,
+  ),
 ]
 
-/** A sortable money column. A missing amount shows a dash and is sorted last. */
-function moneyColumn(
+/** A sortable column of numbers. A missing value shows a dash and is sorted last. */
+function numberColumn(
   header: string,
-  amountOf: (holding: Holding) => string | null,
-  format: (amount: string, currency: string) => string = formatCurrency,
+  valueOf: (holding: Holding) => string | null,
+  show: (value: string, holding: Holding) => ReactNode,
 ): Column<Holding> {
   return {
     header,
     align: 'right',
     render: (holding) => {
-      const amount = amountOf(holding)
-      return amount === null ? NO_VALUE : format(amount, holding.currency)
+      const value = valueOf(holding)
+      return value === null ? NO_VALUE : show(value, holding)
     },
     sortValue: (holding) => {
-      const amount = amountOf(holding)
-      return amount === null ? null : Number(amount)
+      const value = valueOf(holding)
+      return value === null ? null : Number(value)
     },
   }
+}
+
+function moneyColumn(
+  header: string,
+  amountOf: (holding: Holding) => string | null,
+  format: (amount: string, currency: string) => string = formatCurrency,
+): Column<Holding> {
+  return numberColumn(header, amountOf, (amount, holding) => format(amount, holding.currency))
+}
+
+interface TwoLinesProps {
+  main: string
+  detail: string
+  bold?: boolean
+}
+
+/** A value with a smaller line of detail under it. */
+function TwoLines({ main, detail, bold = false }: TwoLinesProps) {
+  return (
+    <div className="min-w-32">
+      <div className={bold ? 'font-medium' : ''}>{main}</div>
+      <div className="text-xs text-slate-500">{detail}</div>
+    </div>
+  )
 }
 
 /** Shows the same number of decimals on every row. */

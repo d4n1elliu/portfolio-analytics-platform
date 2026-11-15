@@ -11,10 +11,17 @@ const dateFormatter = new Intl.DateTimeFormat(LOCALE, {
   year: 'numeric',
 })
 
-const percentFormatter = new Intl.NumberFormat(LOCALE, {
+const PERCENT_OPTIONS = {
   style: 'percent',
   minimumFractionDigits: 1,
   maximumFractionDigits: 1,
+} as const
+
+const percentFormatter = new Intl.NumberFormat(LOCALE, PERCENT_OPTIONS)
+
+const signedPercentFormatter = new Intl.NumberFormat(LOCALE, {
+  ...PERCENT_OPTIONS,
+  signDisplay: 'exceptZero',
 })
 
 const quantityFormatter = new Intl.NumberFormat(LOCALE, { maximumFractionDigits: 6 })
@@ -71,6 +78,11 @@ export function formatProfit(value: string | number, currency = DEFAULT_CURRENCY
 /** Format a fraction as a percentage, so 0.0886 becomes "8.9%". */
 export function formatPercent(fraction: number): string {
   return percentFormatter.format(fraction)
+}
+
+/** Format a gain or loss as a percentage with its sign, such as "+8.9%" or "-2.4%". */
+export function formatSignedPercent(fraction: number): string {
+  return signedPercentFormatter.format(fraction)
 }
 
 /** Format a number of shares or units, for example "1,500" or "0.25". */
