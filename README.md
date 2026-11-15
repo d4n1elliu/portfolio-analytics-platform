@@ -10,20 +10,19 @@ A full-stack web app for tracking portfolio holdings, performance and sector exp
 
 ## Status
 
-Three features are in place:
+Four features are in place:
 
 - **Trades.** Trades can be imported from a CSV file and viewed in a table.
 - **Holdings.** The Holdings page shows the fund's current positions, calculated from those trades.
 - **Prices and valuation.** Daily closing prices are stored for each security and refreshed on weekdays. The Holdings page uses them to show what each position is worth, and the Dashboard page shows the portfolio's value, its unrealised profit, and three charts.
-
-Authentication is not built yet.
+- **Login and roles.** Every page needs a sign in, and each account has a role that decides what it can do.
 
 ## Tech stack
 
 | Layer    | Technology                                                    |
 | -------- | ------------------------------------------------------------- |
 | Frontend | React, TypeScript, Vite, Tailwind CSS v4, ECharts             |
-| Backend  | Python, FastAPI, uvicorn, python-dotenv, pytest, yfinance     |
+| Backend  | Python, FastAPI, uvicorn, python-dotenv, pytest, yfinance, argon2-cffi, PyJWT |
 | Database | PostgreSQL on Neon, SQLAlchemy 2, Alembic, psycopg 3          |
 | Hosting  | Docker, Caddy, GitHub Actions, GitHub Container Registry      |
 
@@ -48,7 +47,7 @@ portfolio-analytics-platform/
 │   ├── src/
 │   │   ├── api/              Typed calls to the backend such as holdings
 │   │   ├── components/       Shared components such as DataTable and Chart
-│   │   ├── hooks/            Shared hooks such as useApiQuery and useSortedRows
+│   │   ├── hooks/            Shared hooks such as useApiQuery and useSignInAttempt
 │   │   ├── lib/              Helpers such as formatting and chart colours
 │   │   ├── pages/            One component per screen such as DashboardPage
 │   │   ├── App.tsx           Root component and page routes
@@ -71,8 +70,8 @@ portfolio-analytics-platform/
 └── backend/
     ├── alembic/              Migration setup and the files in versions/
     ├── app/
-    │   ├── models/           Database tables such as Security and Trade
-    │   ├── routes/           HTTP endpoints such as holdings and portfolio
+    │   ├── models/           Database tables such as Security, Trade and User
+    │   ├── routes/           HTTP endpoints such as holdings and auth
     │   ├── schemas/          Shapes of the JSON the API returns
     │   ├── services/         Business logic such as positions and valuation
     │   ├── config.py         Reads settings from environment variables
@@ -80,7 +79,7 @@ portfolio-analytics-platform/
     │   └── main.py           FastAPI app, CORS and health endpoints
     ├── jobs/                 Price jobs that run outside the API
     ├── sample_data/          Example trade files and a year of closing prices
-    ├── scripts/              One-off scripts such as seed.py
+    ├── scripts/              One-off scripts such as seed.py and seed_users.py
     ├── tests/                pytest tests such as positions and valuation
     ├── .dockerignore
     ├── .env.example          Template for backend environment variables
@@ -97,13 +96,14 @@ A request flows through the backend in one direction: a route calls a service, a
 
 ## Data model
 
-Three tables hold everything the analytics will be built on.
+Three tables hold everything the analytics are built on, and a fourth holds the people who can sign in.
 
 | Table        | One row is                       | Key columns                                                        |
 | ------------ | -------------------------------- | ------------------------------------------------------------------ |
 | `securities` | An instrument the fund can hold  | `ticker` (unique), `name`, `sector`, `asset_class`, `currency`     |
 | `trades`     | One buy or sell of a security    | `security_id`, `trade_date`, `side`, `quantity`, `price`, `fees`   |
 | `prices`     | One day's closing price          | `security_id`, `price_date`, `close`                               |
+| `users`      | A person who can sign in         | `email` (unique), `name`, `password_hash`, `role`, `is_active`     |
 
 A security has many trades and many prices. The database enforces the basic rules itself: `side` must be `BUY` or `SELL`, quantities and prices must be greater than zero, fees cannot be negative, and a security can have only one closing price per day.
 
@@ -123,17 +123,48 @@ A security has many trades and many prices. The database enforces the basic rule
 | ------ | ---------------- | --------------------------------------------------------------- |
 | `GET`  | `/health`        | Confirms the API is running                                     |
 | `GET`  | `/health/db`     | Confirms the API can reach the database                         |
+| `POST` | `/auth/login`    | Signs in with an email and password                             |
+| `POST` | `/auth/logout`   | Signs out                                                       |
+| `GET`  | `/auth/me`       | Returns the signed-in user                                      |
 | `GET`  | `/holdings`      | Lists the current position in each security, ordered by ticker  |
 | `GET`  | `/portfolio/history` | Lists the value of the portfolio on each priced date, oldest first |
 | `GET`  | `/securities`    | Lists every security, ordered by ticker                         |
 | `GET`  | `/trades`        | Lists trades, newest first, with the ticker and security name   |
 | `POST` | `/trades/import` | Imports trades from a CSV file                                  |
 
+Every endpoint below `/auth/me` in the table needs a sign in and answers `401` without one. See [Login and roles](#login-and-roles).
+
 `GET /trades` takes `limit` (1 to 500, default 50) and `offset` (default 0), and returns `{"items": [...], "total": 30, "limit": 50, "offset": 0}`. Decimal values are returned as strings, such as `"45.250000"`, so no precision is lost.
 
 `GET /holdings` returns one item per security that has trades, with `ticker`, `security_name`, `sector`, `asset_class`, `currency`, `quantity`, `average_cost`, `cost_basis`, `realised_pnl` and `oversold_quantity`, plus the valuation fields described under [Prices and valuation](#prices-and-valuation). Positions that have been fully sold are left out unless `include_closed=true` is added.
 
 The interactive docs at http://localhost:8000/docs list every endpoint and let you try them.
+
+### Login and roles
+
+There is no sign-up. Accounts are created by a seed script, as they would be for staff of an internal tool.
+
+| Role              | Can view everything | Can import trades |
+| ----------------- | ------------------- | ----------------- |
+| Operations        | Yes                 | Yes               |
+| Portfolio Manager | Yes                 | No                |
+| Analyst           | Yes                 | No                |
+
+**How signing in works.** `POST /auth/login` checks the email and password and sets a session cookie that lasts 8 hours. The browser sends the cookie with every request, and page scripts cannot read it. A wrong password, an unknown email and an inactive account all get the same answer, so the response does not show which emails exist. After 10 failed attempts from one address, sign-ins from that address are refused for up to 15 minutes.
+
+**What the roles do.** The API answers `403` when a Portfolio Manager or Analyst tries to import trades, and the Trades page shows them a note in place of the import form.
+
+**Demo accounts.** The seed script creates one account per role:
+
+| Role              | Email                    |
+| ----------------- | ------------------------ |
+| Operations        | `operations@example.com` |
+| Portfolio Manager | `pm@example.com`         |
+| Analyst           | `analyst@example.com`    |
+
+The passwords are chosen when the script is run and are not stored in this repository. Only a hash of each is saved.
+
+**Left out on purpose:** sign-up, password reset, email verification and screens for managing accounts.
 
 ### Holdings and average cost
 
@@ -191,9 +222,11 @@ Each point counts the trades made up to that day and values them at that day's p
 `POST /trades/import` takes a multipart upload with the file in a field named `file`:
 
 ```bash
-curl -F "file=@sample_data/trades_sample.csv" http://localhost:8000/trades/import
+curl -b cookies.txt -F "file=@sample_data/trades_sample.csv" http://localhost:8000/trades/import
 # {"imported":30}
 ```
+
+Only the Operations role can import. `cookies.txt` holds the session from signing in as that account with `curl -c cookies.txt`.
 
 The first row of the file must be a header. Column order does not matter and extra columns are ignored.
 
@@ -245,6 +278,8 @@ Two example files are in `backend/sample_data/`: `trades_sample.csv` (30 valid t
 - **Prices are daily closing prices for ASX tickers only.** There are no intraday prices.
 - **Dividends are not counted.** Profit is the change in price only.
 - **Currencies are not converted.** The Dashboard shows a warning instead of totals if positions use more than one currency.
+- **Signing out does not cancel the session token.** The cookie is deleted, but a copied token would work until it expires.
+- **Failed sign-ins are counted in memory.** The count starts again when the API restarts.
 - **The stale price warning does not know public holidays.** It counts Monday to Friday as business days, so it can appear a day early after a long weekend.
 
 ## Local setup
@@ -319,6 +354,20 @@ Then load a year of closing prices for those securities. This needs no network a
 python -m jobs.seed_prices
 ```
 
+Last, create the three demo accounts. Choose a password of at least 12 characters for each and give them to the script as environment variables, for example by adding them to `backend/.env`:
+
+```
+DEMO_PASSWORD_OPERATIONS=...
+DEMO_PASSWORD_PORTFOLIO_MANAGER=...
+DEMO_PASSWORD_ANALYST=...
+```
+
+```bash
+python -m scripts.seed_users
+```
+
+An account that already exists is skipped and its password is left as it was.
+
 ### Refreshing prices
 
 To fetch the latest closing prices from Yahoo Finance:
@@ -357,7 +406,7 @@ cp .env.example .env
 npm run dev
 ```
 
-The app runs at http://localhost:5173 and has three pages. The backend must be running for any of them to load data.
+The app runs at http://localhost:5173. It opens on a sign in page and has three pages after that. The backend must be running.
 
 | Page      | What it shows |
 | --------- | ------------- |
@@ -372,10 +421,11 @@ Real `.env` files are git-ignored and must never be committed. The `.env.example
 | File                    | Variable              | Purpose                                              |
 | ----------------------- | --------------------- | ---------------------------------------------------- |
 | `backend/.env.example`  | `DATABASE_URL`        | Neon PostgreSQL connection string (required)         |
-| `backend/.env.example`  | `JWT_SECRET`          | Secret for signing auth tokens (not used yet)        |
+| `backend/.env.example`  | `JWT_SECRET`          | Secret for signing session tokens. Needed to sign in |
 | `backend/.env.example`  | `MARKET_DATA_API_KEY` | Market data provider API key (not used yet)          |
 | `backend/.env.example`  | `CORS_ORIGINS`        | Optional. Comma-separated addresses allowed to call the API. Defaults to `http://localhost:5173` |
 | `backend/.env.example`  | `MARKET_TIMEZONE`     | Optional. Time zone that decides "today" for trade dates. Defaults to `Australia/Sydney` |
+| `backend/.env.example`  | `SESSION_MINUTES`     | Optional. How long a sign in lasts. Defaults to 480  |
 | `backend/.env.example`  | `IMPORT_MAX_FILE_BYTES`, `IMPORT_MAX_ROWS` | Optional. CSV upload limits. Default to 1 MB and 5000 rows |
 | `backend/.env.example`  | `PRICE_REFRESH_OVERLAP_DAYS`, `PRICE_LOOKBACK_DAYS` | Optional. Price refresh settings. Default to 5 and 365 days |
 | `backend/.env.example`  | `DEFAULT_PAGE_SIZE`, `MAX_PAGE_SIZE` | Optional. Page sizes for list endpoints. Default to 50 and 500 |
@@ -439,3 +489,5 @@ To load the starting securities on a new database:
 ```bash
 docker compose -f docker-compose.prod.yml --env-file .env.prod run --rm backend python -m scripts.seed
 ```
+
+Create the demo accounts the same way, with `python -m scripts.seed_users` and the three `DEMO_PASSWORD_` variables set. `JWT_SECRET` must be set in `.env.prod`, or nobody can sign in.
