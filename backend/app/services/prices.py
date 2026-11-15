@@ -57,3 +57,24 @@ def save_closes(db: Session, security_id: int, closes: Sequence[DailyClose]) -> 
     )
     db.execute(statement)
     return len(closes)
+
+
+def insert_new_closes(db: Session, security_id: int, closes: Sequence[DailyClose]) -> int:
+    """Save the closes, leaving alone any day that already has a price.
+
+    Returns how many were added. The caller commits.
+    """
+    if not closes:
+        return 0
+    statement = (
+        insert(Price)
+        .values(
+            [
+                {"security_id": security_id, "price_date": close.price_date, "close": close.close}
+                for close in closes
+            ]
+        )
+        .on_conflict_do_nothing(index_elements=["security_id", "price_date"])
+        .returning(Price.id)
+    )
+    return len(db.execute(statement).scalars().all())
