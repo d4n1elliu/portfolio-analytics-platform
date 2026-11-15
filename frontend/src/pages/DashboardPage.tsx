@@ -12,7 +12,7 @@ import type { RankedBar } from '../components/RankedBarChart'
 import ValuationSummary from '../components/ValuationSummary'
 import { useApiQuery } from '../hooks/useApiQuery'
 import { formatCount, formatCurrency, formatPercent, formatProfit } from '../lib/format'
-import { MUTED_TEXT } from '../lib/styles'
+import { MUTED_TEXT, TEXT_LINK } from '../lib/styles'
 import {
   latestPriceDate,
   pricesAsAt,
@@ -49,7 +49,7 @@ function Valuation({ openHoldings }: { openHoldings: Holding[] }) {
     return (
       <p className={MUTED_TEXT}>
         No priced positions yet.{' '}
-        <Link to={ROUTES.trades} className="font-medium text-slate-900 underline">
+        <Link to={ROUTES.trades} className={TEXT_LINK}>
           Import trades
         </Link>{' '}
         to get started.

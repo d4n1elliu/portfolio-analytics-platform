@@ -22,7 +22,9 @@ export class ApiError extends Error {
 export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response
   try {
-    response = await fetch(`${API_URL}${path}`, init)
+    // Sends the session cookie, which the browser leaves out by default when
+    // the API is on a different address, as it is in development.
+    response = await fetch(`${API_URL}${path}`, { credentials: 'include', ...init })
   } catch (error) {
     if (isAbortError(error)) throw error
     throw new ApiError('Could not reach the API. Check that the backend is running.', 0)
@@ -34,6 +36,14 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
     throw new ApiError(errorMessage(body, response.status), response.status, body)
   }
   return body as T
+}
+
+export function postJson<T>(path: string, body?: unknown): Promise<T> {
+  return request<T>(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body ?? {}),
+  })
 }
 
 /** Upload one file as a form field named "file". */
