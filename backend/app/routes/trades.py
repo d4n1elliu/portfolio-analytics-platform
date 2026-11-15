@@ -4,14 +4,21 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.routes.dependencies import PageParams, page_params, read_csv_upload
+from app.routes.dependencies import (
+    PageParams,
+    get_current_user,
+    page_params,
+    read_csv_upload,
+)
 from app.routes.errors import IMPORT_ERROR_RESPONSES
 from app.schemas.common import ImportResult, Page
 from app.schemas.trade import TradeRead
 from app.services import trades as trades_service
 from app.services.trade_import import import_trades_csv
 
-router = APIRouter(prefix="/trades", tags=["trades"])
+router = APIRouter(
+    prefix="/trades", tags=["trades"], dependencies=[Depends(get_current_user)]
+)
 
 
 @router.get("", response_model=Page[TradeRead])

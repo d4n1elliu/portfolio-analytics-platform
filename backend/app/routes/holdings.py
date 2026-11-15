@@ -4,10 +4,13 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.routes.dependencies import get_current_user
 from app.schemas.holding import HoldingRead
 from app.services import holdings as holdings_service
 
-router = APIRouter(prefix="/holdings", tags=["holdings"])
+router = APIRouter(
+    prefix="/holdings", tags=["holdings"], dependencies=[Depends(get_current_user)]
+)
 
 
 @router.get("", response_model=list[HoldingRead])

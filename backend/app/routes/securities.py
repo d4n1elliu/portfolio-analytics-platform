@@ -4,10 +4,13 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.routes.dependencies import get_current_user
 from app.schemas.security import SecurityRead
 from app.services import securities as securities_service
 
-router = APIRouter(prefix="/securities", tags=["securities"])
+router = APIRouter(
+    prefix="/securities", tags=["securities"], dependencies=[Depends(get_current_user)]
+)
 
 
 @router.get("", response_model=list[SecurityRead])

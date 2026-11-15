@@ -209,13 +209,3 @@ def test_sign_out_clears_the_session(client_with_users):
 
 def test_sign_out_works_when_not_signed_in(client_with_users):
     assert client_with_users(make_user()).post("/auth/logout").status_code == 204
-
-
-# --- Existing endpoints ---
-
-
-def test_nothing_else_needs_a_sign_in_yet(client_with_users):
-    client = client_with_users(make_user())
-
-    assert client.get("/health").status_code == 200
-    assert client.get("/holdings").status_code == 200
