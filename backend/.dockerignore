@@ -12,6 +12,10 @@ __pycache__/
 .ruff_cache/
 .DS_Store
 
+# Jobs run outside the API and need packages the image does not have.
+jobs/
+requirements-jobs.txt
+
 # Development only
 tests/
 sample_data/
