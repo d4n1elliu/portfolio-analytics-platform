@@ -50,6 +50,7 @@ function LoginPage() {
               value={email}
               autoComplete="username"
               onChange={setEmail}
+              autoFocus
             />
             <PasswordField
               label="Password"

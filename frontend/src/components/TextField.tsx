@@ -12,10 +12,13 @@ export interface TextFieldProps {
   onChange: (value: string) => void
   /** A small control shown inside the right end of the box, such as a button. */
   trailing?: ReactNode
+  /** Puts the cursor in this box when the page opens. */
+  autoFocus?: boolean
 }
 
 /** A labelled text box that must be filled in. */
-function TextField({ label, type, value, autoComplete, onChange, trailing }: TextFieldProps) {
+function TextField(props: TextFieldProps) {
+  const { label, type, value, autoComplete, onChange, trailing, autoFocus } = props
   const id = useId()
 
   return (
@@ -29,6 +32,7 @@ function TextField({ label, type, value, autoComplete, onChange, trailing }: Tex
           type={type}
           value={value}
           autoComplete={autoComplete}
+          autoFocus={autoFocus}
           required
           onChange={(event) => onChange(event.target.value)}
           className={`${TEXT_INPUT} ${FOCUS_OUTLINE} ${trailing ? 'pr-10' : ''}`}
