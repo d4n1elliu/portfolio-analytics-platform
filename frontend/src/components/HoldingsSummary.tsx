@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react'
+
 import type { Holding } from '../api/types'
 import { NO_VALUE, formatCurrency } from '../lib/format'
 import { summariseHoldings } from '../lib/holdings'
@@ -20,29 +22,34 @@ function HoldingsSummary({ holdings }: { holdings: Holding[] }) {
         { label: 'Positions', value: summary.positions },
         {
           label: 'Total cost basis',
-          value: currency ? formatCurrency(summary.costBasis, currency) : NO_VALUE,
+          value: total(currency, (currency) => formatCurrency(summary.costBasis, currency)),
         },
         {
           label: 'Market value',
-          value: valuationCurrency
-            ? formatCurrency(valuation.marketValue, valuationCurrency)
-            : NO_VALUE,
-        },
-        {
-          label: 'Unrealised P&L',
-          value: valuationCurrency ? (
-            <Profit amount={valuation.unrealisedPnl} currency={valuationCurrency} />
-          ) : (
-            NO_VALUE
+          value: total(valuationCurrency, (currency) =>
+            formatCurrency(valuation.marketValue, currency),
           ),
         },
         {
+          label: 'Unrealised P&L',
+          value: total(valuationCurrency, (currency) => (
+            <Profit amount={valuation.unrealisedPnl} currency={currency} />
+          )),
+        },
+        {
           label: 'Realised P&L',
-          value: currency ? <Profit amount={summary.realisedPnl} currency={currency} /> : NO_VALUE,
+          value: total(currency, (currency) => (
+            <Profit amount={summary.realisedPnl} currency={currency} />
+          )),
         },
       ]}
     />
   )
+}
+
+/** A total, or a dash when there is no currency to show it in. */
+function total(currency: string | null, show: (currency: string) => ReactNode): ReactNode {
+  return currency === null ? NO_VALUE : show(currency)
 }
 
 export default HoldingsSummary
