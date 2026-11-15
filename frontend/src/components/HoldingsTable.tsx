@@ -5,6 +5,7 @@ import DataTable from './DataTable'
 import type { Column } from './DataTable'
 
 const UNIT_COST_DECIMALS = 4
+const NO_VALUE = '—'
 
 const COLUMNS: Column<Holding>[] = [
   {
@@ -37,14 +38,28 @@ const COLUMNS: Column<Holding>[] = [
     header: 'Avg cost',
     align: 'right',
     render: (holding) =>
-      holding.average_cost === null ? '—' : formatUnitCost(holding.average_cost, holding.currency),
-    sortValue: (holding) => (holding.average_cost === null ? null : Number(holding.average_cost)),
+      orDash(holding.average_cost, (cost) => formatUnitCost(cost, holding.currency)),
+    sortValue: (holding) => numberOrNull(holding.average_cost),
+  },
+  {
+    header: 'Last price',
+    align: 'right',
+    render: (holding) =>
+      orDash(holding.last_price, (price) => formatCurrency(price, holding.currency)),
+    sortValue: (holding) => numberOrNull(holding.last_price),
   },
   {
     header: 'Cost basis',
     align: 'right',
     render: (holding) => formatCurrency(holding.cost_basis, holding.currency),
     sortValue: (holding) => Number(holding.cost_basis),
+  },
+  {
+    header: 'Market value',
+    align: 'right',
+    render: (holding) =>
+      orDash(holding.market_value, (value) => formatCurrency(value, holding.currency)),
+    sortValue: (holding) => numberOrNull(holding.market_value),
   },
   {
     header: 'Realised P&L',
@@ -57,6 +72,16 @@ const COLUMNS: Column<Holding>[] = [
     sortValue: (holding) => Number(holding.realised_pnl),
   },
 ]
+
+/** Shows a dash for a missing value, such as the price of a closed position. */
+function orDash(value: string | null, format: (value: string) => string): string {
+  return value === null ? NO_VALUE : format(value)
+}
+
+/** The value to sort by. A missing value stays null, so its row is listed last. */
+function numberOrNull(value: string | null): number | null {
+  return value === null ? null : Number(value)
+}
 
 /** Shows the same number of decimals on every row. */
 function formatUnitCost(value: string, currency: string): string {
