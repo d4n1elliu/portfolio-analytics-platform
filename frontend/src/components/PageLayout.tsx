@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { useLocation } from 'react-router'
 
 import { APP_NAME, APP_TAGLINE } from '../config'
+import AccountStatus from './AccountStatus'
 import NavBar from './NavBar'
 
 /** The header and the page content share one width, so they line up. */
@@ -26,7 +27,10 @@ function PageLayout({ title, children }: PageLayoutProps) {
             <p className="font-semibold">{APP_NAME}</p>
             <p className="text-xs text-slate-500">{APP_TAGLINE}</p>
           </div>
-          <NavBar />
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+            <NavBar />
+            <AccountStatus />
+          </div>
         </div>
       </header>
       {/* The key replays the fade-in on each new page. */}
