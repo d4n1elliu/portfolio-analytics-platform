@@ -5,8 +5,9 @@ import type { User } from '../api/types'
 export type AuthState =
   // 'loading' while the app asks the API whether somebody is signed in.
   | { status: 'loading' }
-  // 'expired' is true when the session ended while the user was signed in.
-  | { status: 'signedOut'; expired?: boolean }
+  // 'reason' says how a signed-in user came to be signed out. A visitor who
+  // was never signed in has none.
+  | { status: 'signedOut'; reason?: 'expired' | 'choseTo' }
   | { status: 'signedIn'; user: User }
 
 export interface Auth {

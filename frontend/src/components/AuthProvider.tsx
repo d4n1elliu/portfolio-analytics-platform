@@ -26,7 +26,7 @@ function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
-    setSessionExpiredHandler(() => setState({ status: 'signedOut', expired: true }))
+    setSessionExpiredHandler(() => setState({ status: 'signedOut', reason: 'expired' }))
     return () => setSessionExpiredHandler(null)
   }, [])
 
@@ -37,7 +37,7 @@ function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     await logout()
-    setState(SIGNED_OUT)
+    setState({ status: 'signedOut', reason: 'choseTo' })
   }, [])
 
   const auth = useMemo(() => ({ state, signIn, signOut }), [state, signIn, signOut])

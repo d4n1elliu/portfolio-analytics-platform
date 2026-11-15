@@ -9,11 +9,13 @@ function RequireAuth() {
   const { state } = useAuth()
   const { pathname } = useLocation()
 
-  if (state.status === 'signedOut') {
-    const returnTo: LoginState = { from: pathname }
-    return <Navigate to={ROUTES.login} replace state={returnTo} />
-  }
-  return <Outlet />
+  if (state.status === 'signedIn') return <Outlet />
+
+  // A user who chose to sign out is not trying to open this page, so the
+  // login page is told nothing about it.
+  const choseToSignOut = state.status === 'signedOut' && state.reason === 'choseTo'
+  const returnTo: LoginState | undefined = choseToSignOut ? undefined : { from: pathname }
+  return <Navigate to={ROUTES.login} replace state={returnTo} />
 }
 
 export default RequireAuth

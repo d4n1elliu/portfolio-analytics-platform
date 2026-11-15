@@ -19,7 +19,7 @@ function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const cameFrom = returnPage(useLocation().state)
-  const expired = state.status === 'signedOut' && state.expired
+  const expired = state.status === 'signedOut' && state.reason === 'expired'
 
   // A successful sign in changes the state, which sends the user on from here,
   // back to the page they first asked for.
