@@ -6,10 +6,6 @@ on:
     # 08:00 UTC is 6pm in Sydney, or 7pm during daylight saving. The ASX closes at 4pm.
     - cron: "0 8 * * 1-5"
   workflow_dispatch:
-  # TEMPORARY, remove before merging: lets the workflow run from this pull request.
-  pull_request:
-    paths:
-      - .github/workflows/refresh-prices.yml
 
 # One refresh at a time. A newer one waits instead of cutting this one off.
 concurrency:
