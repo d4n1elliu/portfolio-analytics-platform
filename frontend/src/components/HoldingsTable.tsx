@@ -34,33 +34,10 @@ const COLUMNS: Column<Holding>[] = [
     render: (holding) => formatQuantity(holding.quantity),
     sortValue: (holding) => Number(holding.quantity),
   },
-  {
-    header: 'Avg cost',
-    align: 'right',
-    render: (holding) =>
-      orDash(holding.average_cost, (cost) => formatUnitCost(cost, holding.currency)),
-    sortValue: (holding) => numberOrNull(holding.average_cost),
-  },
-  {
-    header: 'Last price',
-    align: 'right',
-    render: (holding) =>
-      orDash(holding.last_price, (price) => formatCurrency(price, holding.currency)),
-    sortValue: (holding) => numberOrNull(holding.last_price),
-  },
-  {
-    header: 'Cost basis',
-    align: 'right',
-    render: (holding) => formatCurrency(holding.cost_basis, holding.currency),
-    sortValue: (holding) => Number(holding.cost_basis),
-  },
-  {
-    header: 'Market value',
-    align: 'right',
-    render: (holding) =>
-      orDash(holding.market_value, (value) => formatCurrency(value, holding.currency)),
-    sortValue: (holding) => numberOrNull(holding.market_value),
-  },
+  moneyColumn('Avg cost', (holding) => holding.average_cost, formatUnitCost),
+  moneyColumn('Last price', (holding) => holding.last_price),
+  moneyColumn('Cost basis', (holding) => holding.cost_basis),
+  moneyColumn('Market value', (holding) => holding.market_value),
   {
     header: 'Realised P&L',
     align: 'right',
@@ -73,14 +50,24 @@ const COLUMNS: Column<Holding>[] = [
   },
 ]
 
-/** Shows a dash for a missing value, such as the price of a closed position. */
-function orDash(value: string | null, format: (value: string) => string): string {
-  return value === null ? NO_VALUE : format(value)
-}
-
-/** The value to sort by. A missing value stays null, so its row is listed last. */
-function numberOrNull(value: string | null): number | null {
-  return value === null ? null : Number(value)
+/** A sortable money column. A missing amount shows a dash and is sorted last. */
+function moneyColumn(
+  header: string,
+  amountOf: (holding: Holding) => string | null,
+  format: (amount: string, currency: string) => string = formatCurrency,
+): Column<Holding> {
+  return {
+    header,
+    align: 'right',
+    render: (holding) => {
+      const amount = amountOf(holding)
+      return amount === null ? NO_VALUE : format(amount, holding.currency)
+    },
+    sortValue: (holding) => {
+      const amount = amountOf(holding)
+      return amount === null ? null : Number(amount)
+    },
+  }
 }
 
 /** Shows the same number of decimals on every row. */
