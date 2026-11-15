@@ -3,30 +3,20 @@ import { useState } from 'react'
 import { COLOUR_TRANSITION, FOCUS_OUTLINE } from '../lib/styles'
 import EyeIcon from './EyeIcon'
 import TextField from './TextField'
+import type { TextFieldProps } from './TextField'
 
 const EYE_BUTTON =
   `mr-1.5 rounded-md p-1.5 text-slate-400 hover:text-slate-700 ` +
   `${COLOUR_TRANSITION} ${FOCUS_OUTLINE}`
 
-interface PasswordFieldProps {
-  label: string
-  value: string
-  /** Tells the browser and password managers what the box holds. */
-  autoComplete: string
-  onChange: (value: string) => void
-}
-
 /** A password box with an eye button that shows or hides what was typed. */
-function PasswordField({ label, value, autoComplete, onChange }: PasswordFieldProps) {
+function PasswordField(props: Omit<TextFieldProps, 'type' | 'trailing'>) {
   const [visible, setVisible] = useState(false)
 
   return (
     <TextField
-      label={label}
+      {...props}
       type={visible ? 'text' : 'password'}
-      value={value}
-      autoComplete={autoComplete}
-      onChange={onChange}
       trailing={
         <button
           // Not a submit button, so clicking it does not send the form.

@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 
 import { FOCUS_OUTLINE, TEXT_INPUT } from '../lib/styles'
 
-interface TextFieldProps {
+export interface TextFieldProps {
   label: string
   type: 'email' | 'password' | 'text'
   value: string
