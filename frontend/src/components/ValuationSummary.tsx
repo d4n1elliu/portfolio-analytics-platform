@@ -1,6 +1,7 @@
-import { NO_VALUE, formatCurrency, formatPercent, formatProfit } from '../lib/format'
+import { NO_VALUE, formatCurrency, formatPercent } from '../lib/format'
 import { profitColour } from '../lib/profit'
 import type { ValuationSummary as Summary } from '../lib/valuation'
+import Profit from './Profit'
 import StatTiles from './StatTiles'
 
 function ValuationSummary({ summary, currency }: { summary: Summary; currency: string }) {
@@ -12,7 +13,7 @@ function ValuationSummary({ summary, currency }: { summary: Summary; currency: s
         { label: 'Market value', value: formatCurrency(summary.marketValue, currency) },
         {
           label: 'Unrealised P&L',
-          value: <span className={colour}>{formatProfit(summary.unrealisedPnl, currency)}</span>,
+          value: <Profit amount={summary.unrealisedPnl} currency={currency} />,
         },
         {
           label: 'Unrealised return',

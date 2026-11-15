@@ -1,17 +1,10 @@
 import type { ReactNode } from 'react'
 
 import type { Holding } from '../api/types'
-import {
-  NO_VALUE,
-  formatCurrency,
-  formatPercent,
-  formatProfit,
-  formatQuantity,
-  formatSignedPercent,
-} from '../lib/format'
-import { profitColour } from '../lib/profit'
+import { NO_VALUE, formatCurrency, formatPercent, formatQuantity } from '../lib/format'
 import DataTable from './DataTable'
 import type { Column } from './DataTable'
+import Profit from './Profit'
 
 const UNIT_COST_DECIMALS = 4
 
@@ -90,25 +83,6 @@ function TwoLines({ main, detail, bold = false }: TwoLinesProps) {
     <div className="min-w-32">
       <div className={bold ? 'font-medium' : ''}>{main}</div>
       <div className="text-xs text-slate-500">{detail}</div>
-    </div>
-  )
-}
-
-interface ProfitProps {
-  amount: string
-  currency: string
-  /** A fraction, shown as a percentage under the amount. */
-  returnOnCost?: string | null
-}
-
-/** A gain in green or a loss in red, with a plus or minus sign. */
-function Profit({ amount, currency, returnOnCost = null }: ProfitProps) {
-  return (
-    <div className={profitColour(amount)}>
-      <div>{formatProfit(amount, currency)}</div>
-      {returnOnCost !== null && (
-        <div className="text-xs">{formatSignedPercent(Number(returnOnCost))}</div>
-      )}
     </div>
   )
 }

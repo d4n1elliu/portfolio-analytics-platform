@@ -1,7 +1,7 @@
 import type { Holding } from '../api/types'
-import { NO_VALUE, formatCurrency, formatProfit } from '../lib/format'
+import { NO_VALUE, formatCurrency } from '../lib/format'
 import { summariseHoldings } from '../lib/holdings'
-import { profitColour } from '../lib/profit'
+import Profit from './Profit'
 import StatTiles from './StatTiles'
 
 function HoldingsSummary({ holdings }: { holdings: Holding[] }) {
@@ -19,13 +19,7 @@ function HoldingsSummary({ holdings }: { holdings: Holding[] }) {
         },
         {
           label: 'Realised P&L',
-          value: currency ? (
-            <span className={profitColour(summary.realisedPnl)}>
-              {formatProfit(summary.realisedPnl, currency)}
-            </span>
-          ) : (
-            NO_VALUE
-          ),
+          value: currency ? <Profit amount={summary.realisedPnl} currency={currency} /> : NO_VALUE,
         },
       ]}
     />
