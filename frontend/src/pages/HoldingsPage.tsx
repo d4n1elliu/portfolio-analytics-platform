@@ -2,12 +2,12 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 
 import { listHoldings } from '../api/holdings'
-import Alert from '../components/Alert'
 import Button from '../components/Button'
 import Card from '../components/Card'
 import HoldingsFilters from '../components/HoldingsFilters'
 import HoldingsSummary from '../components/HoldingsSummary'
 import HoldingsTable from '../components/HoldingsTable'
+import LoadError from '../components/LoadError'
 import OversoldWarning from '../components/OversoldWarning'
 import PageLayout from '../components/PageLayout'
 import { useApiQuery } from '../hooks/useApiQuery'
@@ -64,12 +64,7 @@ function HoldingsPage() {
         )}
 
         {state.status === 'error' && (
-          <div className="space-y-3 px-6 pb-6">
-            <Alert variant="error">{state.message}</Alert>
-            <Button variant="secondary" onClick={reload}>
-              Try again
-            </Button>
-          </div>
+          <LoadError message={state.message} onRetry={reload} className="px-6 pb-6" />
         )}
 
         {holdings && holdings.length === 0 && (

@@ -2,10 +2,9 @@ import { useCallback, useState } from 'react'
 
 import { listSecurities } from '../api/securities'
 import { TRADE_CSV_COLUMNS, importTrades, listTrades } from '../api/trades'
-import Alert from '../components/Alert'
-import Button from '../components/Button'
 import Card from '../components/Card'
 import CsvImportForm from '../components/CsvImportForm'
+import LoadError from '../components/LoadError'
 import PageLayout from '../components/PageLayout'
 import Pagination from '../components/Pagination'
 import TradeTable from '../components/TradeTable'
@@ -69,12 +68,7 @@ function TradesPage() {
         )}
 
         {trades.status === 'error' && (
-          <div className="space-y-3 px-6 pb-6">
-            <Alert variant="error">{trades.message}</Alert>
-            <Button variant="secondary" onClick={reloadTrades}>
-              Try again
-            </Button>
-          </div>
+          <LoadError message={trades.message} onRetry={reloadTrades} className="px-6 pb-6" />
         )}
 
         {page && page.total === 0 && (

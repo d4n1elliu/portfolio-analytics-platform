@@ -2,10 +2,16 @@
 
 import { BarChart, LineChart, PieChart } from 'echarts/charts'
 import type { BarSeriesOption, LineSeriesOption, PieSeriesOption } from 'echarts/charts'
-import { GridComponent, LegendComponent, TooltipComponent } from 'echarts/components'
+import {
+  GridComponent,
+  LegendComponent,
+  MarkLineComponent,
+  TooltipComponent,
+} from 'echarts/components'
 import type {
   GridComponentOption,
   LegendComponentOption,
+  MarkLineComponentOption,
   TooltipComponentOption,
 } from 'echarts/components'
 import { init, use as register } from 'echarts/core'
@@ -18,6 +24,7 @@ register([
   PieChart,
   GridComponent,
   LegendComponent,
+  MarkLineComponent,
   TooltipComponent,
   CanvasRenderer,
 ])
@@ -29,6 +36,7 @@ export type ChartOption = ComposeOption<
   | PieSeriesOption
   | GridComponentOption
   | LegendComponentOption
+  | MarkLineComponentOption
   | TooltipComponentOption
 >
 

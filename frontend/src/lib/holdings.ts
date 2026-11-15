@@ -63,13 +63,18 @@ export function assetClassesOf(holdings: Holding[]): string[] {
 }
 
 export function summariseHoldings(holdings: Holding[]): HoldingsSummary {
-  const currencies = new Set(holdings.map((holding) => holding.currency))
   return {
     positions: holdings.length,
     costBasis: sumMoney(holdings.map((holding) => holding.cost_basis)),
     realisedPnl: sumMoney(holdings.map((holding) => holding.realised_pnl)),
-    currency: currencies.size === 1 ? [...currencies][0] : null,
+    currency: commonCurrency(holdings),
   }
+}
+
+/** The currency the holdings share, or null if they use more than one. */
+export function commonCurrency(holdings: Holding[]): string | null {
+  const currencies = new Set(holdings.map((holding) => holding.currency))
+  return currencies.size === 1 ? [...currencies][0] : null
 }
 
 function uniqueSorted(values: string[]): string[] {
@@ -77,7 +82,7 @@ function uniqueSorted(values: string[]): string[] {
 }
 
 /** Add amounts in whole cents to avoid rounding errors. */
-function sumMoney(amounts: string[]): number {
+export function sumMoney(amounts: string[]): number {
   const cents = amounts.reduce((total, amount) => total + Math.round(Number(amount) * 100), 0)
   return cents / 100
 }
