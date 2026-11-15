@@ -18,7 +18,7 @@ function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
-  // Also where a successful sign in leads, because it changes the state.
+  // A successful sign in changes the state, which sends the user on from here.
   if (state.status === 'signedIn') return <Navigate to={ROUTES.holdings} replace />
 
   async function handleSubmit(event: FormEvent) {

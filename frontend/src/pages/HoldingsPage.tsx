@@ -23,7 +23,7 @@ import {
   sectorsOf,
   selectByStatus,
 } from '../lib/holdings'
-import { MUTED_TEXT } from '../lib/styles'
+import { MUTED_TEXT, TEXT_LINK } from '../lib/styles'
 import { latestPriceDate, pricesAsAt } from '../lib/valuation'
 import { ROUTES } from '../routes'
 
@@ -75,7 +75,7 @@ function HoldingsPage() {
         {holdings && holdings.length === 0 && (
           <p className={`px-6 pb-6 ${MUTED_TEXT}`}>
             No positions yet.{' '}
-            <Link to={ROUTES.trades} className="font-medium text-slate-900 underline">
+            <Link to={ROUTES.trades} className={TEXT_LINK}>
               Import trades
             </Link>{' '}
             to get started.

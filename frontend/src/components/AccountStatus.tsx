@@ -2,6 +2,7 @@ import { Link } from 'react-router'
 
 import { useAuth } from '../lib/auth'
 import { ROLE_LABELS } from '../lib/roles'
+import { TEXT_LINK } from '../lib/styles'
 import { ROUTES } from '../routes'
 import Button from './Button'
 
@@ -13,7 +14,7 @@ function AccountStatus() {
 
   if (state.status === 'signedOut') {
     return (
-      <Link to={ROUTES.login} className="text-sm font-medium text-slate-900 underline">
+      <Link to={ROUTES.login} className={`text-sm ${TEXT_LINK}`}>
         Sign in
       </Link>
     )
