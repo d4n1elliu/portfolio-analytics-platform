@@ -1,10 +1,18 @@
 """Response shapes shared by more than one endpoint."""
 
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Generic, TypeVar
 
 from pydantic import BaseModel
 
 T = TypeVar("T")
+
+CENTS = Decimal("0.01")
+
+
+def round_decimal(value: Decimal, places: Decimal) -> Decimal:
+    """Round half up to the given places, such as CENTS."""
+    return value.quantize(places, rounding=ROUND_HALF_UP)
 
 
 class Page(BaseModel, Generic[T]):

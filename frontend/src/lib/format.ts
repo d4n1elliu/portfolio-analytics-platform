@@ -8,6 +8,12 @@ const dateFormatter = new Intl.DateTimeFormat(LOCALE, {
   year: 'numeric',
 })
 
+const percentFormatter = new Intl.NumberFormat(LOCALE, {
+  style: 'percent',
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 1,
+})
+
 const quantityFormatter = new Intl.NumberFormat(LOCALE, { maximumFractionDigits: 6 })
 
 /** Format a date-only value such as "2026-03-16" as "16 Mar 2026". */
@@ -37,6 +43,15 @@ export function formatCurrency(
   }).format(amount)
 }
 
+/** Format money in short form for a chart axis, such as "$150K". */
+export function formatCompactCurrency(value: number, currency = DEFAULT_CURRENCY): string {
+  return new Intl.NumberFormat(LOCALE, {
+    style: 'currency',
+    currency,
+    notation: 'compact',
+  }).format(value)
+}
+
 /** Format a profit or loss with its sign, such as "+$812.59" or "-$120.00". */
 export function formatProfit(value: string | number, currency = DEFAULT_CURRENCY): string {
   const amount = Number(value)
@@ -46,6 +61,11 @@ export function formatProfit(value: string | number, currency = DEFAULT_CURRENCY
     currency,
     signDisplay: 'exceptZero',
   }).format(amount)
+}
+
+/** Format a fraction as a percentage, so 0.0886 becomes "8.9%". */
+export function formatPercent(fraction: number): string {
+  return percentFormatter.format(fraction)
 }
 
 /** Format a number of shares or units, for example "1,500" or "0.25". */

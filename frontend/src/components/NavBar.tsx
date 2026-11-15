@@ -4,6 +4,7 @@ import { COLOUR_TRANSITION } from '../lib/styles'
 import { ROUTES } from '../routes'
 
 const LINKS = [
+  { to: ROUTES.dashboard, label: 'Dashboard' },
   { to: ROUTES.holdings, label: 'Holdings' },
   { to: ROUTES.trades, label: 'Trades' },
 ]

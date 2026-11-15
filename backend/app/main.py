@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 
 from app.config import CORS_ORIGINS
 from app.database import get_db
-from app.routes import holdings, securities, trades
+from app.routes import holdings, portfolio, securities, trades
 from app.routes.errors import register_error_handlers
 
 logger = logging.getLogger(__name__)
@@ -35,6 +35,7 @@ register_error_handlers(app)
 
 # Each router holds the endpoints for one area of the API.
 app.include_router(holdings.router)
+app.include_router(portfolio.router)
 app.include_router(securities.router)
 app.include_router(trades.router)
 

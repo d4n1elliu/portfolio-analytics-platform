@@ -13,6 +13,8 @@ ignore = [
 [lint.isort]
 # alembic is an installed package, not the local alembic/ folder.
 known-third-party = ["alembic"]
+# tests/factories.py is imported by the tests as "factories".
+known-first-party = ["factories"]
 
 [lint.flake8-bugbear]
 # FastAPI routes use Depends(...) as a default argument.

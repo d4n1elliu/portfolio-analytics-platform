@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
 
+import DashboardPage from './pages/DashboardPage'
 import HoldingsPage from './pages/HoldingsPage'
 import TradesPage from './pages/TradesPage'
 import { ROUTES } from './routes'
@@ -8,6 +9,7 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path={ROUTES.dashboard} element={<DashboardPage />} />
         <Route path={ROUTES.holdings} element={<HoldingsPage />} />
         <Route path={ROUTES.trades} element={<TradesPage />} />
         {/* Any other address, including the home page, goes to Holdings. */}

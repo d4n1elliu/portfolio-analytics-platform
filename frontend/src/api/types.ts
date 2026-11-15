@@ -44,6 +44,25 @@ export interface Holding {
   realised_pnl: string
   /** Units sold that were never held. */
   oversold_quantity: string
+  // The fields below are null when the position is closed or has no stored price.
+  last_price: string | null
+  /** Date only, as "YYYY-MM-DD". */
+  price_date: string | null
+  market_value: string | null
+  unrealised_pnl: string | null
+  /** A fraction, such as "0.088552" for 8.86%. */
+  unrealised_return: string | null
+  /** Share of the total market value, as a fraction. */
+  weight: string | null
+}
+
+/** The value of the open positions at the end of one date. */
+export interface PortfolioHistoryPoint {
+  /** Date only, as "YYYY-MM-DD". */
+  date: string
+  market_value: string
+  cost_basis: string
+  unrealised_pnl: string
 }
 
 export type TradeSide = 'BUY' | 'SELL'

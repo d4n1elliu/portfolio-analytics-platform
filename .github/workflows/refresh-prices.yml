@@ -1,0 +1,38 @@
+name: Refresh prices
+
+# Runs on weekdays after the ASX has closed, or when started by hand.
+on:
+  schedule:
+    # 08:00 UTC is 6pm in Sydney, or 7pm during daylight saving. The ASX closes at 4pm.
+    - cron: "0 8 * * 1-5"
+  workflow_dispatch:
+
+# One refresh at a time. A newer one waits instead of cutting this one off.
+concurrency:
+  group: refresh-prices
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  refresh:
+    name: Refresh prices
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version-file: .python-version
+          cache: pip
+          cache-dependency-path: backend/requirements-jobs.txt
+      - run: pip install -r requirements-jobs.txt
+      # Fails only when no security could be refreshed.
+      - name: Fetch and store the latest closing prices
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python -m jobs.refresh_prices
