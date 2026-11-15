@@ -13,7 +13,6 @@ export const CHART_COLOURS = {
   gridLine: '#e2e8f0',
 }
 
-/** The space in pixels between a chart and the edge of its container. */
 export const CHART_EDGE_PADDING = 8
 
 export const CHART_TEXT_STYLE = {

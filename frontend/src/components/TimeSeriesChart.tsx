@@ -24,7 +24,6 @@ interface TimeSeriesChartProps {
   formatAxisValue: (value: number) => string
 }
 
-/** A line chart over time. The tooltip shows every line's value on one date. */
 function TimeSeriesChart(props: TimeSeriesChartProps) {
   const { dates, lines, label, formatValue, formatAxisValue } = props
   const option = useMemo(

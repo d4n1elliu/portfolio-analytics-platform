@@ -10,7 +10,6 @@ import Card from './Card'
 import LoadError from './LoadError'
 import TimeSeriesChart from './TimeSeriesChart'
 
-/** A card that charts the market value of the portfolio against its cost. */
 function PortfolioHistory({ currency }: { currency: string }) {
   const { state, reload } = useApiQuery(listPortfolioHistory)
   const points = state.status === 'loaded' ? state.data : []

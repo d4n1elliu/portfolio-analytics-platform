@@ -22,23 +22,23 @@ function HoldingsSummary({ holdings }: { holdings: Holding[] }) {
         { label: 'Positions', value: summary.positions },
         {
           label: 'Total cost basis',
-          value: total(currency, (currency) => formatCurrency(summary.costBasis, currency)),
+          value: totalOrDash(currency, (currency) => formatCurrency(summary.costBasis, currency)),
         },
         {
           label: 'Market value',
-          value: total(valuationCurrency, (currency) =>
+          value: totalOrDash(valuationCurrency, (currency) =>
             formatCurrency(valuation.marketValue, currency),
           ),
         },
         {
           label: 'Unrealised P&L',
-          value: total(valuationCurrency, (currency) => (
+          value: totalOrDash(valuationCurrency, (currency) => (
             <Profit amount={valuation.unrealisedPnl} currency={currency} />
           )),
         },
         {
           label: 'Realised P&L',
-          value: total(currency, (currency) => (
+          value: totalOrDash(currency, (currency) => (
             <Profit amount={summary.realisedPnl} currency={currency} />
           )),
         },
@@ -47,8 +47,7 @@ function HoldingsSummary({ holdings }: { holdings: Holding[] }) {
   )
 }
 
-/** A total, or a dash when there is no currency to show it in. */
-function total(currency: string | null, show: (currency: string) => ReactNode): ReactNode {
+function totalOrDash(currency: string | null, show: (currency: string) => ReactNode): ReactNode {
   return currency === null ? NO_VALUE : show(currency)
 }
 

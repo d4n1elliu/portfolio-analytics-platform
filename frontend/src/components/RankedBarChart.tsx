@@ -26,7 +26,6 @@ interface RankedBarChartProps {
   label: string
 }
 
-/** Horizontal bars. A bar below zero is red and points left. */
 function RankedBarChart({ bars, label }: RankedBarChartProps) {
   const option = useMemo(() => rankedBarOption(bars), [bars])
   return (

@@ -8,7 +8,6 @@ interface ProfitProps {
   returnOnCost?: string | null
 }
 
-/** A gain in green or a loss in red, with a plus or minus sign. */
 function Profit({ amount, currency, returnOnCost = null }: ProfitProps) {
   return (
     <div className={profitColour(amount)}>

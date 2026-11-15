@@ -29,7 +29,6 @@ register([
   CanvasRenderer,
 ])
 
-/** What a chart shows: its series, axes, tooltip and legend. */
 export type ChartOption = ComposeOption<
   | BarSeriesOption
   | LineSeriesOption
@@ -40,7 +39,6 @@ export type ChartOption = ComposeOption<
   | TooltipComponentOption
 >
 
-/** A chart drawn inside an element. */
 export type ChartInstance = EChartsType
 
 /** Creates a chart inside an element. Call dispose() on it when the element is removed. */
