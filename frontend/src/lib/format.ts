@@ -26,19 +26,21 @@ export function formatDate(isoDate: string): string {
 
 /**
  * Format money, for example "$1,234.50". Pass a larger `maxDecimals` for
- * unit prices, which can be quoted in fractions of a cent.
+ * unit prices, which can be quoted in fractions of a cent. Pass `minDecimals`
+ * to always show at least that many.
  */
 export function formatCurrency(
   value: string | number,
   currency = DEFAULT_CURRENCY,
   maxDecimals = 2,
+  minDecimals = 2,
 ): string {
   const amount = Number(value)
   if (Number.isNaN(amount)) return String(value)
   return new Intl.NumberFormat(LOCALE, {
     style: 'currency',
     currency,
-    minimumFractionDigits: 2,
+    minimumFractionDigits: minDecimals,
     maximumFractionDigits: maxDecimals,
   }).format(amount)
 }

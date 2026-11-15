@@ -22,6 +22,11 @@ interface DataTableProps<T> {
   getRowKey: (row: T) => string | number
 }
 
+// The first column stays in place when the table scrolls sideways.
+const CELL_SPACING = 'px-3 py-3 first:sticky first:left-0 first:bg-white first:pl-6 last:pr-6'
+
+const NUMBER_CELL = 'text-right tabular-nums whitespace-nowrap'
+
 /** A table for any kind of row. The columns decide what is shown. */
 function DataTable<T>({ columns, rows, getRowKey }: DataTableProps<T>) {
   const { sortedRows, toggleSort, directionOf } = useSortedRows(rows, columns)
@@ -38,7 +43,7 @@ function DataTable<T>({ columns, rows, getRowKey }: DataTableProps<T>) {
                 <th
                   key={column.header}
                   aria-sort={column.sortValue ? (direction ?? 'none') : undefined}
-                  className={`px-6 py-3 font-medium ${alignRight ? 'text-right' : ''}`}
+                  className={`${CELL_SPACING} whitespace-nowrap font-medium ${alignRight ? 'text-right' : ''}`}
                 >
                   {column.sortValue ? (
                     <SortButton
@@ -61,7 +66,7 @@ function DataTable<T>({ columns, rows, getRowKey }: DataTableProps<T>) {
               {columns.map((column) => (
                 <td
                   key={column.header}
-                  className={`px-6 py-3 ${column.align === 'right' ? 'text-right tabular-nums' : ''} ${column.className ?? ''}`}
+                  className={`${CELL_SPACING} ${column.align === 'right' ? NUMBER_CELL : ''} ${column.className ?? ''}`}
                 >
                   {column.render(row)}
                 </td>
