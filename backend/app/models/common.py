@@ -5,6 +5,7 @@ so every table stores the same kind of value in the same way.
 """
 
 from datetime import datetime
+from enum import StrEnum
 
 from sqlalchemy import DateTime, Numeric, func
 from sqlalchemy.orm import Mapped, mapped_column
@@ -23,6 +24,16 @@ UNIT_PRICE = Numeric(18, 6)
 
 # A cash amount in dollars and cents, such as a fee.
 CASH_AMOUNT = Numeric(18, 2)
+
+
+def one_of(column: str, values: type[StrEnum]) -> str:
+    """Build the rule "column IN (...)" from an enum, for a CheckConstraint.
+
+    The allowed values are then listed in one place. The database is only
+    updated by a migration, so adding a value also needs a new migration that
+    replaces the constraint.
+    """
+    return "{} IN ({})".format(column, ", ".join(f"'{value.value}'" for value in values))
 
 
 class CreatedAtMixin:

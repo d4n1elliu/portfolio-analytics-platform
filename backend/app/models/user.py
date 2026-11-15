@@ -6,7 +6,7 @@ from sqlalchemy import Boolean, CheckConstraint, String, true
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
-from app.models.common import CreatedAtMixin
+from app.models.common import CreatedAtMixin, one_of
 
 
 class Role(StrEnum):
@@ -17,16 +17,10 @@ class Role(StrEnum):
     ANALYST = "analyst"
 
 
-# Builds the rule "role IN (...)" from Role, so the allowed values are listed
-# in one place. Adding a role also needs a migration that replaces this
-# constraint.
-_ROLE_RULE = "role IN ({})".format(", ".join(f"'{role.value}'" for role in Role))
-
-
 class User(CreatedAtMixin, Base):
     __tablename__ = "users"
     __table_args__ = (
-        CheckConstraint(_ROLE_RULE, name="role_valid"),
+        CheckConstraint(one_of("role", Role), name="role_valid"),
         # Stops two accounts that differ only by capital letters.
         CheckConstraint("email = lower(email)", name="email_lowercase"),
     )
