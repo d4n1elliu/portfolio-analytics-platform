@@ -17,11 +17,11 @@ import os
 import sys
 from collections.abc import Mapping
 
-from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from app.database import SessionLocal
 from app.models import Role, User
+from app.services.inserts import insert_missing
 from app.services.passwords import hash_password
 
 MIN_PASSWORD_LENGTH = 12
@@ -74,13 +74,7 @@ def seed_users(session: Session, users: list[dict[str, str | bool]]) -> list[str
 
     Returns the emails that were inserted. The caller commits the session.
     """
-    statement = (
-        insert(User)
-        .values(users)
-        .on_conflict_do_nothing(index_elements=["email"])
-        .returning(User.email)
-    )
-    return list(session.execute(statement).scalars())
+    return insert_missing(session, User, users, ["email"], User.email)
 
 
 def main(environ: Mapping[str, str]) -> int:

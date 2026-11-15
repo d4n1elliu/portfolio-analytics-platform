@@ -8,11 +8,11 @@ duplicates are created.
 """
 
 from sqlalchemy import func, select
-from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from app.database import SessionLocal
 from app.models import Security
+from app.services.inserts import insert_missing
 
 # Ten well-known ASX-listed securities. Sectors follow GICS, the industry
 # classification the ASX uses. VAS is a fund that holds many companies, so it
@@ -37,17 +37,7 @@ def seed_securities(session: Session, securities: list[dict[str, str]]) -> int:
     Returns the number of rows inserted. The caller is responsible for
     committing the session.
     """
-    # ON CONFLICT DO NOTHING tells PostgreSQL to skip a row with a ticker that
-    # is already in the table, instead of raising an error. RETURNING gives
-    # back the tickers that were actually inserted.
-    statement = (
-        insert(Security)
-        .values(securities)
-        .on_conflict_do_nothing(index_elements=["ticker"])
-        .returning(Security.ticker)
-    )
-    inserted_tickers = session.execute(statement).scalars().all()
-    return len(inserted_tickers)
+    return len(insert_missing(session, Security, securities, ["ticker"], Security.ticker))
 
 
 def main() -> None:

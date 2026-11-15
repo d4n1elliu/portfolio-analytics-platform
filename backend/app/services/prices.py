@@ -8,6 +8,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session, joinedload
 
 from app.models import Price, Trade
+from app.services.inserts import insert_missing
 from app.services.price_provider import DailyClose
 
 
@@ -76,15 +77,8 @@ def insert_new_closes(db: Session, security_id: int, closes: Sequence[DailyClose
     """
     if not closes:
         return 0
-    statement = (
-        insert(Price)
-        .values(
-            [
-                {"security_id": security_id, "price_date": close.price_date, "close": close.close}
-                for close in closes
-            ]
-        )
-        .on_conflict_do_nothing(index_elements=["security_id", "price_date"])
-        .returning(Price.id)
-    )
-    return len(db.execute(statement).scalars().all())
+    rows = [
+        {"security_id": security_id, "price_date": close.price_date, "close": close.close}
+        for close in closes
+    ]
+    return len(insert_missing(db, Price, rows, ["security_id", "price_date"], Price.id))
