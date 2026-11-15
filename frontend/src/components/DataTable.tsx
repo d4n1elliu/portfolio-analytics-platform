@@ -23,7 +23,7 @@ interface DataTableProps<T> {
 }
 
 // The first column stays in place when the table scrolls sideways.
-const CELL_SPACING = 'px-3 py-3 first:sticky first:left-0 first:bg-white first:pl-6 last:pr-6'
+const CELL_SPACING = 'px-2 py-3 first:sticky first:left-0 first:bg-white first:pl-6 last:pr-6'
 
 const NUMBER_CELL = 'text-right tabular-nums whitespace-nowrap'
 
