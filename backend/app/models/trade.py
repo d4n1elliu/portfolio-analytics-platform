@@ -17,7 +17,7 @@ from sqlalchemy import CheckConstraint, Date, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
-from app.models.common import CASH_AMOUNT, QUANTITY, UNIT_PRICE, CreatedAtMixin
+from app.models.common import CASH_AMOUNT, QUANTITY, UNIT_PRICE, CreatedAtMixin, one_of
 
 if TYPE_CHECKING:
     from app.models.security import Security
@@ -34,17 +34,11 @@ class TradeSide(StrEnum):
     SELL = "SELL"
 
 
-# Builds the rule "side IN ('BUY', 'SELL')" from TradeSide, so the allowed
-# values are listed in one place. The database is only updated by a migration,
-# so adding a side also needs a new migration that replaces this constraint.
-_SIDE_RULE = "side IN ({})".format(", ".join(f"'{side.value}'" for side in TradeSide))
-
-
 class Trade(CreatedAtMixin, Base):
     __tablename__ = "trades"
     # Rules the database checks on every row, whichever code inserts it.
     __table_args__ = (
-        CheckConstraint(_SIDE_RULE, name="side_valid"),
+        CheckConstraint(one_of("side", TradeSide), name="side_valid"),
         CheckConstraint("quantity > 0", name="quantity_positive"),
         CheckConstraint("price > 0", name="price_positive"),
         CheckConstraint("fees >= 0", name="fees_not_negative"),
