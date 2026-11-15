@@ -19,6 +19,7 @@ function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const from = (useLocation().state as { from?: string } | null)?.from
+  const expired = state.status === 'signedOut' && state.expired
 
   // A successful sign in changes the state, which sends the user on from here,
   // back to the page they first asked for.
@@ -41,6 +42,9 @@ function LoginPage() {
       <div className="mx-auto mt-12 max-w-md">
         <Card title="Sign in">
           <form onSubmit={handleSubmit} className="space-y-4">
+            {expired && !error && (
+              <Alert variant="warning">Your session has ended. Sign in again to continue.</Alert>
+            )}
             {error && <Alert variant="error">{error}</Alert>}
             <TextField
               label="Email"

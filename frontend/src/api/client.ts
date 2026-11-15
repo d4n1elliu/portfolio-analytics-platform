@@ -18,6 +18,17 @@ export class ApiError extends Error {
   }
 }
 
+/** The status the API answers with when nobody is signed in. */
+export const NOT_SIGNED_IN = 401
+const AUTH_PATHS = '/auth/'
+
+let onSessionExpired: (() => void) | null = null
+
+/** Set what happens when the API stops accepting the session. Pass null to clear it. */
+export function setSessionExpiredHandler(handler: (() => void) | null): void {
+  onSessionExpired = handler
+}
+
 /** Send a request to the API and return the parsed JSON response. */
 export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response
@@ -32,6 +43,9 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   // An error response may have no JSON body.
   const body: unknown = await response.json().catch(() => null)
+  // A 401 from a data endpoint means the session ended while the page was open.
+  // The sign in endpoints answer 401 for their own reasons.
+  if (response.status === NOT_SIGNED_IN && !path.startsWith(AUTH_PATHS)) onSessionExpired?.()
   if (!response.ok) {
     throw new ApiError(errorMessage(body, response.status), response.status, body)
   }
