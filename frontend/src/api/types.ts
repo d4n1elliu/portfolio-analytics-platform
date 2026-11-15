@@ -65,6 +65,15 @@ export interface PortfolioHistoryPoint {
   unrealised_pnl: string
 }
 
+export type Role = 'operations' | 'portfolio_manager' | 'analyst'
+
+/** The signed-in user. */
+export interface User {
+  email: string
+  name: string
+  role: Role
+}
+
 export type TradeSide = 'BUY' | 'SELL'
 
 export interface Trade {

@@ -38,6 +38,15 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return body as T
 }
 
+/** Send a POST request with a JSON body. */
+export function postJson<T>(path: string, body?: unknown): Promise<T> {
+  return request<T>(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body ?? {}),
+  })
+}
+
 /** Upload one file as a form field named "file". */
 export function uploadFile<T>(path: string, file: File): Promise<T> {
   const form = new FormData()
