@@ -1,11 +1,10 @@
 import type { Holding } from '../api/types'
-import { formatCurrency, formatProfit, formatQuantity } from '../lib/format'
+import { NO_VALUE, formatCurrency, formatProfit, formatQuantity } from '../lib/format'
 import { profitColour } from '../lib/profit'
 import DataTable from './DataTable'
 import type { Column } from './DataTable'
 
 const UNIT_COST_DECIMALS = 4
-const NO_VALUE = '—'
 
 const COLUMNS: Column<Holding>[] = [
   {

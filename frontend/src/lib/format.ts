@@ -2,6 +2,9 @@
 
 import { DEFAULT_CURRENCY, LOCALE } from '../config'
 
+/** Shown in place of a value that is missing. */
+export const NO_VALUE = '—'
+
 const dateFormatter = new Intl.DateTimeFormat(LOCALE, {
   day: '2-digit',
   month: 'short',
