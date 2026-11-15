@@ -18,6 +18,7 @@ function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [attempts, setAttempts] = useState(0)
   const cameFrom = returnPage(useLocation().state)
   const expired = state.status === 'signedOut' && state.reason === 'expired'
 
@@ -27,12 +28,16 @@ function LoginPage() {
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault() // Stop the browser reloading the page.
+    if (submitting) return
+
     setSubmitting(true)
-    setError(null)
     try {
       await signIn(email, password)
     } catch (error) {
+      // The last error stays on screen until this one replaces it, so the
+      // card does not shrink and grow on every attempt.
       setError(messageFrom(error, 'Could not sign in.'))
+      setAttempts((count) => count + 1)
       setSubmitting(false)
     }
   }
@@ -42,8 +47,14 @@ function LoginPage() {
       <div className="mx-auto mt-12 max-w-md">
         <Card title="Sign in">
           <form onSubmit={handleSubmit} className="space-y-4">
-            {!error && <SignInReason expired={expired} pageName={cameFrom?.label} />}
-            {error && <Alert variant="error">{error}</Alert>}
+            {error ? (
+              // A new key makes screen readers announce the same error again.
+              <Alert key={attempts} variant="error">
+                {error}
+              </Alert>
+            ) : (
+              <SignInReason expired={expired} pageName={cameFrom?.label} />
+            )}
             <TextField
               label="Email"
               type="email"
