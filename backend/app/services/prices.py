@@ -7,7 +7,7 @@ from sqlalchemy import and_, func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session, joinedload
 
-from app.models import Price
+from app.models import Price, Trade
 from app.services.price_provider import DailyClose
 
 
@@ -30,6 +30,16 @@ def latest_prices(db: Session) -> dict[str, Price]:
         .options(joinedload(Price.security))
     )
     return {price.security.ticker: price for price in db.scalars(statement)}
+
+
+def list_prices_of_traded_securities(db: Session) -> list[Price]:
+    """Return every price, with its security, of the securities that have trades."""
+    statement = (
+        select(Price)
+        .options(joinedload(Price.security))
+        .where(Price.security_id.in_(select(Trade.security_id)))
+    )
+    return list(db.scalars(statement))
 
 
 def latest_price_dates(db: Session) -> dict[int, date]:

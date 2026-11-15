@@ -3,45 +3,12 @@
 from datetime import date
 from decimal import Decimal
 
-import pytest
-from fastapi.testclient import TestClient
-
-from app.database import get_db
-from app.main import app
-from app.models import Price, Security, Trade, TradeSide
+from app.models import Price, Security
 from app.schemas.holding import HoldingRead
 from app.services.holdings import build_holdings
+from factories import buy, make_security, sell
 
 PRICE_DATE = date(2026, 11, 13)
-
-
-def make_security(ticker: str, sector: str = "Materials") -> Security:
-    return Security(
-        ticker=ticker,
-        name=f"{ticker} Limited",
-        sector=sector,
-        asset_class="Equity",
-        currency="AUD",
-    )
-
-
-def buy(security: Security, quantity: str, price: str, fees: str = "0") -> Trade:
-    return _trade(security, TradeSide.BUY, quantity, price, fees)
-
-
-def sell(security: Security, quantity: str, price: str, fees: str = "0") -> Trade:
-    return _trade(security, TradeSide.SELL, quantity, price, fees)
-
-
-def _trade(security: Security, side: TradeSide, quantity: str, price: str, fees: str) -> Trade:
-    return Trade(
-        security=security,
-        trade_date=date(2026, 3, 16),
-        side=side,
-        quantity=Decimal(quantity),
-        price=Decimal(price),
-        fees=Decimal(fees),
-    )
 
 
 def price(security: Security, close: str) -> Price:
@@ -221,33 +188,11 @@ def test_response_has_no_valuation_fields_without_a_price():
 # --- Endpoint ---
 
 
-class FakeSession:
-    """Stands in for the database session. Returns trades or prices to match the query."""
-
-    def __init__(self, trades: list[Trade], prices: list[Price]):
-        self.trades = trades
-        self.prices = prices
-
-    def scalars(self, statement):
-        asks_for_prices = statement.column_descriptions[0]["entity"] is Price
-        return self.prices if asks_for_prices else self.trades
-
-
-@pytest.fixture
-def client_with_trades():
-    def make_client(trades: list[Trade], prices: list[Price] | None = None) -> TestClient:
-        app.dependency_overrides[get_db] = lambda: FakeSession(trades, prices or [])
-        return TestClient(app)
-
-    yield make_client
-    app.dependency_overrides.clear()
-
-
-def test_endpoint_returns_open_positions(client_with_trades):
+def test_endpoint_returns_open_positions(client_with_data):
     bhp, cba = make_security("BHP"), make_security("CBA", sector="Financials")
     trades = [buy(bhp, "100", "40", fees="20"), buy(cba, "10", "150"), sell(cba, "10", "160")]
 
-    response = client_with_trades(trades).get("/holdings")
+    response = client_with_data(trades).get("/holdings")
 
     assert response.status_code == 200
     assert response.json() == [
@@ -272,11 +217,11 @@ def test_endpoint_returns_open_positions(client_with_trades):
     ]
 
 
-def test_endpoint_returns_the_valuation_when_a_price_is_stored(client_with_trades):
+def test_endpoint_returns_the_valuation_when_a_price_is_stored(client_with_data):
     bhp = make_security("BHP")
     trades = [buy(bhp, "100", "40", fees="20")]
 
-    response = client_with_trades(trades, [price(bhp, "46")]).get("/holdings")
+    response = client_with_data(trades, [price(bhp, "46")]).get("/holdings")
 
     holding = response.json()[0]
     assert holding["last_price"] == "46"
@@ -287,11 +232,11 @@ def test_endpoint_returns_the_valuation_when_a_price_is_stored(client_with_trade
     assert holding["weight"] == "1.000000"
 
 
-def test_endpoint_includes_closed_positions_when_asked(client_with_trades):
+def test_endpoint_includes_closed_positions_when_asked(client_with_data):
     bhp, cba = make_security("BHP"), make_security("CBA", sector="Financials")
     trades = [buy(bhp, "100", "40"), buy(cba, "10", "150"), sell(cba, "10", "160")]
 
-    response = client_with_trades(trades).get("/holdings", params={"include_closed": "true"})
+    response = client_with_data(trades).get("/holdings", params={"include_closed": "true"})
 
     assert [holding["ticker"] for holding in response.json()] == ["BHP", "CBA"]
     assert response.json()[1]["average_cost"] is None

@@ -4,12 +4,12 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from decimal import Decimal
 
-from sqlalchemy import select
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 
 from app.models import Price, Security, Trade
 from app.services.positions import Position, calculate_position
 from app.services.prices import latest_prices
+from app.services.trades import list_trades_oldest_first
 from app.services.valuation import Valuation, portfolio_weights, value_position
 
 
@@ -25,13 +25,7 @@ class Holding:
 
 def list_holdings(db: Session, include_closed: bool) -> list[Holding]:
     """Return the position in every traded security, ordered by ticker."""
-    statement = (
-        select(Trade)
-        .options(joinedload(Trade.security))
-        # Oldest first. The id decides the order of trades on the same day.
-        .order_by(Trade.trade_date, Trade.id)
-    )
-    return build_holdings(db.scalars(statement), include_closed, latest_prices(db))
+    return build_holdings(list_trades_oldest_first(db), include_closed, latest_prices(db))
 
 
 def build_holdings(

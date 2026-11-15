@@ -1,14 +1,14 @@
 """Response shapes for holdings."""
 
 from datetime import date
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import Decimal
 
 from pydantic import BaseModel
 
+from app.schemas.common import CENTS, round_decimal
 from app.services.holdings import Holding
 from app.services.valuation import Valuation
 
-CENTS = Decimal("0.01")
 UNIT_COST_PLACES = Decimal("0.000001")
 FRACTION_PLACES = Decimal("0.000001")
 
@@ -52,9 +52,9 @@ class HoldingRead(BaseModel):
             asset_class=security.asset_class,
             currency=security.currency,
             quantity=position.quantity,
-            average_cost=None if average_cost is None else _round(average_cost, UNIT_COST_PLACES),
-            cost_basis=_round(position.cost_basis, CENTS),
-            realised_pnl=_round(position.realised_pnl, CENTS),
+            average_cost=_round_optional(average_cost, UNIT_COST_PLACES),
+            cost_basis=round_decimal(position.cost_basis, CENTS),
+            realised_pnl=round_decimal(position.realised_pnl, CENTS),
             oversold_quantity=position.oversold_quantity,
             weight=_round_optional(holding.weight, FRACTION_PLACES),
             **_valuation_fields(valuation),
@@ -70,15 +70,11 @@ def _valuation_fields(valuation: Valuation | None) -> dict[str, Decimal | date |
     return {
         "last_price": valuation.last_price,
         "price_date": valuation.price_date,
-        "market_value": _round(valuation.market_value, CENTS),
-        "unrealised_pnl": _round(valuation.unrealised_pnl, CENTS),
+        "market_value": round_decimal(valuation.market_value, CENTS),
+        "unrealised_pnl": round_decimal(valuation.unrealised_pnl, CENTS),
         "unrealised_return": _round_optional(valuation.unrealised_return, FRACTION_PLACES),
     }
 
 
-def _round(value: Decimal, places: Decimal) -> Decimal:
-    return value.quantize(places, rounding=ROUND_HALF_UP)
-
-
 def _round_optional(value: Decimal | None, places: Decimal) -> Decimal | None:
-    return None if value is None else _round(value, places)
+    return None if value is None else round_decimal(value, places)
