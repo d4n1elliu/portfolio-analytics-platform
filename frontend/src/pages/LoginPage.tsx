@@ -10,8 +10,7 @@ import PageLayout from '../components/PageLayout'
 import PasswordField from '../components/PasswordField'
 import TextField from '../components/TextField'
 import { useAuth } from '../lib/auth'
-import { ROUTES } from '../routes'
-import type { LoginState } from '../routes'
+import { HOME, returnPage } from '../routes'
 
 function LoginPage() {
   const { state, signIn } = useAuth()
@@ -19,12 +18,12 @@ function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
-  const from = (useLocation().state as LoginState | null)?.from
+  const cameFrom = returnPage(useLocation().state)
   const expired = state.status === 'signedOut' && state.expired
 
   // A successful sign in changes the state, which sends the user on from here,
   // back to the page they first asked for.
-  if (state.status === 'signedIn') return <Navigate to={from ?? ROUTES.holdings} replace />
+  if (state.status === 'signedIn') return <Navigate to={cameFrom?.path ?? HOME} replace />
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault() // Stop the browser reloading the page.
@@ -43,9 +42,7 @@ function LoginPage() {
       <div className="mx-auto mt-12 max-w-md">
         <Card title="Sign in">
           <form onSubmit={handleSubmit} className="space-y-4">
-            {expired && !error && (
-              <Alert variant="warning">Your session has ended. Sign in again to continue.</Alert>
-            )}
+            {!error && <SignInReason expired={expired} pageName={cameFrom?.label} />}
             {error && <Alert variant="error">{error}</Alert>}
             <TextField
               label="Email"
@@ -68,6 +65,15 @@ function LoginPage() {
       </div>
     </PageLayout>
   )
+}
+
+/** Says why the visitor has to sign in, when there is a reason to give. */
+function SignInReason({ expired, pageName }: { expired?: boolean; pageName?: string }) {
+  if (expired) {
+    return <Alert variant="warning">Your session has ended. Sign in again to continue.</Alert>
+  }
+  if (pageName) return <Alert variant="info">Sign in to view {pageName}.</Alert>
+  return null
 }
 
 export default LoginPage

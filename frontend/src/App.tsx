@@ -1,6 +1,7 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
+import { BrowserRouter, Route, Routes } from 'react-router'
 
 import AuthProvider from './components/AuthProvider'
+import HomeRedirect from './components/HomeRedirect'
 import RequireAuth from './components/RequireAuth'
 import SessionGate from './components/SessionGate'
 import DashboardPage from './pages/DashboardPage'
@@ -21,8 +22,7 @@ function App() {
               <Route path={ROUTES.holdings} element={<HoldingsPage />} />
               <Route path={ROUTES.trades} element={<TradesPage />} />
             </Route>
-            {/* Any other address, including the home page, goes to Holdings. */}
-            <Route path="*" element={<Navigate to={ROUTES.holdings} replace />} />
+            <Route path="*" element={<HomeRedirect />} />
           </Routes>
         </SessionGate>
       </AuthProvider>
