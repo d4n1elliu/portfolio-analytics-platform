@@ -125,6 +125,7 @@ A security has many trades and many prices. The database enforces the basic rule
 | `GET`  | `/health/db`     | Confirms the API can reach the database                         |
 | `POST` | `/auth/login`    | Signs in with an email and password                             |
 | `POST` | `/auth/logout`   | Signs out                                                       |
+| `GET`  | `/auth/demo-accounts` | Lists the demo roles, with sign-in details for the read-only ones |
 | `GET`  | `/auth/me`       | Returns the signed-in user                                      |
 | `GET`  | `/holdings`      | Lists the current position in each security, ordered by ticker  |
 | `GET`  | `/portfolio/history` | Lists the value of the portfolio on each priced date, oldest first |
@@ -153,6 +154,8 @@ Every page needs a sign in. There is no sign-up: accounts are created by a seed 
 Signing in sets a cookie that lasts 8 hours. After 10 failed attempts, sign-ins from that address are blocked for up to 15 minutes.
 
 The seed script creates one demo account per role: `operations@example.com`, `pm@example.com` and `analyst@example.com`. Their passwords are chosen when the script is run and are not stored in this repository.
+
+The sign in page has a Demo access box. It shows the email and password of the Portfolio Manager and Analyst accounts when `DEMO_PASSWORD_PORTFOLIO_MANAGER` and `DEMO_PASSWORD_ANALYST` are set in the server's environment. The Operations account is never shown, because it can import trades.
 
 Not included: sign-up, password reset, email verification and account management.
 
