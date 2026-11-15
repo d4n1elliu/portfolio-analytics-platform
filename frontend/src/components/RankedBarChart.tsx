@@ -8,28 +8,26 @@ const BAR_THICKNESS = 16
 const ROW_HEIGHT = 36
 const VERTICAL_PADDING = 16
 const EDGE_PADDING = 8
-/** Roughly how wide one character of a value label is, in pixels. */
 const LABEL_CHARACTER_WIDTH = 7
+const LABEL_GAP = 8
 const ROUNDED_RIGHT = [0, 4, 4, 0]
 const ROUNDED_LEFT = [4, 0, 0, 4]
 
 export interface RankedBar {
   name: string
   value: number
-  /** The value as text, shown at the end of the bar. */
   valueLabel: string
-  /** Shown in the tooltip in place of valueLabel, for extra detail. */
   tooltipLabel?: string
 }
 
+type Side = 'left' | 'right'
+
 interface RankedBarChartProps {
-  /** Listed top to bottom in the order given. */
   bars: RankedBar[]
-  /** Read out by screen readers in place of the chart. */
   label: string
 }
 
-/** Horizontal bars with a value label on each. Bars below zero point left, in red. */
+/** Horizontal bars. A bar below zero is red and points left. */
 function RankedBarChart({ bars, label }: RankedBarChartProps) {
   const option = useMemo(() => rankedBarOption(bars), [bars])
   return (
@@ -38,15 +36,20 @@ function RankedBarChart({ bars, label }: RankedBarChartProps) {
 }
 
 function rankedBarOption(bars: RankedBar[]): ChartOption {
-  const text = { color: CHART_COLOURS.text, fontFamily: CHART_FONT_FAMILY, fontSize: CHART_FONT_SIZE }
+  const text = {
+    color: CHART_COLOURS.text,
+    fontFamily: CHART_FONT_FAMILY,
+    fontSize: CHART_FONT_SIZE,
+  }
+  const names = bars.map((bar) => bar.name)
 
   return {
     textStyle: text,
     grid: {
       top: EDGE_PADDING,
       bottom: EDGE_PADDING,
-      left: EDGE_PADDING,
-      right: EDGE_PADDING + labelRoom(bars.filter((bar) => bar.value >= 0)),
+      left: EDGE_PADDING + labelRoom(bars.map((bar) => labelOn(bar, 'left'))),
+      right: EDGE_PADDING + labelRoom(bars.map((bar) => labelOn(bar, 'right'))),
     },
     tooltip: {
       trigger: 'item',
@@ -59,19 +62,7 @@ function rankedBarOption(bars: RankedBar[]): ChartOption {
       min: ({ min }) => Math.min(min, 0),
       max: ({ max }) => Math.max(max, 0),
     },
-    yAxis: {
-      type: 'category',
-      data: bars.map((bar) => bar.name),
-      inverse: true,
-      axisLine: { show: false },
-      axisTick: { show: false },
-      axisLabel: {
-        ...text,
-        color: CHART_COLOURS.mutedText,
-        // Keeps the names clear of the value labels of bars below zero.
-        margin: EDGE_PADDING + labelRoom(bars.filter((bar) => bar.value < 0)),
-      },
-    },
+    yAxis: { type: 'category', data: names, inverse: true, show: false },
     series: [
       {
         type: 'bar',
@@ -85,32 +76,61 @@ function rankedBarOption(bars: RankedBar[]): ChartOption {
           data: [{ xAxis: 0 }],
         },
       },
+      // Empty bars that only hold the names.
+      {
+        type: 'bar',
+        barWidth: BAR_THICKNESS,
+        barGap: '-100%',
+        silent: true,
+        data: bars.map(nameItem),
+      },
     ],
   }
 }
 
-/** The width in pixels of the longest value label among the bars. */
-function labelRoom(bars: RankedBar[]): number {
-  const longest = Math.max(0, ...bars.map((bar) => bar.valueLabel.length))
-  return longest * LABEL_CHARACTER_WIDTH
+function isNegative(bar: RankedBar): boolean {
+  return bar.value < 0
+}
+
+function valueSide(bar: RankedBar): Side {
+  return isNegative(bar) ? 'left' : 'right'
+}
+
+function nameSide(bar: RankedBar): Side {
+  return isNegative(bar) ? 'right' : 'left'
+}
+
+function labelOn(bar: RankedBar, side: Side): string {
+  return side === valueSide(bar) ? bar.valueLabel : bar.name
+}
+
+/** A rough width in pixels for the longest label. */
+function labelRoom(labels: string[]): number {
+  const longest = Math.max(0, ...labels.map((label) => label.length))
+  return longest * LABEL_CHARACTER_WIDTH + LABEL_GAP
 }
 
 function barItem(bar: RankedBar) {
-  const isNegative = bar.value < 0
   return {
     name: bar.name,
     value: bar.value,
     itemStyle: {
-      color: isNegative ? CHART_COLOURS.negative : CHART_COLOURS.primary,
-      borderRadius: isNegative ? ROUNDED_LEFT : ROUNDED_RIGHT,
+      color: isNegative(bar) ? CHART_COLOURS.negative : CHART_COLOURS.primary,
+      borderRadius: isNegative(bar) ? ROUNDED_LEFT : ROUNDED_RIGHT,
     },
-    label: {
-      show: true,
-      position: isNegative ? ('left' as const) : ('right' as const),
-      formatter: bar.valueLabel,
-      color: CHART_COLOURS.text,
-    },
+    label: sideLabel(bar.valueLabel, valueSide(bar), CHART_COLOURS.text),
   }
+}
+
+function nameItem(bar: RankedBar) {
+  return {
+    value: 0,
+    label: sideLabel(bar.name, nameSide(bar), CHART_COLOURS.mutedText),
+  }
+}
+
+function sideLabel(text: string, side: Side, colour: string) {
+  return { show: true, position: side, distance: LABEL_GAP, formatter: text, color: colour }
 }
 
 export default RankedBarChart
