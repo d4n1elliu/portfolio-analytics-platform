@@ -1,3 +1,4 @@
+import { useAuth } from '../lib/auth'
 import { ROUTES } from '../routes'
 import HeaderLink from './HeaderLink'
 
@@ -8,6 +9,8 @@ const LINKS = [
 ]
 
 function NavBar() {
+  const { state } = useAuth()
+
   return (
     <nav aria-label="Main" className="flex gap-1">
       {LINKS.map((link) => (
@@ -15,6 +18,7 @@ function NavBar() {
           {link.label}
         </HeaderLink>
       ))}
+      {state.status === 'signedOut' && <HeaderLink to={ROUTES.login}>Sign in</HeaderLink>}
     </nav>
   )
 }
