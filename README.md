@@ -10,14 +10,20 @@ A full-stack web app for tracking portfolio holdings, performance and sector exp
 
 ## Status
 
-Two features are in place. Trades can be imported from a CSV file and viewed in a table, and the Holdings page shows the fund's current positions, calculated from those trades. The database has tables for securities, trades and prices, with a seed script for a starting set of securities. Market prices, unrealised profit, charts and authentication are not built yet.
+Three features are in place:
+
+- **Trades.** Trades can be imported from a CSV file and viewed in a table.
+- **Holdings.** The Holdings page shows the fund's current positions, calculated from those trades.
+- **Prices and valuation.** Daily closing prices are stored for each security and refreshed on weekdays. The Dashboard page uses them to show what the portfolio is worth, its unrealised profit, and three charts.
+
+Authentication is not built yet.
 
 ## Tech stack
 
 | Layer    | Technology                                                    |
 | -------- | ------------------------------------------------------------- |
-| Frontend | React, TypeScript, Vite, Tailwind CSS v4                      |
-| Backend  | Python, FastAPI, uvicorn, python-dotenv, pytest               |
+| Frontend | React, TypeScript, Vite, Tailwind CSS v4, ECharts             |
+| Backend  | Python, FastAPI, uvicorn, python-dotenv, pytest, yfinance     |
 | Database | PostgreSQL on Neon, SQLAlchemy 2, Alembic, psycopg 3          |
 | Hosting  | Docker, Caddy, GitHub Actions, GitHub Container Registry      |
 
@@ -35,15 +41,16 @@ portfolio-analytics-platform/
 ├── .github/
 │   └── workflows/
 │       ├── ci.yml            Lint, tests, type check and Docker builds
-│       └── deploy.yml        Publishes images and deploys after CI passes
+│       ├── deploy.yml        Publishes images and deploys after CI passes
+│       └── refresh-prices.yml  Fetches closing prices on weekdays
 │
 ├── frontend/
 │   ├── src/
 │   │   ├── api/              Typed calls to the backend such as holdings
-│   │   ├── components/       Shared components such as DataTable and NavBar
+│   │   ├── components/       Shared components such as DataTable and Chart
 │   │   ├── hooks/            Shared hooks such as useApiQuery and useSortedRows
-│   │   ├── lib/              Helpers such as formatting and holdings filters
-│   │   ├── pages/            One component per screen such as HoldingsPage
+│   │   ├── lib/              Helpers such as formatting and chart colours
+│   │   ├── pages/            One component per screen such as DashboardPage
 │   │   ├── App.tsx           Root component and page routes
 │   │   ├── config.ts         API address, locale, currency and page size
 │   │   ├── main.tsx          React entry point
@@ -65,21 +72,23 @@ portfolio-analytics-platform/
     ├── alembic/              Migration setup and the files in versions/
     ├── app/
     │   ├── models/           Database tables such as Security and Trade
-    │   ├── routes/           HTTP endpoints such as trades and holdings
+    │   ├── routes/           HTTP endpoints such as holdings and portfolio
     │   ├── schemas/          Shapes of the JSON the API returns
-    │   ├── services/         Business logic such as positions and CSV import
+    │   ├── services/         Business logic such as positions and valuation
     │   ├── config.py         Reads settings from environment variables
     │   ├── database.py       Engine, sessions and the get_db dependency
     │   └── main.py           FastAPI app, CORS and health endpoints
-    ├── sample_data/          Example CSV files for the trade import
+    ├── jobs/                 Price jobs that run outside the API
+    ├── sample_data/          Example trade files and a year of closing prices
     ├── scripts/              One-off scripts such as seed.py
-    ├── tests/                pytest tests such as CSV rules and positions
+    ├── tests/                pytest tests such as positions and valuation
     ├── .dockerignore
     ├── .env.example          Template for backend environment variables
     ├── alembic.ini           Alembic settings with no database URL
     ├── Dockerfile            Production image for the API
     ├── pytest.ini            pytest settings
     ├── requirements-dev.txt  Runtime packages plus test and lint tools
+    ├── requirements-jobs.txt Runtime packages plus those the price jobs need
     ├── requirements.txt      Pinned packages the app needs to run
     └── ruff.toml             Linter settings
 ```
@@ -115,13 +124,14 @@ A security has many trades and many prices. The database enforces the basic rule
 | `GET`  | `/health`        | Confirms the API is running                                     |
 | `GET`  | `/health/db`     | Confirms the API can reach the database                         |
 | `GET`  | `/holdings`      | Lists the current position in each security, ordered by ticker  |
+| `GET`  | `/portfolio/history` | Lists the value of the portfolio on each priced date, oldest first |
 | `GET`  | `/securities`    | Lists every security, ordered by ticker                         |
 | `GET`  | `/trades`        | Lists trades, newest first, with the ticker and security name   |
 | `POST` | `/trades/import` | Imports trades from a CSV file                                  |
 
 `GET /trades` takes `limit` (1 to 500, default 50) and `offset` (default 0), and returns `{"items": [...], "total": 30, "limit": 50, "offset": 0}`. Decimal values are returned as strings, such as `"45.250000"`, so no precision is lost.
 
-`GET /holdings` returns one item per security that has trades, with `ticker`, `security_name`, `sector`, `asset_class`, `currency`, `quantity`, `average_cost`, `cost_basis`, `realised_pnl` and `oversold_quantity`. Positions that have been fully sold are left out unless `include_closed=true` is added.
+`GET /holdings` returns one item per security that has trades, with `ticker`, `security_name`, `sector`, `asset_class`, `currency`, `quantity`, `average_cost`, `cost_basis`, `realised_pnl` and `oversold_quantity`, plus the valuation fields described under [Prices and valuation](#prices-and-valuation). Positions that have been fully sold are left out unless `include_closed=true` is added.
 
 The interactive docs at http://localhost:8000/docs list every endpoint and let you try them.
 
@@ -145,6 +155,36 @@ For example, the three BHP trades in `sample_data/trades_sample.csv`:
 The sell brings in `250 × 45.72 − 29.95 = 11,400.05`. The 250 units cost `250 × 42.349833 = 10,587.46`, so the realised profit is `812.59`.
 
 **Sells that exceed the position.** The import does not check a sell against what is held. A sell is applied only to the units actually held, the quantity stops at zero, and the rest is reported as `oversold_quantity`. An oversold position is always returned, even when closed, and the Holdings page shows a warning naming the security.
+
+### Prices and valuation
+
+The database stores one closing price per security per day. Each open position is valued at its latest stored price, and `GET /holdings` returns:
+
+| Field               | Meaning                                              |
+| ------------------- | ---------------------------------------------------- |
+| `last_price`        | The latest stored closing price                      |
+| `price_date`        | The day that price is from                           |
+| `market_value`      | `quantity × last_price`                              |
+| `unrealised_pnl`    | `market_value − cost_basis`                          |
+| `unrealised_return` | `unrealised_pnl ÷ cost_basis`, as a fraction         |
+| `weight`            | The holding's share of the total market value        |
+
+These fields are `null` for a closed position or a security with no stored price.
+
+Prices come from Yahoo Finance and are saved by a job that runs outside the API. The pages only read stored prices, so they keep working if Yahoo is unavailable.
+
+### Portfolio value over time
+
+`GET /portfolio/history` returns the value of the portfolio on each day that has a price, oldest first:
+
+```json
+[
+  {"date": "2026-11-12", "market_value": "197787.90", "cost_basis": "173658.10", "unrealised_pnl": "24129.80"},
+  {"date": "2026-11-13", "market_value": "196592.45", "cost_basis": "173658.10", "unrealised_pnl": "22934.35"}
+]
+```
+
+Each point counts the trades made up to that day and values them at that day's prices. A security with no price yet is left out.
 
 ### Importing trades from CSV
 
@@ -202,7 +242,10 @@ Two example files are in `backend/sample_data/`: `trades_sample.csv` (30 valid t
 - **Importing the same file twice creates duplicate trades.** The import has no way to tell a repeated upload from two genuine trades with the same details.
 - **Sells are not checked against holdings on import.** A file can sell more of a security than was ever bought. The position is then reported as oversold instead of the import being rejected.
 - **Every trade is read on each `/holdings` request.** This is fine at the current size and would need revisiting for a much larger ledger.
-- **No market prices yet.** Holdings show what positions cost, not what they are worth today.
+- **Prices are daily closing prices for ASX tickers only.** There are no intraday prices.
+- **Dividends are not counted.** Profit is the change in price only.
+- **Currencies are not converted.** The Dashboard shows a warning instead of totals if positions use more than one currency.
+- **The Holdings page does not show valuation yet.** Market value, unrealised profit and weight are on the Dashboard only.
 
 ## Local setup
 
@@ -270,6 +313,21 @@ python -m scripts.seed
 
 The script is safe to run more than once. A security whose ticker already exists is skipped, so no duplicates are created. It adds securities only, not trades or prices.
 
+Then load a year of closing prices for those securities. This needs no network and is also safe to run more than once:
+
+```bash
+python -m jobs.seed_prices
+```
+
+### Refreshing prices
+
+To fetch the latest closing prices from Yahoo Finance:
+
+```bash
+pip install -r requirements-jobs.txt
+python -m jobs.refresh_prices
+```
+
 ### Tests
 
 Run the backend tests from `backend/` with the virtual environment active:
@@ -278,7 +336,7 @@ Run the backend tests from `backend/` with the virtual environment active:
 pytest
 ```
 
-The tests cover the CSV validation rules, the position calculation and the holdings endpoint. They do not connect to a database, so they run without a `.env` file.
+The tests cover the CSV rules, positions, valuation, price refresh and portfolio history. They do not use a database or the network, so they run without a `.env` file.
 
 ### Linting
 
@@ -299,7 +357,13 @@ cp .env.example .env
 npm run dev
 ```
 
-The app runs at http://localhost:5173 and has two pages. Holdings shows the current positions, with sorting, a search box, filters for sector and asset class, and summary figures. Trades is where you upload a CSV file and see the saved trades. The backend must be running for either page to load data.
+The app runs at http://localhost:5173 and has three pages. The backend must be running for any of them to load data.
+
+| Page      | What it shows |
+| --------- | ------------- |
+| Dashboard | Market value, unrealised P&L and unrealised return, with charts of portfolio value over time, sector allocation and unrealised P&L by holding |
+| Holdings  | The current positions, with sorting, a search box, filters for sector and asset class, and summary figures |
+| Trades    | A form to upload a CSV file, and the saved trades |
 
 ### Environment variables
 
@@ -313,6 +377,7 @@ Real `.env` files are git-ignored and must never be committed. The `.env.example
 | `backend/.env.example`  | `CORS_ORIGINS`        | Optional. Comma-separated addresses allowed to call the API. Defaults to `http://localhost:5173` |
 | `backend/.env.example`  | `MARKET_TIMEZONE`     | Optional. Time zone that decides "today" for trade dates. Defaults to `Australia/Sydney` |
 | `backend/.env.example`  | `IMPORT_MAX_FILE_BYTES`, `IMPORT_MAX_ROWS` | Optional. CSV upload limits. Default to 1 MB and 5000 rows |
+| `backend/.env.example`  | `PRICE_REFRESH_OVERLAP_DAYS`, `PRICE_LOOKBACK_DAYS` | Optional. Price refresh settings. Default to 5 and 365 days |
 | `backend/.env.example`  | `DEFAULT_PAGE_SIZE`, `MAX_PAGE_SIZE` | Optional. Page sizes for list endpoints. Default to 50 and 500 |
 | `frontend/.env.example` | `VITE_API_URL`        | Backend base URL, defaults to `http://localhost:8000` |
 
@@ -349,6 +414,16 @@ The Deploy workflow needs these repository secrets:
 | `SSH_USER`        | User the workflow logs in as |
 | `SSH_PRIVATE_KEY` | Private key for that user, used only for deploys |
 | `SSH_KNOWN_HOSTS` | The server's host key, from `ssh-keyscan -t ed25519 <host>` |
+
+### Price refresh
+
+The Refresh prices workflow fetches the latest closing prices and saves them to the database. It runs on weekdays at 08:00 UTC, after the ASX has closed, and can also be started by hand from the Actions tab.
+
+It needs one more repository secret:
+
+| Secret         | Value |
+| -------------- | ----- |
+| `DATABASE_URL` | The Neon connection string |
 
 ### Running the production setup by hand
 
