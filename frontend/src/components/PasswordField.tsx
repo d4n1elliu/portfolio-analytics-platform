@@ -5,7 +5,7 @@ import EyeIcon from './EyeIcon'
 import TextField from './TextField'
 
 const EYE_BUTTON =
-  `mr-1 rounded-md p-1.5 text-slate-500 hover:text-slate-900 ` +
+  `mr-1.5 rounded-md p-1.5 text-slate-400 hover:text-slate-700 ` +
   `${COLOUR_TRANSITION} ${FOCUS_OUTLINE}`
 
 interface PasswordFieldProps {
