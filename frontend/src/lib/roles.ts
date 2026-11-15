@@ -6,3 +6,10 @@ export const ROLE_LABELS: Record<Role, string> = {
   portfolio_manager: 'Portfolio Manager',
   analyst: 'Analyst',
 }
+
+/** The roles that may import trades. Keep in step with POST /trades/import in the backend. */
+export const IMPORT_ROLES: Role[] = ['operations']
+
+export function canImportTrades(role: Role): boolean {
+  return IMPORT_ROLES.includes(role)
+}

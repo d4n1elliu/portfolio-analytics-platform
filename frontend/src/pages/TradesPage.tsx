@@ -1,16 +1,18 @@
 import { useCallback, useState } from 'react'
 
-import { listSecurities } from '../api/securities'
-import { TRADE_CSV_COLUMNS, importTrades, listTrades } from '../api/trades'
+import { listTrades } from '../api/trades'
 import Card from '../components/Card'
-import CsvImportForm from '../components/CsvImportForm'
 import LoadError from '../components/LoadError'
 import PageLayout from '../components/PageLayout'
 import Pagination from '../components/Pagination'
+import TradeImport from '../components/TradeImport'
+import TradeImportNotAllowed from '../components/TradeImportNotAllowed'
 import TradeTable from '../components/TradeTable'
 import { PAGE_SIZE } from '../config'
 import { useApiQuery } from '../hooks/useApiQuery'
+import { useAuth } from '../lib/auth'
 import { formatRange } from '../lib/format'
+import { canImportTrades } from '../lib/roles'
 import { MUTED_TEXT } from '../lib/styles'
 
 function TradesPage() {
@@ -21,7 +23,9 @@ function TradesPage() {
     [offset],
   )
   const { state: trades, reload: reloadTrades } = useApiQuery(loadTrades)
-  const { state: securities } = useApiQuery(listSecurities)
+  const { state: auth } = useAuth()
+  const role = auth.status === 'signedIn' ? auth.user.role : null
+  const canImport = role !== null && canImportTrades(role)
 
   function handleImported() {
     // New trades can fall anywhere in date order, so return to the first page.
@@ -33,29 +37,8 @@ function TradesPage() {
 
   return (
     <PageLayout title="Trades">
-      <Card title="Import trades">
-        <CsvImportForm
-          upload={importTrades}
-          singular="trade"
-          plural="trades"
-          onImported={handleImported}
-        >
-          <div className="space-y-1 text-sm text-slate-600">
-            <p>
-              Upload a CSV file with the columns{' '}
-              <code className="rounded bg-slate-100 px-1 py-0.5 text-xs">
-                {TRADE_CSV_COLUMNS.join(', ')}
-              </code>
-              .
-            </p>
-            {securities.status === 'loaded' && (
-              <p>
-                Known tickers: {securities.data.map((security) => security.ticker).join(', ')}.
-              </p>
-            )}
-          </div>
-        </CsvImportForm>
-      </Card>
+      {canImport && <TradeImport onImported={handleImported} />}
+      {role && !canImport && <TradeImportNotAllowed role={role} />}
 
       <Card
         title="Trades"
@@ -74,7 +57,7 @@ function TradesPage() {
 
         {page && page.total === 0 && (
           <p className={`px-6 pb-6 ${MUTED_TEXT}`}>
-            No trades yet. Import a CSV file to get started.
+            No trades yet.{canImport && ' Import a CSV file to get started.'}
           </p>
         )}
 
