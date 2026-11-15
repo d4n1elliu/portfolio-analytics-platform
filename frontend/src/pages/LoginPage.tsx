@@ -30,7 +30,6 @@ function LoginPage() {
     event.preventDefault() // Stop the browser reloading the page.
     const signedIn = await signIn.attempt(email, password)
     if (signedIn === false) {
-      // The email is kept. The password is retyped.
       setPassword('')
       passwordBox.current?.focus()
     }
@@ -46,8 +45,8 @@ function LoginPage() {
               key={signIn.failures}
               error={signIn.error}
               lockEnded={signIn.lockEnded}
-              expired={state.status === 'signedOut' && state.reason === 'expired'}
-              pageName={cameFrom?.label}
+              sessionExpired={state.status === 'signedOut' && state.reason === 'expired'}
+              redirectedFrom={cameFrom?.label}
             />
             <TextField
               label="Email"
@@ -80,24 +79,21 @@ function submitLabel(submitting: boolean, lockSecondsLeft: number): string {
 }
 
 interface SignInMessageProps {
-  /** Why the last sign in failed. */
   error: string | null
-  /** True once a lockout is over. */
   lockEnded: boolean
-  /** True when the visitor's session ended while they were signed in. */
-  expired: boolean
-  /** The page that sent the visitor here, if one did. */
-  pageName?: string
+  sessionExpired: boolean
+  redirectedFrom?: string
 }
 
-/** The one message above the form: the latest error, or why the visitor has to sign in. */
-function SignInMessage({ error, lockEnded, expired, pageName }: SignInMessageProps) {
+function SignInMessage(props: SignInMessageProps) {
+  const { error, lockEnded, sessionExpired, redirectedFrom } = props
+
   if (lockEnded) return <Alert variant="info">You can try signing in again.</Alert>
   if (error) return <Alert variant="error">{error}</Alert>
-  if (expired) {
+  if (sessionExpired) {
     return <Alert variant="warning">Your session has ended. Sign in again to continue.</Alert>
   }
-  if (pageName) return <Alert variant="info">Sign in to view {pageName}.</Alert>
+  if (redirectedFrom) return <Alert variant="info">Sign in to view {redirectedFrom}.</Alert>
   return null
 }
 

@@ -13,8 +13,6 @@ WINDOW = timedelta(minutes=15)
 
 
 class LoginLimiter:
-    """Counts the recent failed sign-ins from each address."""
-
     def __init__(self, max_failures: int = MAX_FAILURES, window: timedelta = WINDOW):
         self.max_failures = max_failures
         self.window = window

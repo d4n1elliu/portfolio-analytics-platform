@@ -4,7 +4,6 @@ import { ApiError, messageFrom } from '../api/client'
 import { useAuth } from '../lib/auth'
 import { useCountdown } from './useCountdown'
 
-/** Send sign in attempts, and keep what the form shows about the last one. */
 export function useSignInAttempt() {
   const { signIn } = useAuth()
   const [error, setError] = useState<string | null>(null)
@@ -45,10 +44,8 @@ export function useSignInAttempt() {
     attempt,
     submitting,
     error,
-    /** How many attempts have failed. */
     failures,
     lockSecondsLeft,
-    /** True once a lockout is over and no attempt has been made since. */
     lockEnded: wasLocked && !locked,
   }
 }

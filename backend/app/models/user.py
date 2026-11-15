@@ -30,7 +30,6 @@ class User(CreatedAtMixin, Base):
     name: Mapped[str] = mapped_column(String(100))
     # An Argon2 hash. The password itself is never stored.
     password_hash: Mapped[str] = mapped_column(String(255))
-    # A Role value.
     role: Mapped[str] = mapped_column(String(20))
     # An inactive user keeps their row but cannot sign in.
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default=true())

@@ -8,7 +8,6 @@ import type { AuthState } from '../lib/auth'
 
 const SIGNED_OUT: AuthState = { status: 'signedOut' }
 
-/** Works out who is signed in when the app opens, and shares it with every page. */
 function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({ status: 'loading' })
 

@@ -2,7 +2,6 @@ import { useAuth } from '../lib/auth'
 import { ROLE_LABELS } from '../lib/roles'
 import Button from './Button'
 
-/** The signed-in user's name and role, with a sign out button. */
 function AccountStatus() {
   const { state, signOut } = useAuth()
 
