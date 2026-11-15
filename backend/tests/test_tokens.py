@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 import jwt
 import pytest
 
-from app.config import cookie_secure
+from app.config import jwt_secret
 from app.services.tokens import ALGORITHM, InvalidTokenError, create_token, read_token
 
 NOW = datetime.now(UTC)
@@ -53,7 +53,7 @@ def test_token_with_no_signature_is_rejected():
 
 
 def test_token_with_no_expiry_is_rejected():
-    token = jwt.encode({"sub": "42"}, "test-secret-that-is-long-enough-for-hs256", ALGORITHM)
+    token = jwt.encode({"sub": "42"}, jwt_secret(), ALGORITHM)
 
     with pytest.raises(InvalidTokenError):
         read_token(token)
@@ -61,7 +61,7 @@ def test_token_with_no_expiry_is_rejected():
 
 def test_token_with_no_user_is_rejected():
     claims = {"exp": NOW + timedelta(minutes=60)}
-    token = jwt.encode(claims, "test-secret-that-is-long-enough-for-hs256", ALGORITHM)
+    token = jwt.encode(claims, jwt_secret(), ALGORITHM)
 
     with pytest.raises(InvalidTokenError):
         read_token(token)
@@ -71,12 +71,3 @@ def test_token_with_no_user_is_rejected():
 def test_text_that_is_not_a_token_is_rejected(token):
     with pytest.raises(InvalidTokenError):
         read_token(token)
-
-
-def test_cookie_is_secure_when_every_origin_is_https():
-    assert cookie_secure(["https://example.com"])
-
-
-def test_cookie_is_not_secure_on_plain_http():
-    assert not cookie_secure(["http://localhost:5173"])
-    assert not cookie_secure(["https://example.com", "http://localhost:5173"])

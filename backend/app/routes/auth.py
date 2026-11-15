@@ -1,6 +1,6 @@
 """Endpoints for signing in and out."""
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from math import ceil
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
@@ -43,13 +43,7 @@ def login(
 
     wait = limiter.retry_after(address, now)
     if wait is not None:
-        minutes = ceil(wait.total_seconds() / 60)
-        raise HTTPException(
-            status.HTTP_429_TOO_MANY_REQUESTS,
-            f"Too many failed sign-ins. Try again in {minutes} "
-            f"{'minute' if minutes == 1 else 'minutes'}.",
-            headers={"Retry-After": str(ceil(wait.total_seconds()))},
-        )
+        raise _too_many_failures(wait)
 
     found = users_service.find_by_email(db, credentials.email)
     user = users_service.check_credentials(found, credentials.password)
@@ -74,6 +68,18 @@ def logout(response: Response):
 def read_current_user(user: User = Depends(get_current_user)):
     """Return the signed-in user."""
     return user
+
+
+def _too_many_failures(wait: timedelta) -> HTTPException:
+    """The 429 answer for a visitor who must wait before trying again."""
+    seconds = ceil(wait.total_seconds())
+    minutes = ceil(seconds / 60)
+    return HTTPException(
+        status.HTTP_429_TOO_MANY_REQUESTS,
+        f"Too many failed sign-ins. Try again in {minutes} "
+        f"{'minute' if minutes == 1 else 'minutes'}.",
+        headers={"Retry-After": str(seconds)},
+    )
 
 
 def _client_address(request: Request) -> str:

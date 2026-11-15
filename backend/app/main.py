@@ -40,10 +40,9 @@ SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
 async def reject_cross_site_changes(request: Request, call_next):
     """Refuse a request that changes data if it comes from a site that is not allowed.
 
-    A browser names the site a request came from in the Origin header. Without
-    this check, another site could use a visitor's session to sign them in or
-    out, or to import trades. A request with no Origin is not from a browser
-    page, so it carries no session to misuse.
+    A browser names the site a request came from in the Origin header. This
+    stops another site from using a visitor's session. A request with no
+    Origin is not from a browser page, so it has no session to misuse.
     """
     origin = request.headers.get("origin")
     if request.method not in SAFE_METHODS and origin and origin not in CORS_ORIGINS:
