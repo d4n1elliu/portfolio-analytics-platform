@@ -4,11 +4,13 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.models import Role
 from app.routes.dependencies import (
     PageParams,
     get_current_user,
     page_params,
     read_csv_upload,
+    require_role,
 )
 from app.routes.errors import IMPORT_ERROR_RESPONSES
 from app.schemas.common import ImportResult, Page
@@ -38,7 +40,11 @@ def list_trades(page: PageParams = Depends(page_params), db: Session = Depends(g
     response_model=ImportResult,
     status_code=status.HTTP_201_CREATED,
     responses=IMPORT_ERROR_RESPONSES,
+    dependencies=[Depends(require_role(Role.OPERATIONS))],
 )
 def import_trades(content: bytes = Depends(read_csv_upload), db: Session = Depends(get_db)):
-    """Import trades from a CSV file. Either every row is saved or none are."""
+    """Import trades from a CSV file. Either every row is saved or none are.
+
+    Only the Operations role may import.
+    """
     return ImportResult(imported=import_trades_csv(db, content))

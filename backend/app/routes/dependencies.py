@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.config import DEFAULT_PAGE_SIZE, IMPORT_MAX_FILE_BYTES, MAX_PAGE_SIZE
 from app.database import get_db
-from app.models import User
+from app.models import Role, User
 from app.services import users as users_service
 from app.services.tokens import InvalidTokenError, read_token
 
@@ -68,6 +68,20 @@ def get_current_user(
     if user is None or not user.is_active:
         raise not_signed_in
     return user
+
+
+def require_role(*allowed: Role):
+    """Build a dependency that only lets the given roles through. Use with Depends().
+
+    Answers 401 when nobody is signed in and 403 when the user's role is not allowed.
+    """
+
+    def check_role(user: User = Depends(get_current_user)) -> User:
+        if user.role not in allowed:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Your role does not allow this.")
+        return user
+
+    return check_role
 
 
 def _format_size(size_bytes: int) -> str:
