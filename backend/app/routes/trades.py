@@ -7,7 +7,6 @@ from app.database import get_db
 from app.models import Role
 from app.routes.dependencies import (
     PageParams,
-    get_current_user,
     page_params,
     read_csv_upload,
     require_role,
@@ -18,9 +17,7 @@ from app.schemas.trade import TradeRead
 from app.services import trades as trades_service
 from app.services.trade_import import import_trades_csv
 
-router = APIRouter(
-    prefix="/trades", tags=["trades"], dependencies=[Depends(get_current_user)]
-)
+router = APIRouter(prefix="/trades", tags=["trades"])
 
 
 @router.get("", response_model=Page[TradeRead])

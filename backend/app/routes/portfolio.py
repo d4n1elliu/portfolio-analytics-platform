@@ -4,13 +4,10 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.routes.dependencies import get_current_user
 from app.schemas.portfolio_history import PortfolioHistoryPoint
 from app.services import portfolio_history as portfolio_history_service
 
-router = APIRouter(
-    prefix="/portfolio", tags=["portfolio"], dependencies=[Depends(get_current_user)]
-)
+router = APIRouter(prefix="/portfolio", tags=["portfolio"])
 
 
 @router.get("/history", response_model=list[PortfolioHistoryPoint])
