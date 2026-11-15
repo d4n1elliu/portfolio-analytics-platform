@@ -29,8 +29,18 @@ class FakeSession:
         asks_for_prices = statement.column_descriptions[0]["entity"] is Price
         return self.prices if asks_for_prices else self.trades
 
+    def execute(self, statement):
+        """Accept any statement, such as the health check's query."""
+
     def scalar(self, statement):
-        """Return the user whose columns equal the values in the query, such as an email."""
+        """Return the user whose columns equal the values in the query, such as an email.
+
+        Any other query, such as a count, gets None.
+        """
+        from app.models import User
+
+        if statement.column_descriptions[0]["entity"] is not User:
+            return None
         wanted = {
             name.rsplit("_", 1)[0]: value for name, value in statement.compile().params.items()
         }
@@ -40,20 +50,26 @@ class FakeSession:
         return None
 
 
-def _client(session: FakeSession):
-    """Make a test client that uses the given session instead of a database."""
+def _client(session: FakeSession, signed_in_as=None):
+    """Make a test client that uses the given session instead of a database.
+
+    Give a user to skip signing in: every request is then made as that user.
+    """
     # Imported here because the app needs DATABASE_URL, which is set above.
     from fastapi.testclient import TestClient
 
     from app.database import get_db
     from app.main import app
     from app.routes.auth import get_login_limiter
+    from app.routes.dependencies import get_current_user
     from app.services.login_limiter import LoginLimiter
 
     # A new limiter each time, so one test's failed sign-ins cannot block another's.
     limiter = LoginLimiter()
     app.dependency_overrides[get_db] = lambda: session
     app.dependency_overrides[get_login_limiter] = lambda: limiter
+    if signed_in_as is not None:
+        app.dependency_overrides[get_current_user] = lambda: signed_in_as
     return TestClient(app)
 
 
@@ -68,8 +84,12 @@ def _restore_app():
 
 @pytest.fixture
 def client_with_data(_restore_app):
-    """Make a test client whose database holds the given trades and prices."""
-    return lambda trades, prices=None: _client(FakeSession(trades, prices or []))
+    """Make a test client, signed in, whose database holds the given trades and prices."""
+    from factories import make_user
+
+    return lambda trades, prices=None: _client(
+        FakeSession(trades, prices or []), signed_in_as=make_user()
+    )
 
 
 @pytest.fixture

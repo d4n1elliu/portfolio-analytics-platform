@@ -1,24 +1,20 @@
 import { useAuth } from '../lib/auth'
-import { ROUTES } from '../routes'
+import { PAGES } from '../routes'
 import HeaderLink from './HeaderLink'
 
-const LINKS = [
-  { to: ROUTES.dashboard, label: 'Dashboard' },
-  { to: ROUTES.holdings, label: 'Holdings' },
-  { to: ROUTES.trades, label: 'Trades' },
-]
-
+/** The links to each page. A signed-out visitor cannot open them, so sees none. */
 function NavBar() {
   const { state } = useAuth()
 
+  if (state.status !== 'signedIn') return null
+
   return (
     <nav aria-label="Main" className="flex gap-1">
-      {LINKS.map((link) => (
-        <HeaderLink key={link.to} to={link.to}>
-          {link.label}
+      {PAGES.map((page) => (
+        <HeaderLink key={page.path} to={page.path}>
+          {page.label}
         </HeaderLink>
       ))}
-      {state.status === 'signedOut' && <HeaderLink to={ROUTES.login}>Sign in</HeaderLink>}
     </nav>
   )
 }

@@ -90,6 +90,12 @@ export function formatQuantity(value: string | number): string {
   return Number.isNaN(amount) ? String(value) : quantityFormatter.format(amount)
 }
 
+/** Format a number of seconds as minutes and seconds, such as "10:42". */
+export function formatTimer(seconds: number): string {
+  const minutes = Math.floor(seconds / 60)
+  return `${minutes}:${String(seconds % 60).padStart(2, '0')}`
+}
+
 /** Pick the singular or plural word for a count: "1 trade", "2 trades". */
 export function formatCount(count: number, singular: string, plural: string): string {
   return `${count} ${count === 1 ? singular : plural}`

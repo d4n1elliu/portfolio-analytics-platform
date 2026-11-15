@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from app.config import CORS_ORIGINS
 from app.database import get_db
 from app.routes import auth, holdings, portfolio, securities, trades
+from app.routes.dependencies import get_current_user
 from app.routes.errors import register_error_handlers
 
 logger = logging.getLogger(__name__)
@@ -30,6 +31,8 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    # Lets the page read how long a locked-out visitor must wait.
+    expose_headers=["Retry-After"],
 )
 
 # Requests that only read data. A browser sends them from any site.
@@ -57,10 +60,9 @@ register_error_handlers(app)
 
 # Each router holds the endpoints for one area of the API.
 app.include_router(auth.router)
-app.include_router(holdings.router)
-app.include_router(portfolio.router)
-app.include_router(securities.router)
-app.include_router(trades.router)
+# Every endpoint in these routers needs a signed-in user.
+for router in (holdings.router, portfolio.router, securities.router, trades.router):
+    app.include_router(router, dependencies=[Depends(get_current_user)])
 
 
 @app.get("/health")

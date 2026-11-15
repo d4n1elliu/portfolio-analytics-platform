@@ -1,7 +1,5 @@
-import { ApiError, postJson, request } from './client'
+import { ApiError, NOT_SIGNED_IN, postJson, request } from './client'
 import type { User } from './types'
-
-const NOT_SIGNED_IN = 401
 
 /** Sign in. The API sets the session cookie. */
 export function login(email: string, password: string): Promise<User> {

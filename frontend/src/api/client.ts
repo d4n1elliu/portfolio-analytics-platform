@@ -9,13 +9,32 @@ export class ApiError extends Error {
   readonly status: number
   /** The JSON body of the error response, if it had one. */
   readonly body: unknown
+  /** Seconds to wait before trying again, when the API gave a wait. */
+  readonly retryAfterSeconds: number | null
 
-  constructor(message: string, status: number, body: unknown = null) {
+  constructor(
+    message: string,
+    status: number,
+    body: unknown = null,
+    retryAfterSeconds: number | null = null,
+  ) {
     super(message)
     this.name = 'ApiError'
     this.status = status
     this.body = body
+    this.retryAfterSeconds = retryAfterSeconds
   }
+}
+
+/** The status the API answers with when nobody is signed in. */
+export const NOT_SIGNED_IN = 401
+const AUTH_PATHS = '/auth/'
+
+let onSessionExpired: (() => void) | null = null
+
+/** Set what happens when the API stops accepting the session. Pass null to clear it. */
+export function setSessionExpiredHandler(handler: (() => void) | null): void {
+  onSessionExpired = handler
 }
 
 /** Send a request to the API and return the parsed JSON response. */
@@ -32,8 +51,12 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   // An error response may have no JSON body.
   const body: unknown = await response.json().catch(() => null)
+  // A 401 from a data endpoint means the session ended while the page was open.
+  // The sign in endpoints answer 401 for their own reasons.
+  if (response.status === NOT_SIGNED_IN && !path.startsWith(AUTH_PATHS)) onSessionExpired?.()
   if (!response.ok) {
-    throw new ApiError(errorMessage(body, response.status), response.status, body)
+    const retryAfter = Number(response.headers.get('Retry-After')) || null
+    throw new ApiError(errorMessage(body, response.status), response.status, body, retryAfter)
   }
   return body as T
 }

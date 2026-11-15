@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 
 import { getCurrentUser, login, logout } from '../api/auth'
-import { isAbortError } from '../api/client'
+import { isAbortError, setSessionExpiredHandler } from '../api/client'
 import { AuthContext } from '../lib/auth'
 import type { AuthState } from '../lib/auth'
 
@@ -25,6 +25,11 @@ function AuthProvider({ children }: { children: ReactNode }) {
     return () => controller.abort()
   }, [])
 
+  useEffect(() => {
+    setSessionExpiredHandler(() => setState({ status: 'signedOut', reason: 'expired' }))
+    return () => setSessionExpiredHandler(null)
+  }, [])
+
   const signIn = useCallback(async (email: string, password: string) => {
     const user = await login(email, password)
     setState({ status: 'signedIn', user })
@@ -32,7 +37,7 @@ function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     await logout()
-    setState(SIGNED_OUT)
+    setState({ status: 'signedOut', reason: 'choseTo' })
   }, [])
 
   const auth = useMemo(() => ({ state, signIn, signOut }), [state, signIn, signOut])
