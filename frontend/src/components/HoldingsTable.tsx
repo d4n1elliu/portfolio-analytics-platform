@@ -37,9 +37,7 @@ const COLUMNS: Column<Holding>[] = [
     header: 'Avg cost',
     align: 'right',
     render: (holding) =>
-      holding.average_cost === null
-        ? '—'
-        : formatCurrency(holding.average_cost, holding.currency, UNIT_COST_DECIMALS),
+      holding.average_cost === null ? '—' : formatUnitCost(holding.average_cost, holding.currency),
     sortValue: (holding) => (holding.average_cost === null ? null : Number(holding.average_cost)),
   },
   {
@@ -59,6 +57,11 @@ const COLUMNS: Column<Holding>[] = [
     sortValue: (holding) => Number(holding.realised_pnl),
   },
 ]
+
+/** Every row shows the same number of decimals, so the column lines up. */
+function formatUnitCost(value: string, currency: string): string {
+  return formatCurrency(value, currency, UNIT_COST_DECIMALS, UNIT_COST_DECIMALS)
+}
 
 function HoldingsTable({ holdings }: { holdings: Holding[] }) {
   return <DataTable columns={COLUMNS} rows={holdings} getRowKey={(holding) => holding.ticker} />
