@@ -69,6 +69,11 @@ MARKET_TIMEZONE = os.getenv("MARKET_TIMEZONE", "").strip() or "Australia/Sydney"
 IMPORT_MAX_FILE_BYTES = _optional_int("IMPORT_MAX_FILE_BYTES", 1024 * 1024)
 IMPORT_MAX_ROWS = _optional_int("IMPORT_MAX_ROWS", 5000)
 
+# A price refresh starts this many days before a security's latest stored
+# price, or a full lookback ago when it has none.
+PRICE_REFRESH_OVERLAP_DAYS = _optional_int("PRICE_REFRESH_OVERLAP_DAYS", 5)
+PRICE_LOOKBACK_DAYS = _optional_int("PRICE_LOOKBACK_DAYS", 365)
+
 # Page sizes for endpoints that return lists.
 DEFAULT_PAGE_SIZE = _optional_int("DEFAULT_PAGE_SIZE", 50)
 MAX_PAGE_SIZE = _optional_int("MAX_PAGE_SIZE", 500)
