@@ -1,4 +1,5 @@
 import type { Holding } from '../api/types'
+import { formatDate } from './format'
 import { commonCurrency, sumMoney } from './holdings'
 
 /** A holding that has a stored price, so its valuation fields are filled in. */
@@ -39,6 +40,17 @@ export function summariseValuation(holdings: ValuedHolding[]): ValuationSummary 
     unrealisedReturn: costBasis === 0 ? null : unrealisedPnl / costBasis,
     currency: commonCurrency(holdings),
   }
+}
+
+/** "Prices as at 13 Nov 2026", or nothing when there is no price date. */
+export function pricesAsAt(priceDate: string | null): string {
+  return priceDate === null ? '' : `Prices as at ${formatDate(priceDate)}`
+}
+
+/** The most recent price date among the holdings, or null if none has a price. */
+export function latestPriceDate(holdings: Holding[]): string | null {
+  const dates = holdings.flatMap((holding) => holding.price_date ?? [])
+  return dates.sort().at(-1) ?? null
 }
 
 /** Each sector's market value and share of the total, largest first. */
