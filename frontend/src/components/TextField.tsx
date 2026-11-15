@@ -1,5 +1,5 @@
 import { useId } from 'react'
-import type { ReactNode } from 'react'
+import type { ReactNode, Ref } from 'react'
 
 import { FOCUS_OUTLINE, TEXT_INPUT } from '../lib/styles'
 
@@ -14,11 +14,13 @@ export interface TextFieldProps {
   trailing?: ReactNode
   /** Puts the cursor in this box when the page opens. */
   autoFocus?: boolean
+  /** Gives the page the box itself, for example to move the cursor to it. */
+  inputRef?: Ref<HTMLInputElement>
 }
 
 /** A labelled text box that must be filled in. */
 function TextField(props: TextFieldProps) {
-  const { label, type, value, autoComplete, onChange, trailing, autoFocus } = props
+  const { label, type, value, autoComplete, onChange, trailing, autoFocus, inputRef } = props
   const id = useId()
 
   return (
@@ -29,6 +31,7 @@ function TextField(props: TextFieldProps) {
       <div className="relative">
         <input
           id={id}
+          ref={inputRef}
           type={type}
           value={value}
           autoComplete={autoComplete}

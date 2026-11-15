@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Navigate, useLocation } from 'react-router'
 
@@ -19,6 +19,7 @@ function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [attempts, setAttempts] = useState(0)
+  const passwordBox = useRef<HTMLInputElement>(null)
   const cameFrom = returnPage(useLocation().state)
   const expired = state.status === 'signedOut' && state.reason === 'expired'
 
@@ -39,6 +40,9 @@ function LoginPage() {
       setError(messageFrom(error, 'Could not sign in.'))
       setAttempts((count) => count + 1)
       setSubmitting(false)
+      // The email is kept. The password is retyped.
+      setPassword('')
+      passwordBox.current?.focus()
     }
   }
 
@@ -68,6 +72,7 @@ function LoginPage() {
               value={password}
               autoComplete="current-password"
               onChange={setPassword}
+              inputRef={passwordBox}
             />
             <Button type="submit" disabled={submitting}>
               {submitting ? 'Signing in…' : 'Sign in'}
