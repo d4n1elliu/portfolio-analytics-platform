@@ -7,6 +7,7 @@ import Alert from '../components/Alert'
 import Button from '../components/Button'
 import Card from '../components/Card'
 import PageLayout from '../components/PageLayout'
+import PasswordField from '../components/PasswordField'
 import TextField from '../components/TextField'
 import { useAuth } from '../lib/auth'
 import { ROUTES } from '../routes'
@@ -46,9 +47,8 @@ function LoginPage() {
               autoComplete="username"
               onChange={setEmail}
             />
-            <TextField
+            <PasswordField
               label="Password"
-              type="password"
               value={password}
               autoComplete="current-password"
               onChange={setPassword}
