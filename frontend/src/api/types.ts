@@ -67,7 +67,6 @@ export interface PortfolioHistoryPoint {
 
 export type Role = 'operations' | 'portfolio_manager' | 'analyst'
 
-/** The signed-in user. */
 export interface User {
   email: string
   name: string

@@ -38,7 +38,6 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return body as T
 }
 
-/** Send a POST request with a JSON body. */
 export function postJson<T>(path: string, body?: unknown): Promise<T> {
   return request<T>(path, {
     method: 'POST',
