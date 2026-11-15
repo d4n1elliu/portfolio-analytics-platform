@@ -34,9 +34,9 @@ function LoginPage() {
   }
 
   return (
-    <PageLayout title="Sign in">
-      <div className="max-w-md">
-        <Card title="Sign in to your account">
+    <PageLayout>
+      <div className="mx-auto mt-12 max-w-md">
+        <Card title="Sign in">
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && <Alert variant="error">{error}</Alert>}
             <TextField

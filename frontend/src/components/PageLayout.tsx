@@ -9,7 +9,8 @@ import NavBar from './NavBar'
 const PAGE_WIDTH = 'mx-auto max-w-7xl'
 
 interface PageLayoutProps {
-  title: string
+  /** The page heading. Leave it out for a page that has no heading. */
+  title?: string
   children: ReactNode
 }
 
@@ -38,7 +39,7 @@ function PageLayout({ title, children }: PageLayoutProps) {
         key={pathname}
         className={`${PAGE_WIDTH} space-y-6 px-4 py-8 motion-safe:animate-page-in sm:px-8`}
       >
-        <h1 className="text-2xl font-semibold">{title}</h1>
+        {title && <h1 className="text-2xl font-semibold">{title}</h1>}
         {children}
       </main>
     </div>
