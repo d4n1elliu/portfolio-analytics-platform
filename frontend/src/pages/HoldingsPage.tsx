@@ -10,6 +10,7 @@ import HoldingsTable from '../components/HoldingsTable'
 import LoadError from '../components/LoadError'
 import OversoldWarning from '../components/OversoldWarning'
 import PageLayout from '../components/PageLayout'
+import StalePriceWarning from '../components/StalePriceWarning'
 import { useApiQuery } from '../hooks/useApiQuery'
 import { formatCount } from '../lib/format'
 import {
@@ -45,6 +46,7 @@ function HoldingsPage() {
   return (
     <PageLayout title="Holdings">
       {holdings && <OversoldWarning holdings={findOversold(holdings)} />}
+      <StalePriceWarning priceDate={priceDate} />
       {holdings && <HoldingsSummary holdings={shown} />}
 
       <Card

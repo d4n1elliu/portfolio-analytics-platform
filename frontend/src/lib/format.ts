@@ -1,6 +1,7 @@
 // Shared helpers so every screen shows dates, money and counts the same way.
 
 import { DEFAULT_CURRENCY, LOCALE } from '../config'
+import { parseDate } from './dates'
 
 /** Shown in place of a value that is missing. */
 export const NO_VALUE = '—'
@@ -28,9 +29,7 @@ const quantityFormatter = new Intl.NumberFormat(LOCALE, { maximumFractionDigits:
 
 /** Format a date-only value such as "2026-03-16" as "16 Mar 2026". */
 export function formatDate(isoDate: string): string {
-  const [year, month, day] = isoDate.split('-').map(Number)
-  // Built from its parts so the date stays in the local time zone.
-  const date = new Date(year, month - 1, day)
+  const date = parseDate(isoDate)
   return Number.isNaN(date.getTime()) ? isoDate : dateFormatter.format(date)
 }
 
