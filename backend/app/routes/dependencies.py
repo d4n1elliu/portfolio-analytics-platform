@@ -12,7 +12,6 @@ from app.services import users as users_service
 from app.services.tokens import InvalidTokenError, read_token
 
 CSV_EXTENSION = ".csv"
-# The cookie that holds the session token.
 SESSION_COOKIE = "session"
 
 

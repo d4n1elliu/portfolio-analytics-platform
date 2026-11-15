@@ -71,7 +71,6 @@ def read_current_user(user: User = Depends(get_current_user)):
 
 
 def _too_many_failures(wait: timedelta) -> HTTPException:
-    """The 429 answer for a visitor who must wait before trying again."""
     seconds = ceil(wait.total_seconds())
     minutes = ceil(seconds / 60)
     return HTTPException(

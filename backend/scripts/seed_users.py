@@ -34,7 +34,7 @@ DEMO_ACCOUNTS = [
 
 
 class SeedError(Exception):
-    """Raised when the demo accounts cannot be built."""
+    pass
 
 
 def password_variable(role: Role) -> str:
