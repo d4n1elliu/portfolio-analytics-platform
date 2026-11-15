@@ -6,3 +6,6 @@ export const COLOUR_TRANSITION = 'duration-150 motion-safe:transition-colors'
 /** The outline shown when a control is reached with the keyboard. */
 export const FOCUS_OUTLINE =
   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900'
+
+/** Small grey text for loading and empty messages. */
+export const MUTED_TEXT = 'text-sm text-slate-500'

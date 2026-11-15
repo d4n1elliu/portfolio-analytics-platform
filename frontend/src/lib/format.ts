@@ -43,6 +43,15 @@ export function formatCurrency(
   }).format(amount)
 }
 
+/** Format money in short form for a chart axis, such as "$150K". */
+export function formatCompactCurrency(value: number, currency = DEFAULT_CURRENCY): string {
+  return new Intl.NumberFormat(LOCALE, {
+    style: 'currency',
+    currency,
+    notation: 'compact',
+  }).format(value)
+}
+
 /** Format a profit or loss with its sign, such as "+$812.59" or "-$120.00". */
 export function formatProfit(value: string | number, currency = DEFAULT_CURRENCY): string {
   const amount = Number(value)

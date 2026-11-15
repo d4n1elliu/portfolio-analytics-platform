@@ -1,13 +1,12 @@
 import { useMemo } from 'react'
 
-import { CHART_COLOURS, CHART_FONT_FAMILY, CHART_FONT_SIZE } from '../lib/chartStyle'
+import { CHART_COLOURS, CHART_EDGE_PADDING, CHART_TEXT_STYLE } from '../lib/chartStyle'
 import type { ChartOption } from '../lib/echarts'
 import Chart from './Chart'
 
 const BAR_THICKNESS = 16
 const ROW_HEIGHT = 36
 const VERTICAL_PADDING = 16
-const EDGE_PADDING = 8
 const LABEL_CHARACTER_WIDTH = 7
 const LABEL_GAP = 8
 const ROUNDED_RIGHT = [0, 4, 4, 0]
@@ -36,24 +35,19 @@ function RankedBarChart({ bars, label }: RankedBarChartProps) {
 }
 
 function rankedBarOption(bars: RankedBar[]): ChartOption {
-  const text = {
-    color: CHART_COLOURS.text,
-    fontFamily: CHART_FONT_FAMILY,
-    fontSize: CHART_FONT_SIZE,
-  }
   const names = bars.map((bar) => bar.name)
 
   return {
-    textStyle: text,
+    textStyle: CHART_TEXT_STYLE,
     grid: {
-      top: EDGE_PADDING,
-      bottom: EDGE_PADDING,
-      left: EDGE_PADDING + labelRoom(bars.map((bar) => labelOn(bar, 'left'))),
-      right: EDGE_PADDING + labelRoom(bars.map((bar) => labelOn(bar, 'right'))),
+      top: CHART_EDGE_PADDING,
+      bottom: CHART_EDGE_PADDING,
+      left: CHART_EDGE_PADDING + labelRoom(bars.map((bar) => labelOn(bar, 'left'))),
+      right: CHART_EDGE_PADDING + labelRoom(bars.map((bar) => labelOn(bar, 'right'))),
     },
     tooltip: {
       trigger: 'item',
-      textStyle: text,
+      textStyle: CHART_TEXT_STYLE,
       valueFormatter: (_value, index) => bars[index].tooltipLabel ?? bars[index].valueLabel,
     },
     xAxis: {

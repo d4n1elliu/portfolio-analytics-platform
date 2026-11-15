@@ -6,11 +6,13 @@ import Alert from '../components/Alert'
 import Card from '../components/Card'
 import LoadError from '../components/LoadError'
 import PageLayout from '../components/PageLayout'
+import PortfolioHistory from '../components/PortfolioHistory'
 import RankedBarChart from '../components/RankedBarChart'
 import type { RankedBar } from '../components/RankedBarChart'
 import ValuationSummary from '../components/ValuationSummary'
 import { useApiQuery } from '../hooks/useApiQuery'
 import { formatCount, formatCurrency, formatDate, formatPercent, formatProfit } from '../lib/format'
+import { MUTED_TEXT } from '../lib/styles'
 import { sectorAllocation, summariseValuation, valuedHoldings } from '../lib/valuation'
 import type { SectorShare, ValuedHolding } from '../lib/valuation'
 import { ROUTES } from '../routes'
@@ -24,7 +26,7 @@ function DashboardPage() {
 
   return (
     <PageLayout title="Dashboard">
-      {state.status === 'loading' && <p className="text-sm text-slate-500">Loading dashboard…</p>}
+      {state.status === 'loading' && <p className={MUTED_TEXT}>Loading dashboard…</p>}
       {state.status === 'error' && <LoadError message={state.message} onRetry={reload} />}
       {state.status === 'loaded' && <Valuation openHoldings={state.data} />}
     </PageLayout>
@@ -39,7 +41,7 @@ function Valuation({ openHoldings }: { openHoldings: Holding[] }) {
 
   if (holdings.length === 0) {
     return (
-      <p className="text-sm text-slate-500">
+      <p className={MUTED_TEXT}>
         No priced positions yet.{' '}
         <Link to={ROUTES.trades} className="font-medium text-slate-900 underline">
           Import trades
@@ -68,6 +70,8 @@ function Valuation({ openHoldings }: { openHoldings: Holding[] }) {
       )}
 
       <ValuationSummary summary={summary} currency={currency} />
+
+      <PortfolioHistory currency={currency} />
 
       <Card title="Sector allocation" aside={pricesAsAt}>
         <RankedBarChart

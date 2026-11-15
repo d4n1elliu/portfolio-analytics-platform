@@ -11,6 +11,7 @@ import TradeTable from '../components/TradeTable'
 import { PAGE_SIZE } from '../config'
 import { useApiQuery } from '../hooks/useApiQuery'
 import { formatRange } from '../lib/format'
+import { MUTED_TEXT } from '../lib/styles'
 
 function TradesPage() {
   const [offset, setOffset] = useState(0)
@@ -64,7 +65,7 @@ function TradesPage() {
         }
       >
         {trades.status === 'loading' && (
-          <p className="px-6 pb-6 text-sm text-slate-500">Loading trades…</p>
+          <p className={`px-6 pb-6 ${MUTED_TEXT}`}>Loading trades…</p>
         )}
 
         {trades.status === 'error' && (
@@ -72,7 +73,7 @@ function TradesPage() {
         )}
 
         {page && page.total === 0 && (
-          <p className="px-6 pb-6 text-sm text-slate-500">
+          <p className={`px-6 pb-6 ${MUTED_TEXT}`}>
             No trades yet. Import a CSV file to get started.
           </p>
         )}

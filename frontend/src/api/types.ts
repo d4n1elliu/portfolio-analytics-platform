@@ -56,6 +56,15 @@ export interface Holding {
   weight: string | null
 }
 
+/** The value of the open positions at the end of one date. */
+export interface PortfolioHistoryPoint {
+  /** Date only, as "YYYY-MM-DD". */
+  date: string
+  market_value: string
+  cost_basis: string
+  unrealised_pnl: string
+}
+
 export type TradeSide = 'BUY' | 'SELL'
 
 export interface Trade {

@@ -22,6 +22,7 @@ import {
   sectorsOf,
   selectByStatus,
 } from '../lib/holdings'
+import { MUTED_TEXT } from '../lib/styles'
 import { ROUTES } from '../routes'
 
 /** Every position is fetched once. Closed ones are hidden in the browser. */
@@ -60,7 +61,7 @@ function HoldingsPage() {
         />
 
         {state.status === 'loading' && (
-          <p className="px-6 pb-6 text-sm text-slate-500">Loading holdings…</p>
+          <p className={`px-6 pb-6 ${MUTED_TEXT}`}>Loading holdings…</p>
         )}
 
         {state.status === 'error' && (
@@ -68,7 +69,7 @@ function HoldingsPage() {
         )}
 
         {holdings && holdings.length === 0 && (
-          <p className="px-6 pb-6 text-sm text-slate-500">
+          <p className={`px-6 pb-6 ${MUTED_TEXT}`}>
             No positions yet.{' '}
             <Link to={ROUTES.trades} className="font-medium text-slate-900 underline">
               Import trades
@@ -78,14 +79,14 @@ function HoldingsPage() {
         )}
 
         {holdings && holdings.length > 0 && listed.length === 0 && (
-          <p className="px-6 pb-6 text-sm text-slate-500">
+          <p className={`px-6 pb-6 ${MUTED_TEXT}`}>
             No open positions. Tick "Show closed positions" to see the ones that have been sold.
           </p>
         )}
 
         {listed.length > 0 && shown.length === 0 && (
           <div className="space-y-3 px-6 pb-6">
-            <p className="text-sm text-slate-500">No positions match the search and filters.</p>
+            <p className={MUTED_TEXT}>No positions match the search and filters.</p>
             {hasFilters(filters) && (
               <Button variant="secondary" onClick={() => setFilters(NO_FILTERS)}>
                 Clear filters
