@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { Navigate } from 'react-router'
+import { Navigate, useLocation } from 'react-router'
 
 import { messageFrom } from '../api/client'
 import Alert from '../components/Alert'
@@ -18,9 +18,11 @@ function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const from = (useLocation().state as { from?: string } | null)?.from
 
-  // A successful sign in changes the state, which sends the user on from here.
-  if (state.status === 'signedIn') return <Navigate to={ROUTES.holdings} replace />
+  // A successful sign in changes the state, which sends the user on from here,
+  // back to the page they first asked for.
+  if (state.status === 'signedIn') return <Navigate to={from ?? ROUTES.holdings} replace />
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault() // Stop the browser reloading the page.
