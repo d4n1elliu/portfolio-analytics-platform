@@ -23,6 +23,7 @@ import {
   selectByStatus,
 } from '../lib/holdings'
 import { MUTED_TEXT } from '../lib/styles'
+import { latestPriceDate, pricesAsAt } from '../lib/valuation'
 import { ROUTES } from '../routes'
 
 /** Every position is fetched once. Closed ones are hidden in the browser. */
@@ -39,6 +40,7 @@ function HoldingsPage() {
   const holdings = state.status === 'loaded' ? state.data : null
   const listed = holdings ? selectByStatus(holdings, showClosed) : []
   const shown = filterHoldings(listed, filters)
+  const priceDate = holdings ? latestPriceDate(holdings) : null
 
   return (
     <PageLayout title="Holdings">
@@ -48,7 +50,7 @@ function HoldingsPage() {
       <Card
         title="Positions"
         padded={false}
-        aside={holdings && positionCount(shown.length, listed.length)}
+        aside={holdings && cardAside(shown.length, listed.length, priceDate)}
       >
         <HoldingsFilters
           filters={filters}
@@ -99,6 +101,12 @@ function HoldingsPage() {
       </Card>
     </PageLayout>
   )
+}
+
+/** "10 positions · Prices as at 13 Nov 2026". The date is left out when there are no prices. */
+function cardAside(shown: number, total: number, priceDate: string | null): string {
+  const parts = [positionCount(shown, total), pricesAsAt(priceDate)]
+  return parts.filter((part) => part !== '').join(' · ')
 }
 
 /** "10 positions", or "3 of 10 positions" when filters hide some. */
