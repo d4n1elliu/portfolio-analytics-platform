@@ -1,12 +1,19 @@
-"""Reusable request handling for routes: paging and CSV uploads."""
+"""Reusable request handling for routes: paging, CSV uploads and the signed-in user."""
 
 from dataclasses import dataclass
 
-from fastapi import HTTPException, Query, UploadFile, status
+from fastapi import Cookie, Depends, HTTPException, Query, UploadFile, status
+from sqlalchemy.orm import Session
 
 from app.config import DEFAULT_PAGE_SIZE, IMPORT_MAX_FILE_BYTES, MAX_PAGE_SIZE
+from app.database import get_db
+from app.models import User
+from app.services import users as users_service
+from app.services.tokens import InvalidTokenError, read_token
 
 CSV_EXTENSION = ".csv"
+# The cookie that holds the session token.
+SESSION_COOKIE = "session"
 
 
 @dataclass(frozen=True)
@@ -42,6 +49,25 @@ def read_csv_upload(file: UploadFile) -> bytes:
             f"The file is larger than {_format_size(IMPORT_MAX_FILE_BYTES)}.",
         )
     return content
+
+
+def get_current_user(
+    token: str | None = Cookie(None, alias=SESSION_COOKIE), db: Session = Depends(get_db)
+) -> User:
+    """Return the signed-in user. Use with Depends().
+
+    Answers 401 if there is no valid session, or the user is gone or inactive.
+    """
+    not_signed_in = HTTPException(status.HTTP_401_UNAUTHORIZED, "Sign in to continue.")
+    try:
+        user_id = read_token(token or "")
+    except InvalidTokenError:
+        raise not_signed_in from None
+
+    user = users_service.find_by_id(db, user_id)
+    if user is None or not user.is_active:
+        raise not_signed_in
+    return user
 
 
 def _format_size(size_bytes: int) -> str:

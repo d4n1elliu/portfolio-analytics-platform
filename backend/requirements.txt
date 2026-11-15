@@ -18,6 +18,7 @@ psycopg-binary==3.3.9
 pycparser==3.12
 pydantic==2.14.3
 pydantic_core==2.50.4
+PyJWT==2.15.1
 python-dotenv==1.2.4
 python-multipart==0.0.33
 PyYAML==6.0.3
