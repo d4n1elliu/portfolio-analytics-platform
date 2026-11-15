@@ -11,6 +11,9 @@ import pytest
 if not os.environ.get("DATABASE_URL", "").strip():
     os.environ["DATABASE_URL"] = "postgresql://test:test@localhost:5432/test"
 
+# A made-up secret for signing tokens, so the tests never use a real one.
+os.environ["JWT_SECRET"] = "test-secret-that-is-long-enough-for-hs256"
+
 
 class FakeSession:
     """Stands in for the database session. Returns trades or prices to match the query."""

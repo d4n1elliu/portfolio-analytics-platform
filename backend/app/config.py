@@ -74,6 +74,30 @@ IMPORT_MAX_ROWS = _optional_int("IMPORT_MAX_ROWS", 5000)
 PRICE_REFRESH_OVERLAP_DAYS = _optional_int("PRICE_REFRESH_OVERLAP_DAYS", 5)
 PRICE_LOOKBACK_DAYS = _optional_int("PRICE_LOOKBACK_DAYS", 365)
 
+# How long a sign in lasts before the user has to sign in again.
+SESSION_MINUTES = _optional_int("SESSION_MINUTES", 480)
+
+
+def jwt_secret() -> str:
+    """Return the secret that signs session tokens.
+
+    Read when a token is signed or checked, not when the app starts, so a job
+    that never signs anyone in, such as the price refresh, runs without it.
+    """
+    return _require("JWT_SECRET")
+
+
+def cookie_secure(origins: list[str]) -> bool:
+    """Return True if the session cookie should be sent over HTTPS only.
+
+    True when every allowed origin uses HTTPS, as in production. Local
+    development runs on plain HTTP, where a secure cookie would not be sent.
+    """
+    return all(origin.startswith("https://") for origin in origins)
+
+
+COOKIE_SECURE = cookie_secure(CORS_ORIGINS)
+
 # Page sizes for endpoints that return lists.
 DEFAULT_PAGE_SIZE = _optional_int("DEFAULT_PAGE_SIZE", 50)
 MAX_PAGE_SIZE = _optional_int("MAX_PAGE_SIZE", 500)
