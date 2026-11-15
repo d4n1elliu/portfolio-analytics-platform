@@ -9,7 +9,7 @@ export function parseDate(isoDate: string): Date {
   return new Date(year, month - 1, day)
 }
 
-/** Count the weekdays after a date, up to and including today. Public holidays are not skipped. */
+/** Public holidays are counted as business days. */
 export function businessDaysSince(isoDate: string, today: Date): number {
   const lastDay = new Date(today.getFullYear(), today.getMonth(), today.getDate())
   const day = parseDate(isoDate)

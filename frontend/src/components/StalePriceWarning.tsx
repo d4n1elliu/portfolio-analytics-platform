@@ -6,7 +6,6 @@ import Alert from './Alert'
 
 const MAX_BUSINESS_DAYS_OLD = 3
 
-/** Warns when the latest price is old enough that values may be out of date. */
 function StalePriceWarning({ priceDate }: { priceDate: string | null }) {
   // Read once, so the answer does not change between renders.
   const [today] = useState(() => new Date())

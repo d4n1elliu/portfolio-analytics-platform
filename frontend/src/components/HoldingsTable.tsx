@@ -43,7 +43,6 @@ const COLUMNS: Column<Holding>[] = [
   ),
 ]
 
-/** A sortable column of numbers. A missing value shows a dash and is sorted last. */
 function numberColumn(
   header: string,
   valueOf: (holding: Holding) => string | null,
@@ -77,7 +76,6 @@ interface TwoLinesProps {
   bold?: boolean
 }
 
-/** A value with a smaller line of detail under it. */
 function TwoLines({ main, detail, bold = false }: TwoLinesProps) {
   return (
     <div className="min-w-32">
