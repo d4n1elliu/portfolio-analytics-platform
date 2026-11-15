@@ -96,7 +96,7 @@ A request flows through the backend in one direction: a route calls a service, a
 
 ## Data model
 
-Three tables hold everything the analytics are built on, and a fourth holds the people who can sign in.
+Four tables hold the data.
 
 | Table        | One row is                       | Key columns                                                        |
 | ------------ | -------------------------------- | ------------------------------------------------------------------ |
@@ -132,7 +132,7 @@ A security has many trades and many prices. The database enforces the basic rule
 | `GET`  | `/trades`        | Lists trades, newest first, with the ticker and security name   |
 | `POST` | `/trades/import` | Imports trades from a CSV file                                  |
 
-Every endpoint below `/auth/me` in the table needs a sign in and answers `401` without one. See [Login and roles](#login-and-roles).
+Every endpoint below `/auth/me` needs a sign in. See [Login and roles](#login-and-roles).
 
 `GET /trades` takes `limit` (1 to 500, default 50) and `offset` (default 0), and returns `{"items": [...], "total": 30, "limit": 50, "offset": 0}`. Decimal values are returned as strings, such as `"45.250000"`, so no precision is lost.
 
@@ -142,7 +142,7 @@ The interactive docs at http://localhost:8000/docs list every endpoint and let y
 
 ### Login and roles
 
-There is no sign-up. Accounts are created by a seed script, as they would be for staff of an internal tool.
+Every page needs a sign in. There is no sign-up: accounts are created by a seed script.
 
 | Role              | Can view everything | Can import trades |
 | ----------------- | ------------------- | ----------------- |
@@ -150,21 +150,11 @@ There is no sign-up. Accounts are created by a seed script, as they would be for
 | Portfolio Manager | Yes                 | No                |
 | Analyst           | Yes                 | No                |
 
-**How signing in works.** `POST /auth/login` checks the email and password and sets a session cookie that lasts 8 hours. The browser sends the cookie with every request, and page scripts cannot read it. A wrong password, an unknown email and an inactive account all get the same answer, so the response does not show which emails exist. After 10 failed attempts from one address, sign-ins from that address are refused for up to 15 minutes.
+Signing in sets a cookie that lasts 8 hours. After 10 failed attempts, sign-ins from that address are blocked for up to 15 minutes.
 
-**What the roles do.** The API answers `403` when a Portfolio Manager or Analyst tries to import trades, and the Trades page shows them a note in place of the import form.
+The seed script creates one demo account per role: `operations@example.com`, `pm@example.com` and `analyst@example.com`. Their passwords are chosen when the script is run and are not stored in this repository.
 
-**Demo accounts.** The seed script creates one account per role:
-
-| Role              | Email                    |
-| ----------------- | ------------------------ |
-| Operations        | `operations@example.com` |
-| Portfolio Manager | `pm@example.com`         |
-| Analyst           | `analyst@example.com`    |
-
-The passwords are chosen when the script is run and are not stored in this repository. Only a hash of each is saved.
-
-**Left out on purpose:** sign-up, password reset, email verification and screens for managing accounts.
+Not included: sign-up, password reset, email verification and account management.
 
 ### Holdings and average cost
 
@@ -226,7 +216,7 @@ curl -b cookies.txt -F "file=@sample_data/trades_sample.csv" http://localhost:80
 # {"imported":30}
 ```
 
-Only the Operations role can import. `cookies.txt` holds the session from signing in as that account with `curl -c cookies.txt`.
+Only the Operations role can import, so this needs that account's session cookie.
 
 The first row of the file must be a header. Column order does not matter and extra columns are ignored.
 
@@ -278,8 +268,7 @@ Two example files are in `backend/sample_data/`: `trades_sample.csv` (30 valid t
 - **Prices are daily closing prices for ASX tickers only.** There are no intraday prices.
 - **Dividends are not counted.** Profit is the change in price only.
 - **Currencies are not converted.** The Dashboard shows a warning instead of totals if positions use more than one currency.
-- **Signing out does not cancel the session token.** The cookie is deleted, but a copied token would work until it expires.
-- **Failed sign-ins are counted in memory.** The count starts again when the API restarts.
+- **Signing out does not cancel the session.** A copied session cookie would work until it expires.
 - **The stale price warning does not know public holidays.** It counts Monday to Friday as business days, so it can appear a day early after a long weekend.
 
 ## Local setup
@@ -354,7 +343,7 @@ Then load a year of closing prices for those securities. This needs no network a
 python -m jobs.seed_prices
 ```
 
-Last, create the three demo accounts. Choose a password of at least 12 characters for each and give them to the script as environment variables, for example by adding them to `backend/.env`:
+Last, create the three demo accounts. Add a password of at least 12 characters for each to `backend/.env`:
 
 ```
 DEMO_PASSWORD_OPERATIONS=...
@@ -366,7 +355,7 @@ DEMO_PASSWORD_ANALYST=...
 python -m scripts.seed_users
 ```
 
-An account that already exists is skipped and its password is left as it was.
+An account that already exists is skipped.
 
 ### Refreshing prices
 
@@ -490,4 +479,4 @@ To load the starting securities on a new database:
 docker compose -f docker-compose.prod.yml --env-file .env.prod run --rm backend python -m scripts.seed
 ```
 
-Create the demo accounts the same way, with `python -m scripts.seed_users` and the three `DEMO_PASSWORD_` variables set. `JWT_SECRET` must be set in `.env.prod`, or nobody can sign in.
+Create the demo accounts the same way, with `python -m scripts.seed_users`. `JWT_SECRET` must be set in `.env.prod`, or nobody can sign in.
