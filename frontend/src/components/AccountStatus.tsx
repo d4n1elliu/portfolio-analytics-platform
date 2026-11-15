@@ -1,10 +1,8 @@
-import { Link } from 'react-router'
-
 import { useAuth } from '../lib/auth'
 import { ROLE_LABELS } from '../lib/roles'
-import { TEXT_LINK } from '../lib/styles'
 import { ROUTES } from '../routes'
 import Button from './Button'
+import HeaderLink from './HeaderLink'
 
 /** The signed-in user's name and role with a sign out button, or a link to sign in. */
 function AccountStatus() {
@@ -13,11 +11,7 @@ function AccountStatus() {
   if (state.status === 'loading') return null
 
   if (state.status === 'signedOut') {
-    return (
-      <Link to={ROUTES.login} className={`text-sm ${TEXT_LINK}`}>
-        Sign in
-      </Link>
-    )
+    return <HeaderLink to={ROUTES.login}>Sign in</HeaderLink>
   }
 
   return (
