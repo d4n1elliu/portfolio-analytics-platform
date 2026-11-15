@@ -26,8 +26,8 @@ export function formatDate(isoDate: string): string {
 
 /**
  * Format money, for example "$1,234.50". Pass a larger `maxDecimals` for
- * unit prices, which can be quoted in fractions of a cent. Pass the same
- * `minDecimals` to show that many decimals on every value.
+ * unit prices, which can be quoted in fractions of a cent. Pass `minDecimals`
+ * to always show at least that many.
  */
 export function formatCurrency(
   value: string | number,

@@ -58,7 +58,7 @@ const COLUMNS: Column<Holding>[] = [
   },
 ]
 
-/** Every row shows the same number of decimals, so the column lines up. */
+/** Shows the same number of decimals on every row. */
 function formatUnitCost(value: string, currency: string): string {
   return formatCurrency(value, currency, UNIT_COST_DECIMALS, UNIT_COST_DECIMALS)
 }

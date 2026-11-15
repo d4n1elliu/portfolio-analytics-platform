@@ -4,6 +4,9 @@ import { useLocation } from 'react-router'
 import { APP_NAME, APP_TAGLINE } from '../config'
 import NavBar from './NavBar'
 
+/** The header and the page content share one width, so they line up. */
+const PAGE_WIDTH = 'mx-auto max-w-7xl'
+
 interface PageLayoutProps {
   title: string
   children: ReactNode
@@ -16,7 +19,9 @@ function PageLayout({ title, children }: PageLayoutProps) {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-4 sm:px-8">
+        <div
+          className={`${PAGE_WIDTH} flex flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-4 sm:px-8`}
+        >
           <div>
             <p className="font-semibold">{APP_NAME}</p>
             <p className="text-xs text-slate-500">{APP_TAGLINE}</p>
@@ -27,7 +32,7 @@ function PageLayout({ title, children }: PageLayoutProps) {
       {/* The key replays the fade-in on each new page. */}
       <main
         key={pathname}
-        className="mx-auto max-w-7xl space-y-6 px-4 py-8 motion-safe:animate-page-in sm:px-8"
+        className={`${PAGE_WIDTH} space-y-6 px-4 py-8 motion-safe:animate-page-in sm:px-8`}
       >
         <h1 className="text-2xl font-semibold">{title}</h1>
         {children}

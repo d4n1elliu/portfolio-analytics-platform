@@ -22,8 +22,7 @@ interface DataTableProps<T> {
   getRowKey: (row: T) => string | number
 }
 
-// Narrow gaps between columns, with the card's padding at both edges. The first
-// column stays in place when a wide table is scrolled sideways.
+// The first column stays in place when the table scrolls sideways.
 const CELL_SPACING = 'px-3 py-3 first:sticky first:left-0 first:bg-white first:pl-6 last:pr-6'
 
 const NUMBER_CELL = 'text-right tabular-nums whitespace-nowrap'
