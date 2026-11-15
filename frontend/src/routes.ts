@@ -3,5 +3,6 @@
 export const ROUTES = {
   dashboard: '/dashboard',
   holdings: '/holdings',
+  login: '/login',
   trades: '/trades',
 } as const

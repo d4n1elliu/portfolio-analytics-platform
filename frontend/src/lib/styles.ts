@@ -7,5 +7,9 @@ export const COLOUR_TRANSITION = 'duration-150 motion-safe:transition-colors'
 export const FOCUS_OUTLINE =
   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900'
 
+/** A one-line text box. */
+export const TEXT_INPUT =
+  'h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm placeholder:text-slate-400'
+
 /** Small grey text for loading and empty messages. */
 export const MUTED_TEXT = 'text-sm text-slate-500'
