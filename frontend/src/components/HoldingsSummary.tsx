@@ -1,5 +1,5 @@
 import type { Holding } from '../api/types'
-import { formatCurrency, formatProfit } from '../lib/format'
+import { NO_VALUE, formatCurrency, formatProfit } from '../lib/format'
 import { summariseHoldings } from '../lib/holdings'
 import { profitColour } from '../lib/profit'
 import StatTiles from './StatTiles'
@@ -15,7 +15,7 @@ function HoldingsSummary({ holdings }: { holdings: Holding[] }) {
         { label: 'Positions', value: summary.positions },
         {
           label: 'Total cost basis',
-          value: currency ? formatCurrency(summary.costBasis, currency) : '—',
+          value: currency ? formatCurrency(summary.costBasis, currency) : NO_VALUE,
         },
         {
           label: 'Realised P&L',
@@ -24,7 +24,7 @@ function HoldingsSummary({ holdings }: { holdings: Holding[] }) {
               {formatProfit(summary.realisedPnl, currency)}
             </span>
           ) : (
-            '—'
+            NO_VALUE
           ),
         },
       ]}

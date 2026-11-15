@@ -1,4 +1,4 @@
-import { formatCurrency, formatPercent, formatProfit } from '../lib/format'
+import { NO_VALUE, formatCurrency, formatPercent, formatProfit } from '../lib/format'
 import { profitColour } from '../lib/profit'
 import type { ValuationSummary as Summary } from '../lib/valuation'
 import StatTiles from './StatTiles'
@@ -18,7 +18,7 @@ function ValuationSummary({ summary, currency }: { summary: Summary; currency: s
           label: 'Unrealised return',
           value:
             summary.unrealisedReturn === null ? (
-              '—'
+              NO_VALUE
             ) : (
               <span className={colour}>{formatPercent(summary.unrealisedReturn)}</span>
             ),

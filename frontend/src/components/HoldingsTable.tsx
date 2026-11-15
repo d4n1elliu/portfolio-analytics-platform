@@ -1,5 +1,5 @@
 import type { Holding } from '../api/types'
-import { formatCurrency, formatProfit, formatQuantity } from '../lib/format'
+import { NO_VALUE, formatCurrency, formatProfit, formatQuantity } from '../lib/format'
 import { profitColour } from '../lib/profit'
 import DataTable from './DataTable'
 import type { Column } from './DataTable'
@@ -33,19 +33,10 @@ const COLUMNS: Column<Holding>[] = [
     render: (holding) => formatQuantity(holding.quantity),
     sortValue: (holding) => Number(holding.quantity),
   },
-  {
-    header: 'Avg cost',
-    align: 'right',
-    render: (holding) =>
-      holding.average_cost === null ? '—' : formatUnitCost(holding.average_cost, holding.currency),
-    sortValue: (holding) => (holding.average_cost === null ? null : Number(holding.average_cost)),
-  },
-  {
-    header: 'Cost basis',
-    align: 'right',
-    render: (holding) => formatCurrency(holding.cost_basis, holding.currency),
-    sortValue: (holding) => Number(holding.cost_basis),
-  },
+  moneyColumn('Avg cost', (holding) => holding.average_cost, formatUnitCost),
+  moneyColumn('Last price', (holding) => holding.last_price),
+  moneyColumn('Cost basis', (holding) => holding.cost_basis),
+  moneyColumn('Market value', (holding) => holding.market_value),
   {
     header: 'Realised P&L',
     align: 'right',
@@ -57,6 +48,26 @@ const COLUMNS: Column<Holding>[] = [
     sortValue: (holding) => Number(holding.realised_pnl),
   },
 ]
+
+/** A sortable money column. A missing amount shows a dash and is sorted last. */
+function moneyColumn(
+  header: string,
+  amountOf: (holding: Holding) => string | null,
+  format: (amount: string, currency: string) => string = formatCurrency,
+): Column<Holding> {
+  return {
+    header,
+    align: 'right',
+    render: (holding) => {
+      const amount = amountOf(holding)
+      return amount === null ? NO_VALUE : format(amount, holding.currency)
+    },
+    sortValue: (holding) => {
+      const amount = amountOf(holding)
+      return amount === null ? null : Number(amount)
+    },
+  }
+}
 
 /** Shows the same number of decimals on every row. */
 function formatUnitCost(value: string, currency: string): string {
