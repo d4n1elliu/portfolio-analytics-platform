@@ -20,26 +20,15 @@ from collections.abc import Mapping
 from sqlalchemy.orm import Session
 
 from app.database import SessionLocal
-from app.models import Role, User
+from app.models import User
+from app.services.demo_accounts import DEMO_ACCOUNTS, password_variable
 from app.services.inserts import insert_missing
 from app.services.passwords import hash_password
 
 MIN_PASSWORD_LENGTH = 12
 
-DEMO_ACCOUNTS = [
-    {"email": "operations@example.com", "name": "Demo Operations", "role": Role.OPERATIONS},
-    {"email": "pm@example.com", "name": "Demo Portfolio Manager", "role": Role.PORTFOLIO_MANAGER},
-    {"email": "analyst@example.com", "name": "Demo Analyst", "role": Role.ANALYST},
-]
-
-
 class SeedError(Exception):
     pass
-
-
-def password_variable(role: Role) -> str:
-    """The environment variable that holds a role's demo password."""
-    return f"DEMO_PASSWORD_{role.value.upper()}"
 
 
 def build_demo_users(environ: Mapping[str, str]) -> list[dict[str, str | bool]]:

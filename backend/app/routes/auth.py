@@ -1,5 +1,6 @@
 """Endpoints for signing in and out."""
 
+import os
 from datetime import UTC, datetime, timedelta
 from math import ceil
 
@@ -10,8 +11,9 @@ from app.config import COOKIE_SECURE, SESSION_MINUTES
 from app.database import get_db
 from app.models import User
 from app.routes.dependencies import SESSION_COOKIE, get_current_user
-from app.schemas.user import LoginRequest, UserRead
+from app.schemas.user import DemoAccessRead, LoginRequest, UserRead
 from app.services import users as users_service
+from app.services.demo_accounts import list_demo_access
 from app.services.login_limiter import LoginLimiter
 from app.services.tokens import create_token
 
@@ -62,6 +64,16 @@ def login(
 def logout(response: Response):
     """Sign out by clearing the session cookie."""
     response.delete_cookie(SESSION_COOKIE, **COOKIE_SETTINGS)
+
+
+@router.get("/demo-accounts", response_model=list[DemoAccessRead])
+def read_demo_accounts():
+    """List the demo roles, with sign-in details for the read-only ones.
+
+    Needs no sign in, so the sign in page can show them. The Operations
+    account can change data, so its details are never returned.
+    """
+    return list_demo_access(os.environ)
 
 
 @router.get("/me", response_model=UserRead)

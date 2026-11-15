@@ -18,3 +18,13 @@ class UserRead(BaseModel):
     email: str
     name: str
     role: str
+
+
+class DemoAccessRead(BaseModel):
+    """How a visitor can sign in as a demo role. The details are null when not public."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    role: str
+    email: str | None
+    password: str | None
