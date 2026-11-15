@@ -49,7 +49,7 @@ export function pricesAsAt(priceDate: string | null): string {
 
 /** The most recent price date among the holdings, or null if none has a price. */
 export function latestPriceDate(holdings: Holding[]): string | null {
-  const dates = holdings.flatMap((holding) => holding.price_date ?? [])
+  const dates = holdings.map((holding) => holding.price_date).filter((date) => date !== null)
   return dates.sort().at(-1) ?? null
 }
 
