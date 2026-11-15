@@ -42,3 +42,11 @@ def test_reading_from_another_site_is_not_refused_here(client_with_users):
     response = client_with_users(make_user()).get("/health", headers={"origin": OTHER_SITE})
 
     assert response.status_code == 200
+
+
+def test_the_app_may_read_how_long_to_wait(client_with_users):
+    client = client_with_users(make_user())
+
+    response = client.post("/auth/login", json=CREDENTIALS, headers={"origin": ALLOWED_SITE})
+
+    assert response.headers["access-control-expose-headers"] == "Retry-After"

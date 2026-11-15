@@ -31,6 +31,8 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    # Lets the page read how long a locked-out visitor must wait.
+    expose_headers=["Retry-After"],
 )
 
 # Requests that only read data. A browser sends them from any site.
