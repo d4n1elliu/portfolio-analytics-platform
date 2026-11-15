@@ -11,6 +11,7 @@ import PasswordField from '../components/PasswordField'
 import TextField from '../components/TextField'
 import { useAuth } from '../lib/auth'
 import { ROUTES } from '../routes'
+import type { LoginState } from '../routes'
 
 function LoginPage() {
   const { state, signIn } = useAuth()
@@ -18,7 +19,7 @@ function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
-  const from = (useLocation().state as { from?: string } | null)?.from
+  const from = (useLocation().state as LoginState | null)?.from
   const expired = state.status === 'signedOut' && state.expired
 
   // A successful sign in changes the state, which sends the user on from here,
