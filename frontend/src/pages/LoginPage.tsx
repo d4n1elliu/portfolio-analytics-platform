@@ -5,12 +5,14 @@ import { Navigate, useLocation } from 'react-router'
 import Alert from '../components/Alert'
 import Button from '../components/Button'
 import Card from '../components/Card'
+import DemoAccess from '../components/DemoAccess'
 import PageLayout from '../components/PageLayout'
 import PasswordField from '../components/PasswordField'
 import TextField from '../components/TextField'
 import { useSignInAttempt } from '../hooks/useSignInAttempt'
 import { useAuth } from '../lib/auth'
 import { formatTimer } from '../lib/format'
+import { MUTED_TEXT } from '../lib/styles'
 import { HOME, returnPage } from '../routes'
 
 function LoginPage() {
@@ -37,7 +39,7 @@ function LoginPage() {
 
   return (
     <PageLayout>
-      <div className="mx-auto mt-12 max-w-md">
+      <div className="mx-auto mt-12 max-w-md space-y-6">
         <Card title="Sign in">
           <form onSubmit={handleSubmit} className="space-y-4">
             <SignInMessage
@@ -67,7 +69,11 @@ function LoginPage() {
               {submitLabel(signIn.submitting, signIn.lockSecondsLeft)}
             </Button>
           </form>
+          <p className={`mt-4 ${MUTED_TEXT}`}>
+            Accounts are created by an administrator. There is no public sign-up.
+          </p>
         </Card>
+        <DemoAccess />
       </div>
     </PageLayout>
   )
