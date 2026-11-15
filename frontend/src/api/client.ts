@@ -9,12 +9,20 @@ export class ApiError extends Error {
   readonly status: number
   /** The JSON body of the error response, if it had one. */
   readonly body: unknown
+  /** Seconds to wait before trying again, when the API gave a wait. */
+  readonly retryAfterSeconds: number | null
 
-  constructor(message: string, status: number, body: unknown = null) {
+  constructor(
+    message: string,
+    status: number,
+    body: unknown = null,
+    retryAfterSeconds: number | null = null,
+  ) {
     super(message)
     this.name = 'ApiError'
     this.status = status
     this.body = body
+    this.retryAfterSeconds = retryAfterSeconds
   }
 }
 
@@ -47,7 +55,8 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   // The sign in endpoints answer 401 for their own reasons.
   if (response.status === NOT_SIGNED_IN && !path.startsWith(AUTH_PATHS)) onSessionExpired?.()
   if (!response.ok) {
-    throw new ApiError(errorMessage(body, response.status), response.status, body)
+    const retryAfter = Number(response.headers.get('Retry-After')) || null
+    throw new ApiError(errorMessage(body, response.status), response.status, body, retryAfter)
   }
   return body as T
 }
