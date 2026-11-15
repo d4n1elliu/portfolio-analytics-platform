@@ -14,7 +14,7 @@ Three features are in place:
 
 - **Trades.** Trades can be imported from a CSV file and viewed in a table.
 - **Holdings.** The Holdings page shows the fund's current positions, calculated from those trades.
-- **Prices and valuation.** Daily closing prices are stored for each security and refreshed on weekdays. The Dashboard page uses them to show what the portfolio is worth, its unrealised profit, and three charts.
+- **Prices and valuation.** Daily closing prices are stored for each security and refreshed on weekdays. The Holdings page uses them to show what each position is worth, and the Dashboard page shows the portfolio's value, its unrealised profit, and three charts.
 
 Authentication is not built yet.
 
@@ -245,7 +245,7 @@ Two example files are in `backend/sample_data/`: `trades_sample.csv` (30 valid t
 - **Prices are daily closing prices for ASX tickers only.** There are no intraday prices.
 - **Dividends are not counted.** Profit is the change in price only.
 - **Currencies are not converted.** The Dashboard shows a warning instead of totals if positions use more than one currency.
-- **The Holdings page does not show valuation yet.** Market value, unrealised profit and weight are on the Dashboard only.
+- **The stale price warning does not know public holidays.** It counts Monday to Friday as business days, so it can appear a day early after a long weekend.
 
 ## Local setup
 
@@ -362,7 +362,7 @@ The app runs at http://localhost:5173 and has three pages. The backend must be r
 | Page      | What it shows |
 | --------- | ------------- |
 | Dashboard | Market value, unrealised P&L and unrealised return, with charts of portfolio value over time, sector allocation and unrealised P&L by holding |
-| Holdings  | The current positions, with sorting, a search box, filters for sector and asset class, and summary figures |
+| Holdings  | The current positions with their last price, market value, unrealised P&L and weight. Has sorting, a search box, filters for sector and asset class, summary figures, and a warning when prices are more than three business days old |
 | Trades    | A form to upload a CSV file, and the saved trades |
 
 ### Environment variables
