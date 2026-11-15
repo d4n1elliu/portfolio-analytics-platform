@@ -2,12 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 const ONE_SECOND = 1000
 
-/**
- * Count down a number of seconds.
- *
- * Returns the whole seconds left, which is 0 before a countdown starts and
- * after it ends, and the function that starts one.
- */
+/** Returns the whole seconds left, 0 when not counting, and a function that starts a countdown. */
 export function useCountdown(): [number, (seconds: number) => void] {
   const [endsAt, setEndsAt] = useState<number | null>(null)
   const [secondsLeft, setSecondsLeft] = useState(0)

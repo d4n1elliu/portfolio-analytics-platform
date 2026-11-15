@@ -9,7 +9,6 @@ import NavBar from './NavBar'
 const PAGE_WIDTH = 'mx-auto max-w-7xl'
 
 interface PageLayoutProps {
-  /** The page heading. Leave it out for a page that has no heading. */
   title?: string
   children: ReactNode
 }

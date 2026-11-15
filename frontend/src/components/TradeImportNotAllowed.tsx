@@ -3,7 +3,6 @@ import { IMPORT_ROLES, ROLE_LABELS } from '../lib/roles'
 import { MUTED_TEXT } from '../lib/styles'
 import Card from './Card'
 
-/** Shown in place of the import form to a role that cannot import, saying why. */
 function TradeImportNotAllowed({ role }: { role: Role }) {
   const allowed = IMPORT_ROLES.map((allowedRole) => ROLE_LABELS[allowedRole]).join(' or ')
 

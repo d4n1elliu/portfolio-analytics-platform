@@ -7,18 +7,14 @@ export interface TextFieldProps {
   label: string
   type: 'email' | 'password' | 'text'
   value: string
-  /** Tells the browser and password managers what the box holds. */
   autoComplete: string
   onChange: (value: string) => void
   /** A small control shown inside the right end of the box, such as a button. */
   trailing?: ReactNode
-  /** Puts the cursor in this box when the page opens. */
   autoFocus?: boolean
-  /** Gives the page the box itself, for example to move the cursor to it. */
   inputRef?: Ref<HTMLInputElement>
 }
 
-/** A labelled text box that must be filled in. */
 function TextField(props: TextFieldProps) {
   const { label, type, value, autoComplete, onChange, trailing, autoFocus, inputRef } = props
   const id = useId()

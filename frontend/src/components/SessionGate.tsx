@@ -4,7 +4,6 @@ import { useAuth } from '../lib/auth'
 import { MUTED_TEXT } from '../lib/styles'
 import PageLayout from './PageLayout'
 
-/** Holds every page back until the app knows whether somebody is signed in. */
 function SessionGate({ children }: { children: ReactNode }) {
   const { state } = useAuth()
 

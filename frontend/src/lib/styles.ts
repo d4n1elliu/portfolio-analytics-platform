@@ -7,7 +7,6 @@ export const COLOUR_TRANSITION = 'duration-150 motion-safe:transition-colors'
 export const FOCUS_OUTLINE =
   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900'
 
-/** A link inside a line of text. */
 export const TEXT_LINK = 'font-medium text-slate-900 underline'
 
 export const TEXT_INPUT =

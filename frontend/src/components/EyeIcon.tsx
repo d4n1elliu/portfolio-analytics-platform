@@ -1,6 +1,5 @@
 // The shapes are from Lucide (lucide.dev), used under the ISC licence.
 
-/** An eye, or an eye with a line through it when crossed out. */
 function EyeIcon({ crossedOut }: { crossedOut: boolean }) {
   return (
     <svg

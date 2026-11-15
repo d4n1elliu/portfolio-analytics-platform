@@ -2,7 +2,6 @@ import { useAuth } from '../lib/auth'
 import { PAGES } from '../routes'
 import HeaderLink from './HeaderLink'
 
-/** The links to each page. A signed-out visitor cannot open them, so sees none. */
 function NavBar() {
   const { state } = useAuth()
 

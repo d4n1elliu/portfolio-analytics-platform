@@ -9,7 +9,6 @@ const EYE_BUTTON =
   `mr-1.5 rounded-md p-1.5 text-slate-400 hover:text-slate-700 ` +
   `${COLOUR_TRANSITION} ${FOCUS_OUTLINE}`
 
-/** A password box with an eye button that shows or hides what was typed. */
 function PasswordField(props: Omit<TextFieldProps, 'type' | 'trailing' | 'autoFocus'>) {
   const [visible, setVisible] = useState(false)
 

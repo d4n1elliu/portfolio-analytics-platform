@@ -9,7 +9,6 @@ export class ApiError extends Error {
   readonly status: number
   /** The JSON body of the error response, if it had one. */
   readonly body: unknown
-  /** Seconds to wait before trying again, when the API gave a wait. */
   readonly retryAfterSeconds: number | null
 
   constructor(
@@ -26,13 +25,11 @@ export class ApiError extends Error {
   }
 }
 
-/** The status the API answers with when nobody is signed in. */
 export const NOT_SIGNED_IN = 401
 const AUTH_PATHS = '/auth/'
 
 let onSessionExpired: (() => void) | null = null
 
-/** Set what happens when the API stops accepting the session. Pass null to clear it. */
 export function setSessionExpiredHandler(handler: (() => void) | null): void {
   onSessionExpired = handler
 }

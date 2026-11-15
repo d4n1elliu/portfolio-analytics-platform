@@ -4,7 +4,6 @@ import { useApiQuery } from '../hooks/useApiQuery'
 import Card from './Card'
 import CsvImportForm from './CsvImportForm'
 
-/** The card for uploading a CSV of trades, with the columns and tickers it accepts. */
 function TradeImport({ onImported }: { onImported: () => void }) {
   const { state: securities } = useApiQuery(listSecurities)
 
