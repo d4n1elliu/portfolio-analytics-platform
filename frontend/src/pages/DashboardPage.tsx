@@ -11,9 +11,15 @@ import RankedBarChart from '../components/RankedBarChart'
 import type { RankedBar } from '../components/RankedBarChart'
 import ValuationSummary from '../components/ValuationSummary'
 import { useApiQuery } from '../hooks/useApiQuery'
-import { formatCount, formatCurrency, formatDate, formatPercent, formatProfit } from '../lib/format'
+import { formatCount, formatCurrency, formatPercent, formatProfit } from '../lib/format'
 import { MUTED_TEXT } from '../lib/styles'
-import { sectorAllocation, summariseValuation, valuedHoldings } from '../lib/valuation'
+import {
+  latestPriceDate,
+  pricesAsAt,
+  sectorAllocation,
+  summariseValuation,
+  valuedHoldings,
+} from '../lib/valuation'
 import type { SectorShare, ValuedHolding } from '../lib/valuation'
 import { ROUTES } from '../routes'
 
@@ -58,7 +64,7 @@ function Valuation({ openHoldings }: { openHoldings: Holding[] }) {
     )
   }
 
-  const pricesAsAt = pricedAsAt(holdings)
+  const priceDateLabel = pricesAsAt(latestPriceDate(holdings))
 
   return (
     <>
@@ -73,14 +79,14 @@ function Valuation({ openHoldings }: { openHoldings: Holding[] }) {
 
       <PortfolioHistory currency={currency} />
 
-      <Card title="Sector allocation" aside={pricesAsAt}>
+      <Card title="Sector allocation" aside={priceDateLabel}>
         <RankedBarChart
           label="Share of market value in each sector"
           bars={sectorAllocation(holdings).map((share) => sectorBar(share, currency))}
         />
       </Card>
 
-      <Card title="Unrealised P&L by holding" aside={pricesAsAt}>
+      <Card title="Unrealised P&L by holding" aside={priceDateLabel}>
         <RankedBarChart
           label="Unrealised profit or loss of each holding"
           bars={byLargestGain(holdings).map(pnlBar)}
@@ -109,12 +115,6 @@ function pnlBar(holding: ValuedHolding): RankedBar {
 
 function byLargestGain(holdings: ValuedHolding[]): ValuedHolding[] {
   return [...holdings].sort((a, b) => Number(b.unrealised_pnl) - Number(a.unrealised_pnl))
-}
-
-/** "Prices as at 13 Nov 2026", using the most recent price date. */
-function pricedAsAt(holdings: ValuedHolding[]): string {
-  const latest = holdings.map((holding) => holding.price_date ?? '').sort().at(-1)
-  return latest ? `Prices as at ${formatDate(latest)}` : ''
 }
 
 export default DashboardPage

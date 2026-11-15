@@ -61,7 +61,12 @@ function timeSeriesOption(
       type: 'time',
       axisLine: { lineStyle: { color: CHART_COLOURS.baseline } },
       axisTick: { show: false },
-      axisLabel: { ...mutedLabel, hideOverlap: true },
+      axisLabel: {
+        ...mutedLabel,
+        hideOverlap: true,
+        // January shows its month name like the others, not the year.
+        formatter: { year: '{MMM}', month: '{MMM}' },
+      },
       // Shows the date at the top of the tooltip.
       axisPointer: {
         label: {
