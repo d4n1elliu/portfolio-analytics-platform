@@ -8,7 +8,7 @@ import { formatDate, formatSignedPercent } from '../lib/format'
 import { PERIOD_LABELS, returnSeries } from '../lib/performance'
 import { MUTED_TEXT } from '../lib/styles'
 import Card from './Card'
-import LoadError from './LoadError'
+import LoadState from './LoadState'
 import PeriodPicker from './PeriodPicker'
 import TimeSeriesChart from './TimeSeriesChart'
 
@@ -18,12 +18,15 @@ function PortfolioPerformance() {
 
   return (
     <Card title="Performance" aside={asAt(performance)}>
-      {state.status === 'loading' && <p className={MUTED_TEXT}>Loading performance…</p>}
-      {state.status === 'error' && <LoadError message={state.message} onRetry={reload} />}
-      {performance && performance.growth.length === 0 && (
-        <p className={MUTED_TEXT}>No price history yet.</p>
-      )}
-      {performance && performance.growth.length > 0 && <Returns performance={performance} />}
+      <LoadState
+        state={state}
+        onRetry={reload}
+        loadingText="Loading performance…"
+        emptyText="No price history yet."
+        isEmpty={(loaded) => loaded.growth.length === 0}
+      >
+        {(loaded) => <Returns performance={loaded} />}
+      </LoadState>
     </Card>
   )
 }
@@ -36,7 +39,7 @@ function Returns({ performance }: { performance: Performance }) {
   const [selected, setSelected] = useState<PerformancePeriod>('inception')
   const { dates, lines } = useMemo(() => {
     const period = performance.periods.find((candidate) => candidate.period === selected)
-    const series = period ? returnSeries(performance.growth, period) : { dates: [], returns: [] }
+    const series = returnSeries(performance.growth, period)
     return {
       dates: series.dates,
       lines: [{ name: 'Portfolio', values: series.returns, colour: CHART_COLOURS.primary }],

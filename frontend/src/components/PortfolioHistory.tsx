@@ -5,9 +5,8 @@ import type { PortfolioHistoryPoint } from '../api/types'
 import { useApiQuery } from '../hooks/useApiQuery'
 import { CHART_COLOURS } from '../lib/chartStyle'
 import { formatCompactCurrency, formatCurrency, formatDate } from '../lib/format'
-import { MUTED_TEXT } from '../lib/styles'
 import Card from './Card'
-import LoadError from './LoadError'
+import LoadState from './LoadState'
 import TimeSeriesChart from './TimeSeriesChart'
 
 function PortfolioHistory({ currency }: { currency: string }) {
@@ -16,12 +15,15 @@ function PortfolioHistory({ currency }: { currency: string }) {
 
   return (
     <Card title="Portfolio value over time" aside={periodOf(points)}>
-      {state.status === 'loading' && <p className={MUTED_TEXT}>Loading history…</p>}
-      {state.status === 'error' && <LoadError message={state.message} onRetry={reload} />}
-      {state.status === 'loaded' && points.length === 0 && (
-        <p className={MUTED_TEXT}>No price history yet.</p>
-      )}
-      {points.length > 0 && <HistoryChart points={points} currency={currency} />}
+      <LoadState
+        state={state}
+        onRetry={reload}
+        loadingText="Loading history…"
+        emptyText="No price history yet."
+        isEmpty={(loaded) => loaded.length === 0}
+      >
+        {(loaded) => <HistoryChart points={loaded} currency={currency} />}
+      </LoadState>
     </Card>
   )
 }

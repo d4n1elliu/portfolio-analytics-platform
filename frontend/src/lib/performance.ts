@@ -15,9 +15,9 @@ export interface ReturnSeries {
 }
 
 /** The return on each date of a period, for a chart. Empty when the period has no return. */
-export function returnSeries(growth: GrowthPoint[], period: PeriodReturn): ReturnSeries {
-  const start = period.start_date
-  if (start === null) return { dates: [], returns: [] }
+export function returnSeries(growth: GrowthPoint[], period?: PeriodReturn): ReturnSeries {
+  const start = period?.start_date ?? null
+  if (!period || start === null) return { dates: [], returns: [] }
 
   const points = growth.filter((point) => point.date >= start)
   // Since inception is measured from before the first date, so its first
