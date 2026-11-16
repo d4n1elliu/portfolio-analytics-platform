@@ -210,3 +210,57 @@ def test_period_start_dates(period, start):
 )
 def test_months_before_keeps_the_day_where_the_month_has_it(day, months, expected):
     assert months_before(day, months) == expected
+
+
+# --- Endpoint ---
+
+
+def test_endpoint_returns_the_periods_and_the_growth(client_with_data):
+    bhp = make_security("BHP")
+    trades = [buy(bhp, "100", "10", on=DAY_1), buy(bhp, "100", "11", on=DAY_3)]
+    prices = closes(bhp, {DAY_1: "10", DAY_2: "11", DAY_3: "11", DAY_4: "12.1"})
+
+    response = client_with_data(trades, prices).get("/portfolio/performance")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "as_of": "2026-11-12",
+        "periods": [
+            {"period": "1m", "portfolio_return": None},
+            {"period": "3m", "portfolio_return": None},
+            {"period": "ytd", "portfolio_return": None},
+            {"period": "1y", "portfolio_return": None},
+            {"period": "inception", "portfolio_return": "0.210000"},
+        ],
+        "growth": [
+            {"date": "2026-11-09", "portfolio": "1.000000"},
+            {"date": "2026-11-10", "portfolio": "1.100000"},
+            {"date": "2026-11-11", "portfolio": "1.100000"},
+            {"date": "2026-11-12", "portfolio": "1.210000"},
+        ],
+    }
+
+
+def test_endpoint_rounds_to_six_decimal_places(client_with_data):
+    bhp = make_security("BHP")
+    trades = [buy(bhp, "100", "10", fees="25", on=DAY_1)]
+
+    response = client_with_data(trades, closes(bhp, {DAY_1: "10"})).get("/portfolio/performance")
+
+    # 1,000 / 1,025 = 0.975609756...
+    assert response.json()["growth"] == [{"date": "2026-11-09", "portfolio": "0.975610"}]
+    assert response.json()["periods"][-1] == {
+        "period": "inception",
+        "portfolio_return": "-0.024390",
+    }
+
+
+def test_endpoint_with_no_trades_has_no_returns(client_with_data):
+    bhp = make_security("BHP")
+
+    response = client_with_data([], closes(bhp, {DAY_1: "10"})).get("/portfolio/performance")
+
+    assert response.status_code == 200
+    assert response.json()["as_of"] is None
+    assert response.json()["growth"] == []
+    assert {period["portfolio_return"] for period in response.json()["periods"]} == {None}

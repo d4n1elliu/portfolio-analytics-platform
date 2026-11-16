@@ -8,6 +8,8 @@ from pydantic import BaseModel
 T = TypeVar("T")
 
 CENTS = Decimal("0.01")
+# For fractions such as a return or a weight: 0.088552 is 8.8552%.
+FRACTION_PLACES = Decimal("0.000001")
 
 
 def round_decimal(value: Decimal, places: Decimal) -> Decimal:

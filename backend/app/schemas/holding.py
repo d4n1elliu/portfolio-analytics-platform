@@ -5,12 +5,11 @@ from decimal import Decimal
 
 from pydantic import BaseModel
 
-from app.schemas.common import CENTS, round_decimal
+from app.schemas.common import CENTS, FRACTION_PLACES, round_decimal
 from app.services.holdings import Holding
 from app.services.valuation import Valuation
 
 UNIT_COST_PLACES = Decimal("0.000001")
-FRACTION_PLACES = Decimal("0.000001")
 
 
 class HoldingRead(BaseModel):
