@@ -128,6 +128,7 @@ A security has many trades and many prices. The database enforces the basic rule
 | `GET`  | `/auth/me`       | Returns the signed-in user                                      |
 | `GET`  | `/holdings`      | Lists the current position in each security, ordered by ticker  |
 | `GET`  | `/portfolio/history` | Lists the value of the portfolio on each priced date, oldest first |
+| `GET`  | `/portfolio/performance` | Returns the portfolio's return over 1 month, 3 months, year to date, 1 year and since inception |
 | `GET`  | `/securities`    | Lists every security, ordered by ticker                         |
 | `GET`  | `/trades`        | Lists trades, newest first, with the ticker and security name   |
 | `POST` | `/trades/import` | Imports trades from a CSV file                                  |
@@ -206,6 +207,12 @@ Prices come from Yahoo Finance and are saved by a job that runs outside the API.
 ```
 
 Each point counts the trades made up to that day and values them at that day's prices. A security with no price yet is left out.
+
+### Portfolio performance
+
+`GET /portfolio/performance` returns a time-weighted return. Each day's gain is measured on the value held at the start of that day, so money going in or out does not count as a gain or a loss. A buy counts as cash in at its cost and fees, and a sell as cash out at its proceeds after fees.
+
+A period has no return when the price history does not reach back to its start. Dividends are not counted.
 
 ### Importing trades from CSV
 
