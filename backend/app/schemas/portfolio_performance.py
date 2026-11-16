@@ -14,6 +14,8 @@ class PeriodReturnRead(BaseModel):
     period: str
     # A fraction. None when the history starts after the period does.
     portfolio_return: Decimal | None
+    # The date the return is measured from. None when there is no return.
+    start_date: datetime.date | None
 
 
 class GrowthPointRead(BaseModel):
@@ -42,6 +44,7 @@ class PerformanceRead(BaseModel):
                 PeriodReturnRead(
                     period=period.period,
                     portfolio_return=round_optional(period.portfolio_return, FRACTION_PLACES),
+                    start_date=period.start,
                 )
                 for period in performance.periods
             ],

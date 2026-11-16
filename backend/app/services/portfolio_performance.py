@@ -40,6 +40,8 @@ class PeriodReturn:
     # A fraction, such as 0.0886 for 8.86%. None when the history does not
     # reach back to the start of the period.
     portfolio_return: Decimal | None
+    # The date the return is measured from. None when there is no return.
+    start: date | None
 
 
 @dataclass(frozen=True)
@@ -58,11 +60,11 @@ def build_performance(points: Sequence[HistoryPoint]) -> Performance:
     """Work out the return over each period. Uses no database."""
     growth = build_growth(points)
     if not growth:
-        return Performance(None, [PeriodReturn(period, None) for period in PERIODS], [])
+        return Performance(None, [PeriodReturn(period, None, None) for period in PERIODS], [])
 
     as_of = growth[-1].as_of
     periods = [
-        PeriodReturn(period, return_since(growth, period_start(period, as_of)))
+        PeriodReturn(period, *return_since(growth, period_start(period, as_of)))
         for period in PERIODS
     ]
     return Performance(as_of, periods, growth)
@@ -108,16 +110,19 @@ def months_before(day: date, months: int) -> date:
     return date(year, month + 1, min(day.day, last_day))
 
 
-def return_since(growth: Sequence[GrowthPoint], start: date | None) -> Decimal | None:
-    """Return the gain from the start date to the latest date, as a fraction.
+def return_since(
+    growth: Sequence[GrowthPoint], start: date | None
+) -> tuple[Decimal | None, date | None]:
+    """Return the gain to the latest date as a fraction, and the date it is measured from.
 
-    Measured from the last point on or before the start date. None when the
-    history begins after it, or when everything had been lost by then.
+    Measured from the last point on or before the start date, or from the
+    first point when start is None. Both are None when the history begins
+    after the start date, or when everything had been lost by then.
     """
     latest = growth[-1].growth
     if start is None:
-        return latest - ONE
-    base = next((point.growth for point in reversed(growth) if point.as_of <= start), None)
-    if base is None or base == ZERO:
-        return None
-    return latest / base - ONE
+        return latest - ONE, growth[0].as_of
+    base = next((point for point in reversed(growth) if point.as_of <= start), None)
+    if base is None or base.growth == ZERO:
+        return None, None
+    return latest / base.growth - ONE, base.as_of
