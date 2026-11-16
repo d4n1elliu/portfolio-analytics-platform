@@ -65,6 +65,30 @@ export interface PortfolioHistoryPoint {
   unrealised_pnl: string
 }
 
+export type PerformancePeriod = '1m' | '3m' | 'ytd' | '1y' | 'inception'
+
+export interface PeriodReturn {
+  period: PerformancePeriod
+  /** A fraction, such as "0.088552" for 8.86%. Null when the history starts after the period. */
+  portfolio_return: string | null
+  /** The date the return is measured from. Null when there is no return. */
+  start_date: string | null
+}
+
+export interface GrowthPoint {
+  /** Date only, as "YYYY-MM-DD". */
+  date: string
+  /** What 1 invested at the start is worth at the end of this date. */
+  portfolio: string
+}
+
+export interface PortfolioPerformance {
+  /** The latest priced date, or null when there is no history. */
+  as_of: string | null
+  periods: PeriodReturn[]
+  growth: GrowthPoint[]
+}
+
 export type Role = 'operations' | 'portfolio_manager' | 'analyst'
 
 export interface User {

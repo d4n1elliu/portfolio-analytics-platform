@@ -7,6 +7,7 @@ import Card from '../components/Card'
 import LoadError from '../components/LoadError'
 import PageLayout from '../components/PageLayout'
 import PortfolioHistory from '../components/PortfolioHistory'
+import PortfolioPerformance from '../components/PortfolioPerformance'
 import RankedBarChart from '../components/RankedBarChart'
 import type { RankedBar } from '../components/RankedBarChart'
 import ValuationSummary from '../components/ValuationSummary'
@@ -76,6 +77,8 @@ function Valuation({ openHoldings }: { openHoldings: Holding[] }) {
       )}
 
       <ValuationSummary summary={summary} currency={currency} />
+
+      <PortfolioPerformance />
 
       <PortfolioHistory currency={currency} />
 

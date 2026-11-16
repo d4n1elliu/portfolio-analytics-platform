@@ -32,6 +32,11 @@ def returns_of(trades, prices) -> dict[str, Decimal | None]:
     return {period.period: period.portfolio_return for period in performance.periods}
 
 
+def starts_of(trades, prices) -> dict[str, date | None]:
+    performance = build_performance(build_portfolio_history(trades, prices))
+    return {period.period: period.start for period in performance.periods}
+
+
 # --- Growth: the daily returns multiplied together ---
 
 
@@ -153,6 +158,7 @@ def test_period_longer_than_the_history_has_no_return():
 
     assert returns["1m"] is None
     assert returns["1y"] is None
+    assert starts_of(trades, closes(bhp, {DAY_1: "10", DAY_2: "11"}))["1m"] is None
 
 
 def test_period_is_measured_from_the_last_point_on_or_before_its_start():
@@ -165,6 +171,7 @@ def test_period_is_measured_from_the_last_point_on_or_before_its_start():
 
     # One month before 11 Nov is 11 Oct, a Sunday, so the base is 9 Oct.
     assert returns_of(trades, prices)["1m"] == Decimal("0.8")
+    assert starts_of(trades, prices)["1m"] == start
 
 
 def test_year_to_date_is_measured_from_the_last_day_of_last_year():
@@ -218,11 +225,11 @@ def test_endpoint_returns_the_periods_and_the_growth(client_with_data):
     assert response.json() == {
         "as_of": "2026-11-12",
         "periods": [
-            {"period": "1m", "portfolio_return": None},
-            {"period": "3m", "portfolio_return": None},
-            {"period": "ytd", "portfolio_return": None},
-            {"period": "1y", "portfolio_return": None},
-            {"period": "inception", "portfolio_return": "0.210000"},
+            {"period": "1m", "portfolio_return": None, "start_date": None},
+            {"period": "3m", "portfolio_return": None, "start_date": None},
+            {"period": "ytd", "portfolio_return": None, "start_date": None},
+            {"period": "1y", "portfolio_return": None, "start_date": None},
+            {"period": "inception", "portfolio_return": "0.210000", "start_date": "2026-11-09"},
         ],
         "growth": [
             {"date": "2026-11-09", "portfolio": "1.000000"},
@@ -244,6 +251,7 @@ def test_endpoint_rounds_to_six_decimal_places(client_with_data):
     assert response.json()["periods"][-1] == {
         "period": "inception",
         "portfolio_return": "-0.024390",
+        "start_date": "2026-11-09",
     }
 
 
