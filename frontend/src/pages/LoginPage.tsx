@@ -11,7 +11,6 @@ import TextField from '../components/TextField'
 import { useSignInAttempt } from '../hooks/useSignInAttempt'
 import { useAuth } from '../lib/auth'
 import { formatTimer } from '../lib/format'
-import { MUTED_TEXT } from '../lib/styles'
 import { HOME, returnPage } from '../routes'
 
 function LoginPage() {
@@ -68,9 +67,6 @@ function LoginPage() {
               {submitLabel(signIn.submitting, signIn.lockSecondsLeft)}
             </Button>
           </form>
-          <p className={`mt-4 ${MUTED_TEXT}`}>
-            Accounts are created by an administrator. There is no public sign-up.
-          </p>
         </Card>
       </div>
     </PageLayout>
