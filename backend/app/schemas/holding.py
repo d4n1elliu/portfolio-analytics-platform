@@ -5,7 +5,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel
 
-from app.schemas.common import CENTS, FRACTION_PLACES, round_decimal
+from app.schemas.common import CENTS, FRACTION_PLACES, round_decimal, round_optional
 from app.services.holdings import Holding
 from app.services.valuation import Valuation
 
@@ -51,11 +51,11 @@ class HoldingRead(BaseModel):
             asset_class=security.asset_class,
             currency=security.currency,
             quantity=position.quantity,
-            average_cost=_round_optional(average_cost, UNIT_COST_PLACES),
+            average_cost=round_optional(average_cost, UNIT_COST_PLACES),
             cost_basis=round_decimal(position.cost_basis, CENTS),
             realised_pnl=round_decimal(position.realised_pnl, CENTS),
             oversold_quantity=position.oversold_quantity,
-            weight=_round_optional(holding.weight, FRACTION_PLACES),
+            weight=round_optional(holding.weight, FRACTION_PLACES),
             **_valuation_fields(valuation),
         )
 
@@ -71,9 +71,5 @@ def _valuation_fields(valuation: Valuation | None) -> dict[str, Decimal | date |
         "price_date": valuation.price_date,
         "market_value": round_decimal(valuation.market_value, CENTS),
         "unrealised_pnl": round_decimal(valuation.unrealised_pnl, CENTS),
-        "unrealised_return": _round_optional(valuation.unrealised_return, FRACTION_PLACES),
+        "unrealised_return": round_optional(valuation.unrealised_return, FRACTION_PLACES),
     }
-
-
-def _round_optional(value: Decimal | None, places: Decimal) -> Decimal | None:
-    return None if value is None else round_decimal(value, places)

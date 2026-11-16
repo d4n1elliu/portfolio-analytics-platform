@@ -5,7 +5,6 @@ from decimal import Decimal
 
 import pytest
 
-from app.models import Price, Security
 from app.services.portfolio_history import build_portfolio_history
 from app.services.portfolio_performance import (
     PERIODS,
@@ -14,7 +13,7 @@ from app.services.portfolio_performance import (
     months_before,
     period_start,
 )
-from factories import buy, make_security, sell
+from factories import buy, closes, make_security, sell
 
 DAY_1 = date(2026, 11, 9)
 DAY_2 = date(2026, 11, 10)
@@ -22,13 +21,6 @@ DAY_3 = date(2026, 11, 11)
 DAY_4 = date(2026, 11, 12)
 DAY_5 = date(2026, 11, 13)
 DAY_6 = date(2026, 11, 16)
-
-
-def closes(security: Security, by_date: dict[date, str]) -> list[Price]:
-    return [
-        Price(security=security, price_date=day, close=Decimal(close))
-        for day, close in by_date.items()
-    ]
 
 
 def growth_of(trades, prices) -> list[Decimal]:

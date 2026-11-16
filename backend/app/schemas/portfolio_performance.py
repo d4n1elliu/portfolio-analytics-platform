@@ -5,15 +5,14 @@ from decimal import Decimal
 
 from pydantic import BaseModel
 
-from app.schemas.common import FRACTION_PLACES, round_decimal
+from app.schemas.common import FRACTION_PLACES, round_decimal, round_optional
 from app.services.portfolio_performance import Performance
 
 
 class PeriodReturnRead(BaseModel):
     # One of 1m, 3m, ytd, 1y and inception.
     period: str
-    # A fraction, such as 0.0886 for 8.86%. None when the history does not
-    # reach back to the start of the period.
+    # A fraction. None when the history starts after the period does.
     portfolio_return: Decimal | None
 
 
@@ -42,16 +41,14 @@ class PerformanceRead(BaseModel):
             periods=[
                 PeriodReturnRead(
                     period=period.period,
-                    portfolio_return=_round_optional(period.portfolio_return),
+                    portfolio_return=round_optional(period.portfolio_return, FRACTION_PLACES),
                 )
                 for period in performance.periods
             ],
             growth=[
-                GrowthPointRead(date=point.as_of, portfolio=_round_optional(point.growth))
+                GrowthPointRead(
+                    date=point.as_of, portfolio=round_decimal(point.growth, FRACTION_PLACES)
+                )
                 for point in performance.growth
             ],
         )
-
-
-def _round_optional(value: Decimal | None) -> Decimal | None:
-    return None if value is None else round_decimal(value, FRACTION_PLACES)

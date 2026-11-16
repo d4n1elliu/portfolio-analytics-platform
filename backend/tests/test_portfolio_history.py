@@ -3,11 +3,10 @@
 from datetime import date
 from decimal import Decimal
 
-from app.models import Price, Security
 from app.schemas.portfolio_history import PortfolioHistoryPoint
 from app.services.holdings import build_holdings
 from app.services.portfolio_history import build_portfolio_history
-from factories import buy, make_security, sell
+from factories import buy, closes, make_security, sell
 
 # One week of trading days, then the weekend and the Monday after it.
 LAST_FRI = date(2026, 11, 6)
@@ -18,13 +17,6 @@ THU = date(2026, 11, 12)
 FRI = date(2026, 11, 13)
 SAT = date(2026, 11, 14)
 NEXT_MON = date(2026, 11, 16)
-
-
-def closes(security: Security, by_date: dict[date, str]) -> list[Price]:
-    return [
-        Price(security=security, price_date=day, close=Decimal(close))
-        for day, close in by_date.items()
-    ]
 
 
 def dates(points) -> list[date]:

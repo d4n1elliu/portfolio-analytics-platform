@@ -17,6 +17,10 @@ def round_decimal(value: Decimal, places: Decimal) -> Decimal:
     return value.quantize(places, rounding=ROUND_HALF_UP)
 
 
+def round_optional(value: Decimal | None, places: Decimal) -> Decimal | None:
+    return None if value is None else round_decimal(value, places)
+
+
 class Page(BaseModel, Generic[T]):
     """One page of a list. Use it as Page[TradeRead], for example."""
 

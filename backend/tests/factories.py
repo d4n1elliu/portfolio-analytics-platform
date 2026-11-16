@@ -3,7 +3,7 @@
 from datetime import date
 from decimal import Decimal
 
-from app.models import Role, Security, Trade, TradeSide, User
+from app.models import Price, Role, Security, Trade, TradeSide, User
 from app.services.passwords import hash_password
 
 DEFAULT_TRADE_DATE = date(2026, 3, 16)
@@ -65,3 +65,11 @@ def make_user(role: Role = Role.ANALYST, user_id: int = 1, is_active: bool = Tru
         role=role.value,
         is_active=is_active,
     )
+
+
+def closes(security: Security, by_date: dict[date, str]) -> list[Price]:
+    """Closing prices for one security, from a date-to-price mapping."""
+    return [
+        Price(security=security, price_date=day, close=Decimal(close))
+        for day, close in by_date.items()
+    ]
