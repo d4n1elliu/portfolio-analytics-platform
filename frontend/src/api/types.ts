@@ -73,13 +73,6 @@ export interface User {
   role: Role
 }
 
-/** How a visitor can sign in as a demo role. The details are null when they are not public. */
-export interface DemoAccess {
-  role: Role
-  email: string | null
-  password: string | null
-}
-
 export type TradeSide = 'BUY' | 'SELL'
 
 export interface Trade {

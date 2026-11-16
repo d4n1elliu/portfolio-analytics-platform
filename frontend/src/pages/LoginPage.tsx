@@ -5,7 +5,6 @@ import { Navigate, useLocation } from 'react-router'
 import Alert from '../components/Alert'
 import Button from '../components/Button'
 import Card from '../components/Card'
-import DemoAccess from '../components/DemoAccess'
 import PageLayout from '../components/PageLayout'
 import PasswordField from '../components/PasswordField'
 import TextField from '../components/TextField'
@@ -39,7 +38,7 @@ function LoginPage() {
 
   return (
     <PageLayout>
-      <div className="mx-auto mt-12 max-w-md space-y-6">
+      <div className="mx-auto mt-12 max-w-md">
         <Card title="Sign in">
           <form onSubmit={handleSubmit} className="space-y-4">
             <SignInMessage
@@ -73,7 +72,6 @@ function LoginPage() {
             Accounts are created by an administrator. There is no public sign-up.
           </p>
         </Card>
-        <DemoAccess />
       </div>
     </PageLayout>
   )
