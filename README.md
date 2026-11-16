@@ -406,7 +406,7 @@ The app runs at http://localhost:5173. It opens on a sign in page and has three 
 
 | Page      | What it shows |
 | --------- | ------------- |
-| Dashboard | Market value, unrealised P&L and unrealised return, with charts of portfolio value over time, sector allocation and unrealised P&L by holding |
+| Dashboard | Market value, unrealised P&L and unrealised return, the return over each period, and charts of portfolio value over time, sector allocation and unrealised P&L by holding |
 | Holdings  | The current positions with their last price, market value, unrealised P&L and weight. Has sorting, a search box, filters for sector and asset class, summary figures, and a warning when prices are more than three business days old |
 | Trades    | A form to upload a CSV file, and the saved trades |
 
