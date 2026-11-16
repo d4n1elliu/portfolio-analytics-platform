@@ -3,11 +3,10 @@
 from datetime import date
 from decimal import Decimal
 
-from app.models import Price, Security
 from app.schemas.portfolio_history import PortfolioHistoryPoint
 from app.services.holdings import build_holdings
 from app.services.portfolio_history import build_portfolio_history
-from factories import buy, make_security, sell
+from factories import buy, closes, make_security, sell
 
 # One week of trading days, then the weekend and the Monday after it.
 LAST_FRI = date(2026, 11, 6)
@@ -18,13 +17,6 @@ THU = date(2026, 11, 12)
 FRI = date(2026, 11, 13)
 SAT = date(2026, 11, 14)
 NEXT_MON = date(2026, 11, 16)
-
-
-def closes(security: Security, by_date: dict[date, str]) -> list[Price]:
-    return [
-        Price(security=security, price_date=day, close=Decimal(close))
-        for day, close in by_date.items()
-    ]
 
 
 def dates(points) -> list[date]:
@@ -291,6 +283,60 @@ def test_last_point_equals_the_holdings_totals():
     assert last_point.market_value == sum(holding.valuation.market_value for holding in valued)
     assert last_point.cost_basis == sum(holding.position.cost_basis for holding in valued)
     assert last_point.unrealised_pnl == sum(holding.valuation.unrealised_pnl for holding in valued)
+
+
+# --- Cash put in and taken out ---
+
+
+def net_flows(points) -> list[Decimal]:
+    return [point.net_flow for point in points]
+
+
+def test_buy_puts_in_its_cost_and_fees():
+    bhp = make_security("BHP")
+    trades = [buy(bhp, "100", "40", fees="20", on=MON)]
+
+    points = build_portfolio_history(trades, closes(bhp, {MON: "41", TUE: "42"}))
+
+    assert net_flows(points) == [Decimal("4020"), Decimal("0")]
+
+
+def test_sell_takes_out_its_proceeds_after_fees():
+    bhp = make_security("BHP")
+    trades = [buy(bhp, "100", "40", on=MON), sell(bhp, "40", "45", fees="10", on=TUE)]
+
+    points = build_portfolio_history(trades, closes(bhp, {MON: "40", TUE: "45"}))
+
+    assert net_flows(points) == [Decimal("4000"), Decimal("-1790")]
+
+
+def test_trades_on_one_date_are_added_together():
+    bhp, cba = make_security("BHP"), make_security("CBA")
+    trades = [buy(bhp, "100", "40", on=MON), buy(cba, "10", "150", on=MON)]
+    prices = closes(bhp, {MON: "40"}) + closes(cba, {MON: "150"})
+
+    assert net_flows(build_portfolio_history(trades, prices)) == [Decimal("5500")]
+
+
+def test_weekend_trade_counts_as_cash_on_the_next_priced_date():
+    bhp = make_security("BHP")
+    trades = [buy(bhp, "100", "40", on=FRI), buy(bhp, "50", "42", on=SAT)]
+
+    points = build_portfolio_history(trades, closes(bhp, {FRI: "40", NEXT_MON: "42"}))
+
+    assert net_flows(points) == [Decimal("4000"), Decimal("2100")]
+
+
+def test_position_with_no_close_puts_in_no_cash_until_it_is_priced():
+    bhp, cba = make_security("BHP"), make_security("CBA")
+    trades = [buy(bhp, "100", "40", on=MON), buy(cba, "10", "150", on=MON)]
+    prices = closes(bhp, {MON: "40", TUE: "40", WED: "40"}) + closes(cba, {WED: "160"})
+
+    points = build_portfolio_history(trades, prices)
+
+    # CBA arrives on Wednesday at what it is then worth, not at what it cost.
+    assert net_flows(points) == [Decimal("4000"), Decimal("0"), Decimal("1600")]
+    assert market_values(points) == [Decimal("4000"), Decimal("4000"), Decimal("5600")]
 
 
 # --- Endpoint ---

@@ -7,7 +7,7 @@ from decimal import Decimal
 
 from sqlalchemy.orm import Session
 
-from app.models import Price, Trade
+from app.models import Price, Trade, TradeSide
 from app.services.positions import ZERO, Position, calculate_position
 from app.services.prices import list_prices_of_traded_securities
 from app.services.trades import list_trades_oldest_first
@@ -22,6 +22,9 @@ class HistoryPoint:
     market_value: Decimal
     cost_basis: Decimal
     unrealised_pnl: Decimal
+    # Cash put into the valued positions that day, less cash taken out. A buy
+    # puts in its cost and fees. A sell takes out its proceeds after fees.
+    net_flow: Decimal
 
 
 def list_portfolio_history(db: Session) -> list[HistoryPoint]:
@@ -46,6 +49,8 @@ def build_portfolio_history(trades: Iterable[Trade], prices: Iterable[Price]) ->
     trades_so_far: dict[str, list[Trade]] = {}
     positions: dict[str, Position] = {}
     latest_price: dict[str, Price] = {}
+    # Held on the previous date with no close yet, so not yet in the market value.
+    unpriced: set[str] = set()
     next_trade = 0
     points = []
 
@@ -54,21 +59,56 @@ def build_portfolio_history(trades: Iterable[Trade], prices: Iterable[Price]) ->
             latest_price[price.security.ticker] = price
 
         # Only a position with a new trade is recalculated.
-        traded = set()
+        cash_traded: dict[str, Decimal] = {}
         while next_trade < len(trades) and trades[next_trade].trade_date <= day:
-            ticker = trades[next_trade].security.ticker
-            trades_so_far.setdefault(ticker, []).append(trades[next_trade])
-            traded.add(ticker)
+            trade = trades[next_trade]
+            ticker = trade.security.ticker
+            trades_so_far.setdefault(ticker, []).append(trade)
+            cash_traded[ticker] = cash_traded.get(ticker, ZERO) + _cash_flow(trade)
             next_trade += 1
-        for ticker in traded:
+        for ticker in cash_traded:
             positions[ticker] = calculate_position(trades_so_far[ticker])
 
         open_positions = {
             ticker: position for ticker, position in positions.items() if position.is_open
         }
         if points or open_positions:
-            points.append(_point(day, open_positions, latest_price))
+            net_flow = _net_flow(cash_traded, open_positions, latest_price, unpriced)
+            points.append(_point(day, open_positions, latest_price, net_flow))
+        unpriced = {ticker for ticker in open_positions if ticker not in latest_price}
     return points
+
+
+def _cash_flow(trade: Trade) -> Decimal:
+    """Cash a trade puts into the portfolio. Negative for a sell, which takes cash out."""
+    amount = trade.quantity * trade.price
+    return amount + trade.fees if trade.side == TradeSide.BUY else trade.fees - amount
+
+
+def _net_flow(
+    cash_traded: dict[str, Decimal],
+    open_positions: dict[str, Position],
+    latest_price: dict[str, Price],
+    unpriced: set[str],
+) -> Decimal:
+    """Add up the cash that went into the valued positions on one date.
+
+    A position held with no close is not in the market value. On the date it
+    gets its first close, its whole value counts as cash put in, so its
+    arrival does not look like a gain.
+    """
+    newly_priced = {ticker for ticker in unpriced if ticker in latest_price}
+    net_flow = sum(
+        (
+            cash
+            for ticker, cash in cash_traded.items()
+            if ticker in latest_price and ticker not in newly_priced
+        ),
+        ZERO,
+    )
+    for ticker in newly_priced & open_positions.keys():
+        net_flow += _market_value(open_positions[ticker], latest_price[ticker])
+    return net_flow
 
 
 def _group_by_date(prices: Iterable[Price]) -> dict[date, list[Price]]:
@@ -79,7 +119,10 @@ def _group_by_date(prices: Iterable[Price]) -> dict[date, list[Price]]:
 
 
 def _point(
-    day: date, open_positions: dict[str, Position], latest_price: dict[str, Price]
+    day: date,
+    open_positions: dict[str, Position],
+    latest_price: dict[str, Price],
+    net_flow: Decimal,
 ) -> HistoryPoint:
     """Add up the open positions that have a price."""
     market_value = ZERO
@@ -88,6 +131,10 @@ def _point(
         price = latest_price.get(ticker)
         if price is None:
             continue
-        market_value += value_position(position, price.close, price.price_date).market_value
+        market_value += _market_value(position, price)
         cost_basis += position.cost_basis
-    return HistoryPoint(day, market_value, cost_basis, market_value - cost_basis)
+    return HistoryPoint(day, market_value, cost_basis, market_value - cost_basis, net_flow)
+
+
+def _market_value(position: Position, price: Price) -> Decimal:
+    return value_position(position, price.close, price.price_date).market_value

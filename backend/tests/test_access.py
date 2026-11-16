@@ -5,7 +5,13 @@ import pytest
 from app.models import Role
 from factories import USER_PASSWORD, make_user
 
-READ_ENDPOINTS = ["/holdings", "/portfolio/history", "/securities", "/trades"]
+READ_ENDPOINTS = [
+    "/holdings",
+    "/portfolio/history",
+    "/portfolio/performance",
+    "/securities",
+    "/trades",
+]
 OPEN_ENDPOINTS = ["/health", "/docs"]
 
 NOT_SIGNED_IN = {"detail": "Sign in to continue."}
