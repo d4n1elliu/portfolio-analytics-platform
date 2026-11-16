@@ -293,6 +293,60 @@ def test_last_point_equals_the_holdings_totals():
     assert last_point.unrealised_pnl == sum(holding.valuation.unrealised_pnl for holding in valued)
 
 
+# --- Cash put in and taken out ---
+
+
+def net_flows(points) -> list[Decimal]:
+    return [point.net_flow for point in points]
+
+
+def test_buy_puts_in_its_cost_and_fees():
+    bhp = make_security("BHP")
+    trades = [buy(bhp, "100", "40", fees="20", on=MON)]
+
+    points = build_portfolio_history(trades, closes(bhp, {MON: "41", TUE: "42"}))
+
+    assert net_flows(points) == [Decimal("4020"), Decimal("0")]
+
+
+def test_sell_takes_out_its_proceeds_after_fees():
+    bhp = make_security("BHP")
+    trades = [buy(bhp, "100", "40", on=MON), sell(bhp, "40", "45", fees="10", on=TUE)]
+
+    points = build_portfolio_history(trades, closes(bhp, {MON: "40", TUE: "45"}))
+
+    assert net_flows(points) == [Decimal("4000"), Decimal("-1790")]
+
+
+def test_trades_on_one_date_are_added_together():
+    bhp, cba = make_security("BHP"), make_security("CBA")
+    trades = [buy(bhp, "100", "40", on=MON), buy(cba, "10", "150", on=MON)]
+    prices = closes(bhp, {MON: "40"}) + closes(cba, {MON: "150"})
+
+    assert net_flows(build_portfolio_history(trades, prices)) == [Decimal("5500")]
+
+
+def test_weekend_trade_counts_as_cash_on_the_next_priced_date():
+    bhp = make_security("BHP")
+    trades = [buy(bhp, "100", "40", on=FRI), buy(bhp, "50", "42", on=SAT)]
+
+    points = build_portfolio_history(trades, closes(bhp, {FRI: "40", NEXT_MON: "42"}))
+
+    assert net_flows(points) == [Decimal("4000"), Decimal("2100")]
+
+
+def test_position_with_no_close_puts_in_no_cash_until_it_is_priced():
+    bhp, cba = make_security("BHP"), make_security("CBA")
+    trades = [buy(bhp, "100", "40", on=MON), buy(cba, "10", "150", on=MON)]
+    prices = closes(bhp, {MON: "40", TUE: "40", WED: "40"}) + closes(cba, {WED: "160"})
+
+    points = build_portfolio_history(trades, prices)
+
+    # CBA arrives on Wednesday at what it is then worth, not at what it cost.
+    assert net_flows(points) == [Decimal("4000"), Decimal("0"), Decimal("1600")]
+    assert market_values(points) == [Decimal("4000"), Decimal("4000"), Decimal("5600")]
+
+
 # --- Endpoint ---
 
 
