@@ -3,8 +3,9 @@ name: Refresh prices
 # Runs on weekdays after the ASX has closed, or when started by hand.
 on:
   schedule:
-    # 08:00 UTC is 6pm in Sydney, or 7pm during daylight saving. The ASX closes at 4pm.
-    - cron: "0 8 * * 1-5"
+    # 08:23 UTC is after 6pm in Sydney, or 7pm during daylight saving. The ASX
+    # closes at 4pm. Not on the hour, when GitHub delays scheduled runs the most.
+    - cron: "23 8 * * 1-5"
   workflow_dispatch:
 
 # One refresh at a time. A newer one waits instead of cutting this one off.
@@ -14,6 +15,7 @@ concurrency:
 
 permissions:
   contents: read
+  issues: write
 
 jobs:
   refresh:
@@ -36,3 +38,20 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: python -m jobs.refresh_prices
+
+      - name: Open an issue for a failed refresh, or comment on the open one
+        if: failure()
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ISSUE_TITLE: The price refresh failed
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          message="The Refresh prices workflow failed, so the stored prices may be out of date. See $RUN_URL"
+          open_issue=$(gh issue list --state open --search "\"$ISSUE_TITLE\" in:title" --json number --jq '.[0].number // empty')
+          if [ -n "$open_issue" ]; then
+            gh issue comment "$open_issue" --body "$message"
+          else
+            gh issue create --title "$ISSUE_TITLE" --body "$message"
+          fi
