@@ -35,6 +35,7 @@ portfolio-analytics-platform/
 ├── .nvmrc                    Node version for local use and CI
 ├── .python-version           Python version for local use and CI
 ├── docker-compose.prod.yml   Production setup that runs both containers
+├── LICENSE
 ├── README.md
 │
 ├── .github/
@@ -487,3 +488,7 @@ docker compose -f docker-compose.prod.yml --env-file .env.prod run --rm backend 
 ```
 
 Create the demo accounts the same way, with `python -m scripts.seed_users`. `JWT_SECRET` must be set in `.env.prod`, or nobody can sign in.
+
+## License
+
+Released under the [MIT License](LICENSE).
