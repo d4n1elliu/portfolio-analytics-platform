@@ -2,6 +2,7 @@
 
 export const ROUTES = {
   account: '/account',
+  assistant: '/assistant',
   dashboard: '/dashboard',
   holdings: '/holdings',
   login: '/login',
@@ -9,11 +10,22 @@ export const ROUTES = {
   trades: '/trades',
 } as const
 
-export const PAGES = [
+interface Page {
+  path: string
+  label: string
+  needsAi?: boolean
+}
+
+export const PAGES: Page[] = [
   { path: ROUTES.dashboard, label: 'Dashboard' },
   { path: ROUTES.holdings, label: 'Holdings' },
   { path: ROUTES.trades, label: 'Trades' },
+  { path: ROUTES.assistant, label: 'Assistant', needsAi: true },
 ]
+
+export function pagesFor(user: { ai_enabled: boolean }): Page[] {
+  return PAGES.filter((page) => user.ai_enabled || !page.needsAi)
+}
 
 export const HOME = ROUTES.dashboard
 

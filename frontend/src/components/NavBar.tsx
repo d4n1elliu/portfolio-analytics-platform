@@ -1,5 +1,5 @@
 import { useAuth } from '../lib/auth'
-import { PAGES } from '../routes'
+import { pagesFor } from '../routes'
 import HeaderLink from './HeaderLink'
 
 function NavBar() {
@@ -9,7 +9,7 @@ function NavBar() {
 
   return (
     <nav aria-label="Main" className="flex gap-1">
-      {PAGES.map((page) => (
+      {pagesFor(state.user).map((page) => (
         <HeaderLink key={page.path} to={page.path}>
           {page.label}
         </HeaderLink>

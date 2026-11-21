@@ -6,7 +6,13 @@ import type { Permission, User } from '../api/types'
 import { allowedActions, can } from './roles'
 
 function user(permissions: Permission[]): User {
-  return { email: 'pm@example.com', name: 'Demo PM', role: 'portfolio_manager', permissions }
+  return {
+    email: 'pm@example.com',
+    name: 'Demo PM',
+    role: 'portfolio_manager',
+    permissions,
+    ai_enabled: false,
+  }
 }
 
 describe('can', () => {
