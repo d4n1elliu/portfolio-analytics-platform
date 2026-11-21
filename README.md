@@ -11,7 +11,7 @@ A full-stack web app for tracking portfolio holdings, performance and sector exp
 Five features are in place:
 
 - **Trades.** Trades can be imported from a CSV file, then filtered, sorted and exported. Every import is recorded, and the same file cannot be imported twice.
-- **Holdings.** The Holdings page shows the fund's current positions, calculated from those trades.
+- **Holdings.** The Holdings page shows the fund's positions, calculated from those trades, either now or as at any past date.
 - **Prices and valuation.** Daily closing prices are stored for each security and refreshed on weekdays. The Holdings page uses them to show what each position is worth, and the Dashboard page shows the portfolio's value, its unrealised profit, and charts of sector allocation and profit by holding.
 - **History and performance.** The Dashboard charts the portfolio's value on each past day and its time-weighted return over 1 month, 3 months, year to date, 1 year and since inception.
 - **Login and roles.** Every page needs a sign in, and each account has a role that decides what it can do.
@@ -161,6 +161,8 @@ It also takes filters and an order, and `total` counts the trades that match:
 `GET /trades/export` takes the same filters and order and returns every matching trade as a CSV file with the columns the import reads. `GET /trades/imports` is paged like `/trades`, and each item has `file_name`, `row_count`, `imported_by` and `created_at`.
 
 `GET /holdings` returns one item per security that has trades, with `ticker`, `security_name`, `sector`, `asset_class`, `currency`, `quantity`, `average_cost`, `cost_basis`, `realised_pnl` and `oversold_quantity`, plus the valuation fields described under [Prices and valuation](#prices-and-valuation). Positions that have been fully sold are left out unless `include_closed=true` is added.
+
+Add `as_of=YYYY-MM-DD` to get the positions at the end of a past date. Only the trades made by then are counted, and each position is valued at its latest closing price on or before that date, so a weekend uses Friday's close. A date in the future is refused with `422`.
 
 The interactive docs at http://localhost:8000/docs list every endpoint and let you try them.
 
@@ -451,7 +453,7 @@ The app runs at http://localhost:5173. It opens on a sign in page and has three 
 | Page      | What it shows |
 | --------- | ------------- |
 | Dashboard | Market value, unrealised P&L and unrealised return, the return over each period, and charts of portfolio value over time, sector allocation and unrealised P&L by holding |
-| Holdings  | The current positions with their last price, market value, unrealised P&L and weight. Has sorting, a search box, filters for sector and asset class, summary figures, and a warning when prices are more than three business days old |
+| Holdings  | The current positions with their last price, market value, unrealised P&L and weight. Has sorting, a search box, filters for sector and asset class, summary figures, and a warning when prices are more than three business days old. An "As at" date shows the positions on a past date |
 | Trades    | A form to upload a CSV file, the saved trades with filters, sorting and a CSV export, and a list of past imports |
 
 ### Environment variables
