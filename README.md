@@ -21,7 +21,7 @@ Five features are in place:
 | Layer    | Technology                                                    |
 | -------- | ------------------------------------------------------------- |
 | Frontend | React, TypeScript, Vite, Tailwind CSS v4, ECharts, Vitest     |
-| Backend  | Python, FastAPI, uvicorn, python-dotenv, pytest, yfinance, argon2-cffi, PyJWT |
+| Backend  | Python, FastAPI, uvicorn, python-dotenv, pytest, yfinance, argon2-cffi, PyJWT, LangChain |
 | Database | PostgreSQL on Neon, SQLAlchemy 2, Alembic, psycopg 3          |
 | Hosting  | Docker, Caddy, GitHub Actions, GitHub Container Registry      |
 
@@ -78,6 +78,7 @@ portfolio-analytics-platform/
 └── backend/
     ├── alembic/              Migration setup and the files in versions/
     ├── app/
+    │   ├── ai/               The AI models and each user's allowance
     │   ├── models/           Database tables such as Security, Trade and User
     │   ├── routes/           HTTP endpoints such as holdings and auth
     │   ├── schemas/          Shapes of the JSON the API returns
@@ -106,7 +107,7 @@ A request flows through the backend in one direction: a route calls a service, a
 
 ## Data model
 
-Six tables hold the data.
+Seven tables hold the data.
 
 | Table        | One row is                       | Key columns                                                        |
 | ------------ | -------------------------------- | ------------------------------------------------------------------ |
@@ -116,6 +117,7 @@ Six tables hold the data.
 | `users`      | A person who can sign in         | `email` (unique), `name`, `password_hash`, `role`, `is_active`     |
 | `import_batches` | One imported file of trades  | `file_name`, `file_hash` (unique), `row_count`, `imported_by_id`   |
 | `user_sessions` | One sign in                   | `user_id`, `expires_at`, `ended_at`                                |
+| `ai_usage`    | One AI request                 | `user_id`, `input_tokens`, `output_tokens`                         |
 
 A security has many trades and many prices. A trade points to the import it came from, in `import_batch_id`. The database enforces the basic rules itself: `side` must be `BUY` or `SELL`, quantities and prices must be greater than zero, fees cannot be negative, and a security can have only one closing price per day.
 
@@ -138,6 +140,7 @@ A security has many trades and many prices. A trade points to the import it came
 | `POST` | `/auth/login`    | Signs in with an email and password                             |
 | `POST` | `/auth/logout`   | Signs out                                                       |
 | `POST` | `/auth/password` | Changes the signed-in user's password                           |
+| `GET`  | `/ai/usage`      | Returns the signed-in user's AI requests and tokens, and their limits |
 | `GET`  | `/auth/me`       | Returns the signed-in user                                      |
 | `GET`  | `/holdings`      | Lists the current position in each security, ordered by ticker  |
 | `GET`  | `/holdings/{ticker}` | Returns the current position in one security                |
@@ -193,6 +196,16 @@ A signed-in user can change their password on the Account page, opened by clicki
 The seed script creates one demo account per role: `operations@example.com`, `pm@example.com` and `analyst@example.com`. Their passwords are chosen when the script is run and are not stored in this repository.
 
 Not included: sign-up, resetting a forgotten password, email verification and managing other users' accounts.
+
+### AI features
+
+The AI features are off unless `AI_ENABLED` is `true`. While they are off, the AI pages are hidden, every endpoint under `/ai` answers `404`, and no AI package is loaded, so the app runs without any API key.
+
+The chat model and the embedding model are named in settings as `provider:model` and built by LangChain, so another provider can be used by changing a setting and installing its package. The keys are read from the environment by each provider's own package.
+
+Each user has an allowance: 20 AI requests in any hour and 200,000 tokens in any day, by default. Every request is recorded in `ai_usage` with the tokens it used, so the count survives a restart. A request over either limit is answered with `429`. `GET /ai/usage` returns what has been used, and the Account page shows it.
+
+No test calls a real model. The test setup refuses to build one, and the tests use a fake chat model that gives scripted answers and a fake embedding model.
 
 ### Holdings and average cost
 
@@ -487,7 +500,10 @@ Real `.env` files are git-ignored and must never be committed. The `.env.example
 | `backend/.env.example`  | `MARKET_TIMEZONE`     | Optional. Time zone that decides "today" for trade dates. Defaults to `Australia/Sydney` |
 | `backend/.env.example`  | `SESSION_MINUTES`     | Optional. How long a sign in lasts. Defaults to 480  |
 | `backend/.env.example`  | `BENCHMARK_TICKER`    | Optional. The security the portfolio's return is compared with. Defaults to `VAS` |
-| `backend/.env.example`  | `AI_ENABLED`          | Optional. Set to `true` to show the AI pages. Defaults to off |
+| `backend/.env.example`  | `AI_ENABLED`          | Optional. Set to `true` to turn on the AI pages and endpoints. Defaults to off |
+| `backend/.env.example`  | `AI_CHAT_MODEL`, `AI_EMBEDDING_MODEL` | Optional. The models to use, each as `provider:model`. Default to `anthropic:claude-opus-5-5` and `openai:text-embedding-3-small` |
+| `backend/.env.example`  | `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` | The keys for those providers. Needed only when the AI features are on |
+| `backend/.env.example`  | `AI_REQUESTS_PER_HOUR`, `AI_DAILY_TOKEN_CAP` | Optional. Each user's AI allowance. Default to 20 requests an hour and 200,000 tokens a day |
 | `backend/.env.example`  | `PASSWORD_LOCKED_EMAILS` | Optional. Comma-separated accounts whose password cannot be changed, such as shared demo accounts. Defaults to none |
 | `backend/.env.example`  | `IMPORT_MAX_FILE_BYTES`, `IMPORT_MAX_ROWS` | Optional. CSV upload limits. Default to 1 MB and 5000 rows |
 | `backend/.env.example`  | `PRICE_REFRESH_OVERLAP_DAYS`, `PRICE_LOOKBACK_DAYS` | Optional. Price refresh settings. Default to 5 and 365 days |

@@ -7,7 +7,9 @@ from enum import StrEnum
 from fastapi import Cookie, Depends, HTTPException, Query, UploadFile, status
 from sqlalchemy.orm import Session
 
-from app.config import DEFAULT_PAGE_SIZE, IMPORT_MAX_FILE_BYTES, MAX_PAGE_SIZE
+from app.ai import usage as ai_usage
+from app.ai.usage import Allowance
+from app.config import AI_ENABLED, DEFAULT_PAGE_SIZE, IMPORT_MAX_FILE_BYTES, MAX_PAGE_SIZE
 from app.database import get_db
 from app.models import Security, User, UserSession
 from app.schemas.common import Page
@@ -107,6 +109,23 @@ def get_security(ticker: str, db: Session = Depends(get_db)) -> Security:
     if security is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"No security has the ticker '{ticker}'.")
     return security
+
+
+def require_ai_enabled() -> None:
+    if not AI_ENABLED:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "The AI features are not turned on.")
+
+
+def get_ai_allowance(
+    user: User = Depends(get_current_user), db: Session = Depends(get_db)
+) -> Allowance:
+    return ai_usage.read_allowance(db, user, datetime.now(UTC))
+
+
+def require_ai_allowance(allowance: Allowance = Depends(get_ai_allowance)) -> Allowance:
+    if allowance.limit_reached is not None:
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, allowance.limit_reached)
+    return allowance
 
 
 def require_permission(permission: Permission):
