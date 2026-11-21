@@ -44,6 +44,7 @@ portfolio-analytics-platform/
 │       └── refresh-prices.yml  Fetches closing prices on weekdays
 │
 ├── frontend/
+│   ├── public/               Files served as they are, such as the favicon
 │   ├── src/
 │   │   ├── api/              Typed calls to the backend such as holdings
 │   │   ├── components/       Shared components such as DataTable and Chart
