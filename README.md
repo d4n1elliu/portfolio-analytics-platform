@@ -39,6 +39,7 @@ portfolio-analytics-platform/
 ├── README.md
 │
 ├── .github/
+│   ├── dependabot.yml        Weekly pull requests for outdated packages
 │   └── workflows/
 │       ├── ci.yml            Lint, format check, tests, type check and Docker builds
 │       ├── deploy.yml        Publishes images and deploys after CI passes
@@ -64,7 +65,7 @@ portfolio-analytics-platform/
 │   ├── .env.example          Template for frontend environment variables
 │   ├── .oxlintrc.json        Linter settings
 │   ├── .prettierrc.json      Formatter settings
-│   ├── Caddyfile             Caddy settings for HTTPS and the /api proxy
+│   ├── Caddyfile             Caddy settings for HTTPS, security headers and the /api proxy
 │   ├── Dockerfile            Builds the app and serves it with Caddy
 │   ├── index.html            HTML shell that Vite serves
 │   ├── package-lock.json
@@ -83,7 +84,8 @@ portfolio-analytics-platform/
     │   ├── services/         Business logic such as positions and valuation
     │   ├── config.py         Reads settings from environment variables
     │   ├── database.py       Engine, sessions and the get_db dependency
-    │   └── main.py           FastAPI app, CORS and health endpoints
+    │   ├── main.py           FastAPI app, CORS and health endpoints
+    │   └── request_log.py    Logs one line for each request
     ├── jobs/                 Price jobs that run outside the API
     ├── sample_data/          Example trade files and a year of closing prices
     ├── scripts/              One-off scripts such as seed.py and seed_users.py
@@ -186,7 +188,7 @@ The table lives in one place, `backend/app/services/permissions.py`. The API che
 
 Signing in starts a session that lasts 8 hours and sets a cookie that names it. The session is checked on every request, so signing out ends it at once: a copy of the cookie stops working. After 10 failed attempts, sign-ins from that address are blocked for up to 15 minutes.
 
-A signed-in user can change their password on the Account page, opened by clicking their name. The new password must be at least 12 characters, and changing it signs the user out everywhere else.
+A signed-in user can change their password on the Account page, opened by clicking their name. The new password must be at least 12 characters, and changing it signs the user out everywhere else. An account listed in `PASSWORD_LOCKED_EMAILS` cannot change its password, which stops a visitor locking others out of a shared demo account.
 
 The seed script creates one demo account per role: `operations@example.com`, `pm@example.com` and `analyst@example.com`. Their passwords are chosen when the script is run and are not stored in this repository.
 
@@ -482,6 +484,7 @@ Real `.env` files are git-ignored and must never be committed. The `.env.example
 | `backend/.env.example`  | `MARKET_TIMEZONE`     | Optional. Time zone that decides "today" for trade dates. Defaults to `Australia/Sydney` |
 | `backend/.env.example`  | `SESSION_MINUTES`     | Optional. How long a sign in lasts. Defaults to 480  |
 | `backend/.env.example`  | `BENCHMARK_TICKER`    | Optional. The security the portfolio's return is compared with. Defaults to `VAS` |
+| `backend/.env.example`  | `PASSWORD_LOCKED_EMAILS` | Optional. Comma-separated accounts whose password cannot be changed, such as shared demo accounts. Defaults to none |
 | `backend/.env.example`  | `IMPORT_MAX_FILE_BYTES`, `IMPORT_MAX_ROWS` | Optional. CSV upload limits. Default to 1 MB and 5000 rows |
 | `backend/.env.example`  | `PRICE_REFRESH_OVERLAP_DAYS`, `PRICE_LOOKBACK_DAYS` | Optional. Price refresh settings. Default to 5 and 365 days |
 | `backend/.env.example`  | `DEFAULT_PAGE_SIZE`, `MAX_PAGE_SIZE` | Optional. Page sizes for list endpoints. Default to 50 and 500 |
@@ -504,6 +507,25 @@ The site runs on a VPS as two Docker containers. The database stays on Neon.
 4. The workflow then connects to the server over SSH, pulls those images, runs `alembic upgrade head`, and restarts the containers.
 5. It finishes by checking `https://<domain>/api/health/db`. The run fails if the site does not come up healthy.
 
+### What the server adds to each response
+
+Caddy adds security headers to every response:
+
+| Header | What it does |
+| ------ | ------------ |
+| `Strict-Transport-Security` | Tells the browser to use HTTPS for the next year |
+| `X-Content-Type-Options` | Stops the browser guessing a file's type |
+| `X-Frame-Options` | Stops other sites showing this one inside a frame |
+| `Referrer-Policy` | Sends only the site's address, not the page, to other sites |
+| `Permissions-Policy` | Turns off the camera, microphone and location |
+| `Content-Security-Policy` | On the pages of the app, allows scripts, styles and requests from this site only |
+
+Inline styles are allowed, because the charts set styles on their own elements.
+
+The API logs one line for each request, with its method, path, status and time taken, such as `GET /trades 200 12ms`. The query string, the cookie and the body are never logged, and the health check is left out. Read the log with `docker compose -f docker-compose.prod.yml --env-file .env.prod logs backend`.
+
+Dependabot opens pull requests for outdated Python packages, npm packages and GitHub Actions once a week. CI tests each one.
+
 ### One-time server setup
 
 The server needs Docker with the Compose plugin, and ports 80 and 443 open.
@@ -523,7 +545,7 @@ The Deploy workflow needs these repository secrets:
 
 ### Price refresh
 
-The Refresh prices workflow fetches the latest closing prices and saves them to the database. It runs on weekdays at 08:00 UTC, after the ASX has closed, and can also be started by hand from the Actions tab.
+The Refresh prices workflow fetches the latest closing prices and saves them to the database. It runs on weekdays at 08:23 UTC, after the ASX has closed, and can also be started by hand from the Actions tab. If a run fails, it opens an issue in this repository, or adds a comment to the one already open.
 
 It needs one more repository secret:
 
