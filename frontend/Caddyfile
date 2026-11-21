@@ -9,6 +9,15 @@
 {$SITE_ADDRESS::80} {
 	encode gzip
 
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		-Server
+	}
+
 	# /api/trades is sent to the backend as /trades: the backend's routes
 	# have no /api in front.
 	handle_path /api/* {
@@ -18,6 +27,8 @@
 	# Everything else is the React app. A path with no matching file, such as
 	# a page opened from a bookmark, gets index.html so the app can show it.
 	handle {
+		# Charts and their tooltips set styles on elements, so inline styles are allowed.
+		header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
 		root * /srv
 		try_files {path} /index.html
 		file_server
