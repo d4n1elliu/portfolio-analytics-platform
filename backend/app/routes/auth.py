@@ -88,6 +88,10 @@ def change_password(
     db: Session = Depends(get_db),
 ):
     """Set a new password, and sign the user out everywhere else."""
+    if users_service.password_is_locked(session.user):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, "The password of this account cannot be changed."
+        )
     if users_service.check_credentials(session.user, change.current_password) is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "The current password is incorrect.")
     problem = password_problem(change.new_password)
