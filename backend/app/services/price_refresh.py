@@ -83,5 +83,7 @@ def refresh_window(
     lookback_days: int = PRICE_LOOKBACK_DAYS,
 ) -> tuple[date, date]:
     """Return the first and last day to fetch for one security."""
-    days_back = lookback_days if latest_stored is None else (today - latest_stored).days + overlap_days
+    days_back = (
+        lookback_days if latest_stored is None else (today - latest_stored).days + overlap_days
+    )
     return today - timedelta(days=days_back), today

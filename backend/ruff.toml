@@ -1,5 +1,7 @@
 # Settings for ruff, the linter. Run "ruff check ." from backend/.
 target-version = "py312"
+# The width that "ruff format ." wraps lines at.
+line-length = 100
 
 [lint]
 ignore = [

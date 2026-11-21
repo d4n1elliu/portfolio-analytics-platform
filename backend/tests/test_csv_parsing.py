@@ -18,7 +18,16 @@ def test_rows_are_numbered_from_two_with_names_and_values_tidied():
     rows = read("Trade_Date, ticker ,side,quantity,price\n2026-03-16, bhp ,buy,100,45.25\n")
 
     assert rows == [
-        (2, {"trade_date": "2026-03-16", "ticker": "bhp", "side": "buy", "quantity": "100", "price": "45.25"})
+        (
+            2,
+            {
+                "trade_date": "2026-03-16",
+                "ticker": "bhp",
+                "side": "buy",
+                "quantity": "100",
+                "price": "45.25",
+            },
+        )
     ]
 
 

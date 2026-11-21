@@ -19,15 +19,50 @@ from app.services.inserts import insert_missing
 # has no single sector. Currency is left out, so each row gets the default.
 SECURITIES = [
     {"ticker": "BHP", "name": "BHP Group Limited", "sector": "Materials", "asset_class": "Equity"},
-    {"ticker": "CBA", "name": "Commonwealth Bank of Australia", "sector": "Financials", "asset_class": "Equity"},
+    {
+        "ticker": "CBA",
+        "name": "Commonwealth Bank of Australia",
+        "sector": "Financials",
+        "asset_class": "Equity",
+    },
     {"ticker": "CSL", "name": "CSL Limited", "sector": "Health Care", "asset_class": "Equity"},
-    {"ticker": "WES", "name": "Wesfarmers Limited", "sector": "Consumer Discretionary", "asset_class": "Equity"},
-    {"ticker": "WOW", "name": "Woolworths Group Limited", "sector": "Consumer Staples", "asset_class": "Equity"},
-    {"ticker": "TLS", "name": "Telstra Group Limited", "sector": "Communication Services", "asset_class": "Equity"},
-    {"ticker": "NAB", "name": "National Australia Bank Limited", "sector": "Financials", "asset_class": "Equity"},
-    {"ticker": "MQG", "name": "Macquarie Group Limited", "sector": "Financials", "asset_class": "Equity"},
+    {
+        "ticker": "WES",
+        "name": "Wesfarmers Limited",
+        "sector": "Consumer Discretionary",
+        "asset_class": "Equity",
+    },
+    {
+        "ticker": "WOW",
+        "name": "Woolworths Group Limited",
+        "sector": "Consumer Staples",
+        "asset_class": "Equity",
+    },
+    {
+        "ticker": "TLS",
+        "name": "Telstra Group Limited",
+        "sector": "Communication Services",
+        "asset_class": "Equity",
+    },
+    {
+        "ticker": "NAB",
+        "name": "National Australia Bank Limited",
+        "sector": "Financials",
+        "asset_class": "Equity",
+    },
+    {
+        "ticker": "MQG",
+        "name": "Macquarie Group Limited",
+        "sector": "Financials",
+        "asset_class": "Equity",
+    },
     {"ticker": "RIO", "name": "Rio Tinto Limited", "sector": "Materials", "asset_class": "Equity"},
-    {"ticker": "VAS", "name": "Vanguard Australian Shares Index ETF", "sector": "Diversified", "asset_class": "ETF"},
+    {
+        "ticker": "VAS",
+        "name": "Vanguard Australian Shares Index ETF",
+        "sector": "Diversified",
+        "asset_class": "ETF",
+    },
 ]
 
 
