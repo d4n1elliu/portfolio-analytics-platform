@@ -65,6 +65,7 @@ def test_sign_in_returns_the_user_without_the_password_hash(client_with_users):
         "name": "Test analyst",
         "role": "analyst",
         "permissions": [],
+        "ai_enabled": False,
     }
 
 
@@ -207,6 +208,14 @@ def test_session_of_a_user_made_inactive_is_rejected(client_with_users):
     user.is_active = False
 
     assert client.get("/auth/me").status_code == 401
+
+
+def test_the_user_is_told_when_the_ai_features_are_on(client_with_users, monkeypatch):
+    monkeypatch.setattr("app.routes.auth.AI_ENABLED", True)
+    client = client_with_users(make_user())
+    sign_in(client)
+
+    assert client.get("/auth/me").json()["ai_enabled"] is True
 
 
 # --- POST /auth/logout ---

@@ -107,6 +107,26 @@ export interface User {
   name: string
   role: Role
   permissions: Permission[]
+  ai_enabled: boolean
+}
+
+export type ChatRole = 'user' | 'assistant'
+
+export type ToolCallStatus = 'running' | 'done' | 'failed'
+
+export interface ToolCall {
+  id: string
+  name: string
+  input: string
+  output: string | null
+  status: ToolCallStatus
+}
+
+export interface ChatMessage {
+  id: string
+  role: ChatRole
+  text: string
+  toolCalls: ToolCall[]
 }
 
 export type TradeSide = 'BUY' | 'SELL'

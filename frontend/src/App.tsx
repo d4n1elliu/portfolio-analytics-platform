@@ -2,9 +2,11 @@ import { BrowserRouter, Route, Routes } from 'react-router'
 
 import AuthProvider from './components/AuthProvider'
 import HomeRedirect from './components/HomeRedirect'
+import RequireAi from './components/RequireAi'
 import RequireAuth from './components/RequireAuth'
 import SessionGate from './components/SessionGate'
 import AccountPage from './pages/AccountPage'
+import AssistantPage from './pages/AssistantPage'
 import DashboardPage from './pages/DashboardPage'
 import HoldingsPage from './pages/HoldingsPage'
 import LoginPage from './pages/LoginPage'
@@ -25,6 +27,9 @@ function App() {
               <Route path={ROUTES.trades} element={<TradesPage />} />
               <Route path={ROUTES.security} element={<SecurityPage />} />
               <Route path={ROUTES.account} element={<AccountPage />} />
+              <Route element={<RequireAi />}>
+                <Route path={ROUTES.assistant} element={<AssistantPage />} />
+              </Route>
             </Route>
             <Route path="*" element={<HomeRedirect />} />
           </Routes>

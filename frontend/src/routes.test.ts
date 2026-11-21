@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from 'vitest'
 
-import { ROUTES, returnPage, securityPath } from './routes'
+import { ROUTES, pagesFor, returnPage, securityPath } from './routes'
 
 describe('returnPage', () => {
   it('accepts a page of this app', () => {
@@ -20,5 +20,19 @@ describe('securityPath', () => {
   it('puts the ticker in the address, keeping it safe for a URL', () => {
     expect(securityPath('BHP')).toBe('/securities/BHP')
     expect(securityPath('A/B')).toBe('/securities/A%2FB')
+  })
+})
+
+describe('pagesFor', () => {
+  function labels(aiEnabled: boolean): string[] {
+    return pagesFor({ ai_enabled: aiEnabled }).map((page) => page.label)
+  }
+
+  it('leaves out the AI pages while the AI features are off', () => {
+    expect(labels(false)).toEqual(['Dashboard', 'Holdings', 'Trades'])
+  })
+
+  it('lists the AI pages once they are on', () => {
+    expect(labels(true)).toEqual(['Dashboard', 'Holdings', 'Trades', 'Assistant'])
   })
 })
