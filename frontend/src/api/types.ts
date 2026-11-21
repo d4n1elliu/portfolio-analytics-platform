@@ -110,6 +110,13 @@ export interface User {
   ai_enabled: boolean
 }
 
+export interface AiUsage {
+  requests_used: number
+  requests_limit: number
+  tokens_used: number
+  tokens_limit: number
+}
+
 export type ChatRole = 'user' | 'assistant'
 
 export type ToolCallStatus = 'running' | 'done' | 'failed'

@@ -1,5 +1,6 @@
 // The page for the signed-in user: who they are, and a form to change their password.
 
+import AiUsageCard from '../components/AiUsageCard'
 import Card from '../components/Card'
 import ChangePasswordForm from '../components/ChangePasswordForm'
 import DetailsList from '../components/DetailsList'
@@ -24,6 +25,7 @@ function AccountPage() {
           ]}
         />
       </Card>
+      {user.ai_enabled && <AiUsageCard />}
       <Card title="Change password">
         <ChangePasswordForm />
       </Card>
