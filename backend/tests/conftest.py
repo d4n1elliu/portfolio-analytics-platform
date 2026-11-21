@@ -32,6 +32,7 @@ OPTIONAL_SETTINGS = (
     "AI_ENABLED",
     "AI_CHAT_MODEL",
     "AI_EMBEDDING_MODEL",
+    "AI_RERANK_MODEL",
     "AI_REQUESTS_PER_HOUR",
     "AI_DAILY_TOKEN_CAP",
     "ANTHROPIC_API_KEY",
@@ -133,8 +134,10 @@ def no_real_ai_models(monkeypatch):
     monkeypatch.setattr("langchain.chat_models.init_chat_model", refuse)
     monkeypatch.setattr("langchain.embeddings.init_embeddings", refuse)
     monkeypatch.setattr("fastembed.TextEmbedding", refuse)
+    monkeypatch.setattr("fastembed.rerank.cross_encoder.TextCrossEncoder", refuse)
     providers.get_chat_model.cache_clear()
     providers.get_embeddings.cache_clear()
+    providers.get_reranker.cache_clear()
 
 
 @pytest.fixture

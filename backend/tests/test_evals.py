@@ -8,10 +8,14 @@ import pytest
 from ai_fakes import scripted_chat_model
 from app.ai.assistant import TokenCount
 from app.ai.evals import (
+    FOLLOW_UP,
+    KEYWORDS,
+    QUESTION,
     GoldenQuestion,
     JudgedAnswer,
     judge,
     load_golden_questions,
+    of_kind,
     rank_of_expected,
     score_faithfulness,
     score_retrieval,
@@ -89,6 +93,7 @@ def test_every_golden_phrase_is_in_the_sample_note_for_its_ticker():
 
     questions = load_golden_questions(Path(QUESTIONS_FILE))
 
-    assert len(questions) >= 20
+    assert {golden.kind for golden in questions} == {QUESTION, KEYWORDS, FOLLOW_UP}
+    assert all(golden.earlier for golden in of_kind(questions, FOLLOW_UP))
     for golden in questions:
         assert golden.phrase in notes[golden.ticker], golden.question

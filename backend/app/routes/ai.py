@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.ai import conversations
 from app.ai.memory import get_checkpointer
-from app.ai.providers import embeddings_loader, get_chat_model
+from app.ai.providers import embeddings_loader, get_chat_model, reranker_loader
 from app.ai.usage import Allowance
 from app.database import get_db
 from app.models import Conversation, User
@@ -29,6 +29,8 @@ if TYPE_CHECKING:
     from langchain_core.embeddings import Embeddings
     from langchain_core.language_models import BaseChatModel
     from langgraph.checkpoint.base import BaseCheckpointSaver
+
+    from app.ai.retrieval import Reranker
 
 router = APIRouter(prefix="/ai", tags=["ai"], dependencies=[Depends(require_ai_enabled)])
 
@@ -90,6 +92,7 @@ def chat(
     user: User = Depends(get_current_user),
     chat_model: BaseChatModel = Depends(get_chat_model),
     load_embeddings: Callable[[], Embeddings] = Depends(embeddings_loader),
+    load_reranker: Callable[[], Reranker | None] = Depends(reranker_loader),
     memory: BaseCheckpointSaver = Depends(get_checkpointer),
     db: Session = Depends(get_db),
 ):
@@ -106,7 +109,7 @@ def chat(
     else:
         conversation = get_conversation(request.conversation_id, user, db)
     events = assistant.answer_events(
-        assistant.Assistant(chat_model, load_embeddings, memory),
+        assistant.Assistant(chat_model, load_embeddings, memory, load_reranker),
         db,
         user,
         conversation,

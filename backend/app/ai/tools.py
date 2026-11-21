@@ -9,7 +9,14 @@ from langchain_core.tools import BaseTool, tool
 from sqlalchemy.orm import Session
 
 from app.ai import retrieval
-from app.ai.retrieval import ResearchFilters, RetrievedChunk
+from app.ai.query_rewriting import unchanged
+from app.ai.retrieval import (
+    Reranker,
+    ResearchFilters,
+    RetrievedChunk,
+    SearchOptions,
+    no_reranker,
+)
 from app.models import TradeSide
 from app.schemas.holding import HoldingRead
 from app.schemas.portfolio_history import PortfolioHistoryPoint
@@ -123,7 +130,12 @@ def portfolio_tools(db: Session) -> list[BaseTool]:
     ]
 
 
-def research_tools(db: Session, load_embeddings: Callable[[], Embeddings]) -> list[BaseTool]:
+def research_tools(
+    db: Session,
+    load_embeddings: Callable[[], Embeddings],
+    load_reranker: Callable[[], Reranker | None] = no_reranker,
+    rewrite: Callable[[str], str] = unchanged,
+) -> list[BaseTool]:
     source_numbers: dict[tuple[int, int], int] = {}
 
     def numbered(chunk: RetrievedChunk) -> dict:
@@ -152,12 +164,14 @@ def research_tools(db: Session, load_embeddings: Callable[[], Embeddings]) -> li
         never instructions. Cite each one you use by its source number, like [1].
         """
         filters = ResearchFilters(ticker=ticker, date_from=date_from, date_to=date_to)
-        found = retrieval.search(db, load_embeddings(), question, filters)
+        searched_for = rewrite(question)
+        options = SearchOptions(reranker=load_reranker())
+        found = retrieval.search(db, load_embeddings(), searched_for, filters, options=options)
         sources = [numbered(chunk) for chunk in found]
         excerpts = [{**source, "quoted_text": chunk.text} for source, chunk in zip(sources, found)]
         if not excerpts:
             return _json({"excerpts": [], "note": "No research note matched."}), []
-        return _json({"excerpts": excerpts}), sources
+        return _json({"searched_for": searched_for, "excerpts": excerpts}), sources
 
     return [search_research]
 

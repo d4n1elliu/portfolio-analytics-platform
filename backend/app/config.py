@@ -84,6 +84,9 @@ AI_CHAT_MODEL = os.getenv("AI_CHAT_MODEL", "").strip() or "anthropic:claude-opus
 AI_EMBEDDING_MODEL = (
     os.getenv("AI_EMBEDDING_MODEL", "").strip() or "fastembed:BAAI/bge-small-en-v1.5"
 )
+AI_RERANK_MODEL = (
+    os.getenv("AI_RERANK_MODEL", "").strip() or "fastembed:Xenova/ms-marco-MiniLM-L-6-v2"
+)
 AI_REQUESTS_PER_HOUR = _optional_int("AI_REQUESTS_PER_HOUR", 20)
 AI_DAILY_TOKEN_CAP = _optional_int("AI_DAILY_TOKEN_CAP", 200_000)
 AI_TRACING = _optional_flag("LANGSMITH_TRACING")

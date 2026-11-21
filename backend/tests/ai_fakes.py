@@ -57,6 +57,14 @@ class KeywordEmbeddings(Embeddings):
         return [self.embed_query(text) for text in texts]
 
 
+class KeywordReranker:
+    def __init__(self, *keywords: str) -> None:
+        self.keywords = keywords
+
+    def scores(self, question: str, texts: list[str]) -> list[float]:
+        return [sum(keyword in text.lower() for keyword in self.keywords) for text in texts]
+
+
 def streamed_events(response) -> list[dict]:
     lines = [line for line in response.text.splitlines() if line.startswith("data: ")]
     return [json.loads(line.removeprefix("data: ")) for line in lines]

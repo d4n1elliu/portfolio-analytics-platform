@@ -4,10 +4,18 @@ import json
 from datetime import date
 
 import pytest
+from langgraph.checkpoint.memory import InMemorySaver
 
-from ai_fakes import KeywordEmbeddings, scripted_chat_model, streamed_events, tool_call
-from app.ai.providers import embeddings_loader, get_chat_model
-from app.ai.retrieval import ResearchFilters, search
+from ai_fakes import (
+    KeywordEmbeddings,
+    KeywordReranker,
+    scripted_chat_model,
+    streamed_events,
+    tool_call,
+)
+from app.ai.assistant import Assistant, TokenCount, stream_answer
+from app.ai.providers import embeddings_loader, get_chat_model, reranker_loader
+from app.ai.retrieval import ResearchFilters, SearchOptions, search
 from app.ai.tools import research_tools
 from app.main import app
 from app.models import Role
@@ -64,6 +72,51 @@ def test_no_more_chunks_than_asked_for_are_returned(db, library):
     assert search(db, EMBEDDINGS, "iron", ResearchFilters(ticker="XYZ")) == []
 
 
+def test_a_word_from_the_note_finds_it_when_the_meaning_does_not(db, library):
+    by_meaning = search(db, EMBEDDINGS, "shipments", options=SearchOptions(match_words=False))
+    with_words = search(db, EMBEDDINGS, "shipments")
+
+    assert titles(by_meaning)[0] == "CSL plasma"
+    assert titles(with_words)[0] == "BHP iron ore"
+
+
+def test_matching_words_still_respects_the_ticker(db, library):
+    found = search(db, EMBEDDINGS, "shipments", ResearchFilters(ticker="CSL"))
+
+    assert titles(found) == ["CSL plasma"]
+
+
+def test_a_reranker_decides_the_final_order(db, library):
+    options = SearchOptions(reranker=KeywordReranker("margin"))
+
+    assert titles(search(db, EMBEDDINGS, "plasma", options=options))[0] == "BHP margins"
+
+
+def test_a_follow_up_search_is_rewritten_using_the_earlier_questions(db, library):
+    assistant = Assistant(
+        scripted_chat_model(
+            tool_call("search_research", question="plasma"),
+            "Plasma volumes rose [1].",
+            tool_call("search_research", question="its margin"),
+            "BHP margin on iron ore",
+            "The margin fell [1].",
+        ),
+        lambda: EMBEDDINGS,
+        InMemorySaver(),
+    )
+    tokens_used = TokenCount()
+    list(stream_answer(assistant, db, "c1", "How is plasma going?", TokenCount()))
+
+    events = list(stream_answer(assistant, db, "c1", "And its margin?", tokens_used))
+
+    (result,) = [event for event in events if event["type"] == "tool_result"]
+    assert json.loads(result["output"])["searched_for"] == "BHP margin on iron ore"
+    assert [event["text"] for event in events if event["type"] == "text"] == [
+        "The margin fell [1]."
+    ]
+    assert tokens_used.input_tokens == 30
+
+
 def test_the_search_tool_numbers_its_sources_and_keeps_the_numbers(db, library):
     (search_research,) = research_tools(db, lambda: EMBEDDINGS)
 
@@ -98,7 +151,7 @@ def test_text_inside_a_note_reaches_the_model_only_as_quoted_text(db, library):
 
     excerpt = content["excerpts"][0]
     assert INJECTION in excerpt["quoted_text"]
-    assert set(content) == {"excerpts"}
+    assert set(content) == {"searched_for", "excerpts"}
 
 
 def test_the_search_tool_says_so_when_nothing_matches(db, library):
@@ -114,6 +167,7 @@ def test_an_answer_that_uses_research_streams_its_sources(
 ):
     monkeypatch.setattr("app.routes.dependencies.AI_ENABLED", True)
     app.dependency_overrides[embeddings_loader] = lambda: lambda: EMBEDDINGS
+    app.dependency_overrides[reranker_loader] = lambda: lambda: KeywordReranker("plasma")
     app.dependency_overrides[get_chat_model] = lambda: scripted_chat_model(
         tool_call("search_research", question="plasma", ticker="CSL"),
         "Research says plasma collection volumes rose [1].",
