@@ -3,6 +3,8 @@
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerificationError
 
+MIN_PASSWORD_LENGTH = 12
+
 _hasher = PasswordHasher()
 
 
@@ -20,3 +22,9 @@ def verify_password(password: str, password_hash: str) -> bool:
         return _hasher.verify(password_hash, password)
     except (VerificationError, InvalidHashError):
         return False
+
+
+def password_problem(password: str) -> str | None:
+    if len(password) < MIN_PASSWORD_LENGTH:
+        return f"The new password must be at least {MIN_PASSWORD_LENGTH} characters."
+    return None

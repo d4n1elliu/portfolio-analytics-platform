@@ -3,9 +3,8 @@
 import pytest
 
 from app.models import Role
-from app.services.passwords import verify_password
+from app.services.passwords import MIN_PASSWORD_LENGTH, verify_password
 from scripts.seed_users import (
-    MIN_PASSWORD_LENGTH,
     SeedError,
     build_demo_users,
     main,

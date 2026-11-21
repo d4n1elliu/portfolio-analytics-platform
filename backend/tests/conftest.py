@@ -34,6 +34,13 @@ class FakeSession:
         self.trades = trades
         self.prices = prices
         self.users = users
+        self.user_sessions = []
+
+    def add(self, row):
+        self.user_sessions.append(row)
+
+    def commit(self):
+        pass
 
     def scalars(self, statement):
         from app.models import Price
@@ -45,20 +52,23 @@ class FakeSession:
         """Accept any statement, such as the health check's query."""
 
     def scalar(self, statement):
-        """Return the user whose columns equal the values in the query, such as an email.
+        """Return the user or session whose columns equal the values in the query, such as an email.
 
         Any other query, such as a count, gets None.
         """
-        from app.models import User
+        from app.models import User, UserSession
 
-        if statement.column_descriptions[0]["entity"] is not User:
+        rows = {User: self.users, UserSession: self.user_sessions}.get(
+            statement.column_descriptions[0]["entity"]
+        )
+        if rows is None:
             return None
         wanted = {
             name.rsplit("_", 1)[0]: value for name, value in statement.compile().params.items()
         }
-        for user in self.users:
-            if all(getattr(user, column) == value for column, value in wanted.items()):
-                return user
+        for row in rows:
+            if all(getattr(row, column) == value for column, value in wanted.items()):
+                return row
         return None
 
 

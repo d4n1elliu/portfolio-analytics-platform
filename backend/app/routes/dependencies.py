@@ -1,6 +1,7 @@
 """Reusable request handling for routes: paging, CSV uploads and the signed-in user."""
 
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from enum import StrEnum
 
 from fastapi import Cookie, Depends, HTTPException, Query, UploadFile, status
@@ -8,10 +9,10 @@ from sqlalchemy.orm import Session
 
 from app.config import DEFAULT_PAGE_SIZE, IMPORT_MAX_FILE_BYTES, MAX_PAGE_SIZE
 from app.database import get_db
-from app.models import Role, Security, User
+from app.models import Role, Security, User, UserSession
 from app.schemas.common import Page
 from app.services import securities as securities_service
-from app.services import users as users_service
+from app.services import user_sessions as user_sessions_service
 from app.services.tokens import InvalidTokenError, read_token
 
 CSV_EXTENSION = ".csv"
@@ -70,23 +71,30 @@ def read_csv_upload(file: UploadFile) -> CsvUpload:
     return CsvUpload(file_name, content)
 
 
-def get_current_user(
+def find_current_session(
     token: str | None = Cookie(None, alias=SESSION_COOKIE), db: Session = Depends(get_db)
-) -> User:
+) -> UserSession | None:
+    try:
+        session_id = read_token(token or "")
+    except InvalidTokenError:
+        return None
+    return user_sessions_service.find_active_session(db, session_id, datetime.now(UTC))
+
+
+def get_current_session(
+    session: UserSession | None = Depends(find_current_session),
+) -> UserSession:
+    if session is None:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Sign in to continue.")
+    return session
+
+
+def get_current_user(session: UserSession = Depends(get_current_session)) -> User:
     """Return the signed-in user. Use with Depends().
 
-    Answers 401 if there is no valid session, or the user is gone or inactive.
+    Answers 401 if there is no session, it has ended, or the user is inactive.
     """
-    not_signed_in = HTTPException(status.HTTP_401_UNAUTHORIZED, "Sign in to continue.")
-    try:
-        user_id = read_token(token or "")
-    except InvalidTokenError:
-        raise not_signed_in from None
-
-    user = users_service.find_by_id(db, user_id)
-    if user is None or not user.is_active:
-        raise not_signed_in
-    return user
+    return session.user
 
 
 def get_security(ticker: str, db: Session = Depends(get_db)) -> Security:
