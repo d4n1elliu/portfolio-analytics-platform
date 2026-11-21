@@ -11,6 +11,7 @@ Other code can then import everything from one place:
 from app.models.ai_usage import AiUsage
 from app.models.import_batch import ImportBatch
 from app.models.price import Price
+from app.models.research import ResearchChunk, ResearchDocument
 from app.models.security import Security
 from app.models.trade import Trade, TradeSide
 from app.models.user import Role, User
@@ -20,6 +21,8 @@ __all__ = [
     "AiUsage",
     "ImportBatch",
     "Price",
+    "ResearchChunk",
+    "ResearchDocument",
     "Role",
     "Security",
     "Trade",

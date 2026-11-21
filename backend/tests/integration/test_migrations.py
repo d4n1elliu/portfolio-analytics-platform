@@ -2,7 +2,7 @@
 
 from sqlalchemy import inspect
 
-APP_TABLES = {"prices", "securities", "trades", "users"}
+APP_TABLES = {"prices", "research_chunks", "research_documents", "securities", "trades", "users"}
 
 
 def test_models_match_the_migrations(migrated_engine, alembic):
