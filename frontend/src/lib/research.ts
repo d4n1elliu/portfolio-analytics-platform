@@ -13,9 +13,6 @@ export interface ResearchFilters {
 
 export const NO_RESEARCH_FILTERS: ResearchFilters = { ticker: '', dateFrom: '', dateTo: '' }
 
-export const RESEARCH_NOT_CONNECTED =
-  'Research uploads are not connected yet, so nothing was saved.'
-
 export interface ResearchUpload {
   file: File | null
   title: string
