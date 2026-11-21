@@ -168,3 +168,13 @@ export interface ResearchDocument {
   uploaded_by: string
   created_at: string
 }
+
+export interface ResearchChunk {
+  id: number
+  position: number
+  text: string
+}
+
+export interface ResearchDocumentDetail extends ResearchDocument {
+  chunks: ResearchChunk[]
+}

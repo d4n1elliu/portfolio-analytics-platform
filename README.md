@@ -471,6 +471,7 @@ The app runs at http://localhost:5173. It opens on a sign in page and has three 
 | Security  | Opened by clicking a ticker. One security's position, a chart of its closing price with each buy and sell marked, and its trades |
 | Assistant | Shown only when `AI_ENABLED` is on. A conversation about the portfolio, with the tools each answer used. The page is in place but not yet connected to a model, so it cannot answer |
 | Research  | Shown only when `AI_ENABLED` is on. The library of research documents, with filters for ticker and date, and a form to upload a PDF, Markdown or text file for a ticker. The page is in place but uploads are not yet connected, so nothing is saved |
+| Research document | Opened by clicking a title in the library. One document's details and its text as numbered chunks. A link to a chunk, such as `/research/12#chunk-3`, scrolls to that chunk and highlights it. No documents are stored yet, so every address says the document could not be found |
 | Trades    | A form to upload a CSV file, the saved trades with filters, sorting and a CSV export, and a list of past imports |
 
 ### Environment variables

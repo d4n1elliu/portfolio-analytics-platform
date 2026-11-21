@@ -1,24 +1,15 @@
 // The research library table: one row for each uploaded document.
 
-import type { ResearchDocument, ResearchStatus } from '../api/types'
+import { Link } from 'react-router'
+
+import type { ResearchDocument } from '../api/types'
 import { formatDate, formatDateTime } from '../lib/format'
-import Badge from './Badge'
-import type { BadgeTone } from './Badge'
+import { NAME_LINK } from '../lib/styles'
+import { researchDocumentPath } from '../routes'
 import DataTable from './DataTable'
 import type { Column } from './DataTable'
+import ResearchStatusBadge from './ResearchStatusBadge'
 import TickerLink from './TickerLink'
-
-const STATUS_LABELS: Record<ResearchStatus, string> = {
-  processing: 'Processing',
-  ready: 'Ready',
-  failed: 'Failed',
-}
-
-const STATUS_TONES: Record<ResearchStatus, BadgeTone> = {
-  processing: 'neutral',
-  ready: 'positive',
-  failed: 'negative',
-}
 
 const COLUMNS: Column<ResearchDocument>[] = [
   {
@@ -29,8 +20,11 @@ const COLUMNS: Column<ResearchDocument>[] = [
   },
   {
     header: 'Title',
-    render: (document) => document.title,
-    className: 'font-medium',
+    render: (document) => (
+      <Link to={researchDocumentPath(document.id)} className={NAME_LINK}>
+        {document.title}
+      </Link>
+    ),
     sortValue: (document) => document.title,
   },
   {
@@ -40,9 +34,7 @@ const COLUMNS: Column<ResearchDocument>[] = [
   },
   {
     header: 'Status',
-    render: (document) => (
-      <Badge tone={STATUS_TONES[document.status]}>{STATUS_LABELS[document.status]}</Badge>
-    ),
+    render: (document) => <ResearchStatusBadge status={document.status} />,
   },
   {
     header: 'Uploaded by',
