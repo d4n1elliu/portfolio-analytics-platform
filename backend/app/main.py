@@ -15,10 +15,12 @@ from sqlalchemy.orm import Session
 
 from app.config import CORS_ORIGINS
 from app.database import get_db
+from app.request_log import LOG_FORMAT, log_request
 from app.routes import auth, holdings, portfolio, securities, trades
 from app.routes.dependencies import get_current_user
 from app.routes.errors import register_error_handlers
 
+logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Portfolio Analytics API")
@@ -55,6 +57,8 @@ async def reject_cross_site_changes(request: Request, call_next):
         )
     return await call_next(request)
 
+
+app.middleware("http")(log_request)
 
 register_error_handlers(app)
 

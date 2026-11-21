@@ -282,3 +282,16 @@ def test_a_new_password_that_is_too_short_is_refused(client_with_users):
     assert response.status_code == 422
     assert response.json() == {"detail": "The new password must be at least 12 characters."}
     assert verify_password(USER_PASSWORD, user.password_hash)
+
+
+def test_the_password_of_a_locked_account_cannot_be_changed(client_with_users, monkeypatch):
+    monkeypatch.setattr("app.services.users.PASSWORD_LOCKED_EMAILS", ["analyst@example.com"])
+    user = make_user()
+    client = client_with_users(user)
+    sign_in(client)
+
+    response = change_password(client)
+
+    assert response.status_code == 403
+    assert response.json() == {"detail": "The password of this account cannot be changed."}
+    assert verify_password(USER_PASSWORD, user.password_hash)
