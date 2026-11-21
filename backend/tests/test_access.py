@@ -14,7 +14,6 @@ READ_ENDPOINTS = [
     "/trades/export",
     "/trades/imports",
 ]
-# These answer 404 without a database, so only the sign in check is tested here.
 SECURITY_ENDPOINTS = ["/holdings/BHP", "/securities/BHP/prices"]
 OPEN_ENDPOINTS = ["/health", "/docs"]
 

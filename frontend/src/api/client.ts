@@ -34,7 +34,6 @@ export function setSessionExpiredHandler(handler: (() => void) | null): void {
   onSessionExpired = handler
 }
 
-/** Send a request to the API. Throws ApiError unless it answers with a success status. */
 async function send(path: string, init?: RequestInit): Promise<Response> {
   let response: Response
   try {
@@ -61,11 +60,9 @@ async function send(path: string, init?: RequestInit): Promise<Response> {
 /** Send a request to the API and return the parsed JSON response. */
 export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await send(path, init)
-  // A response such as 204 has no JSON body.
   return (await response.json().catch(() => null)) as T
 }
 
-/** Send a request to the API and return the file it answers with. */
 export async function requestFile(path: string, init?: RequestInit): Promise<Blob> {
   return (await send(path, init)).blob()
 }

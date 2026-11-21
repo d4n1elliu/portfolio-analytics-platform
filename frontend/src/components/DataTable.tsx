@@ -14,7 +14,6 @@ export interface Column<T> {
   className?: string
   /** Add this to make the column sortable. Returns the value to sort a row by. */
   sortValue?: (row: T) => SortValue
-  /** Add this instead when the rows are sorted outside the table. Passed to onSort. */
   sortKey?: string
 }
 
@@ -23,10 +22,6 @@ interface DataTableProps<T> {
   rows: T[]
   /** A value that is different for every row, such as its id. */
   getRowKey: (row: T) => string | number
-  /**
-   * Give both to sort the rows outside the table, such as on the server. The
-   * rows are then shown in the order given, and columns with a sortKey can be sorted.
-   */
   sort?: SortBy<string>
   onSort?: (sortKey: string) => void
 }
@@ -42,7 +37,6 @@ function DataTable<T>({ columns, rows, getRowKey, sort, onSort }: DataTableProps
   const sortedOutside = sort !== undefined && onSort !== undefined
   const shownRows = sortedOutside ? rows : local.sortedRows
 
-  /** What a column is sorted by: its sortKey outside the table, its header inside. */
   function sortIdOf(column: Column<T>): string | undefined {
     if (sortedOutside) return column.sortKey
     return column.sortValue ? column.header : undefined

@@ -1,3 +1,5 @@
+// A card listing the latest trade imports.
+
 import type { ImportBatch, Page } from '../api/types'
 import type { QueryState } from '../hooks/useApiQuery'
 import { formatCount, formatDateTime } from '../lib/format'
@@ -18,7 +20,6 @@ const COLUMNS: Column<ImportBatch>[] = [
 ]
 
 interface ImportHistoryProps {
-  /** The latest imports, newest first. */
   state: QueryState<Page<ImportBatch>>
   onRetry: () => void
 }
@@ -44,7 +45,6 @@ function ImportHistory({ state, onRetry }: ImportHistoryProps) {
   )
 }
 
-/** "3 imports", or "Latest 10 of 34 imports" when older ones are not listed. */
 function countOf(imports: Page<ImportBatch>): string {
   const count = formatCount(imports.total, 'import', 'imports')
   return imports.items.length < imports.total ? `Latest ${imports.items.length} of ${count}` : count

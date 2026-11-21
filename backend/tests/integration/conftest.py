@@ -1,10 +1,4 @@
-"""Setup for the tests that run real queries against PostgreSQL.
-
-They need TEST_DATABASE_URL and are skipped without it, except in CI, where
-they fail. Every test runs
-inside a transaction that is undone afterwards, so the tests leave no rows
-behind and can run in any order.
-"""
+"""Setup for the tests that run real queries against PostgreSQL."""
 
 import os
 import subprocess
@@ -19,7 +13,6 @@ TEST_DATABASE_SUFFIX = "_test"
 
 
 def _run_alembic(*arguments: str) -> None:
-    """Run an alembic command the way a developer would, against the test database."""
     result = subprocess.run(
         [sys.executable, "-m", "alembic", *arguments],
         cwd=BACKEND_DIR,
@@ -37,17 +30,13 @@ def alembic():
 
 @pytest.fixture(scope="session")
 def migrated_engine():
-    """The engine of the test database, with every migration applied."""
     if not os.environ["TEST_DATABASE_URL"]:
-        # CI always has a database, so there a missing one is a mistake in the
-        # workflow. Failing stops these tests from being skipped unnoticed.
         if os.environ.get("CI"):
             pytest.fail("TEST_DATABASE_URL is not set.")
         pytest.skip("TEST_DATABASE_URL is not set.")
 
     from app.database import engine
 
-    # The migration tests drop every table, so a database with any other name is refused.
     if not (engine.url.database or "").endswith(TEST_DATABASE_SUFFIX):
         pytest.fail(f"TEST_DATABASE_URL must name a database ending in {TEST_DATABASE_SUFFIX}.")
 
@@ -57,10 +46,8 @@ def migrated_engine():
 
 @pytest.fixture
 def db(migrated_engine):
-    """A session whose changes are undone after the test, including the ones the code commits."""
     with migrated_engine.connect() as connection:
         transaction = connection.begin()
-        # A commit made by the code under test ends a savepoint, not the transaction.
         session = Session(
             bind=connection,
             join_transaction_mode="create_savepoint",
@@ -76,7 +63,6 @@ def db(migrated_engine):
 
 @pytest.fixture
 def save(db):
-    """Save rows built by the factories, and return them with their ids filled in."""
 
     def save_rows(*rows):
         db.add_all(rows)

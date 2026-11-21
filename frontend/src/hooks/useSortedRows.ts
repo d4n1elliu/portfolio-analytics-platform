@@ -14,7 +14,6 @@ interface SortableColumn<T> {
 
 /** Sort rows by one column at a time. Rows keep their order until a column is chosen. */
 export function useSortedRows<T>(rows: T[], columns: SortableColumn<T>[]) {
-  // The key is the header of the sorted column.
   const [sort, setSort] = useState<SortBy<string> | null>(null)
 
   const sortedRows = useMemo(() => {

@@ -24,7 +24,6 @@ def quantities(trades) -> list[int]:
 def test_trades_are_paged_newest_first(db, save):
     bhp = save(make_security("BHP"))
     save(buy(bhp, "1", "40", on=MONDAY), buy(bhp, "2", "40", on=TUESDAY))
-    # Saved later on the same day, so it is the newest of all.
     save(buy(bhp, "3", "40", on=TUESDAY))
 
     first_page, total = list_trades(db, TradeQuery(), limit=2, offset=0)
@@ -85,5 +84,4 @@ def test_trades_can_be_ordered_by_another_column(db, save):
     by_ticker = TradeQuery(sort=TradeSort.TICKER, descending=False)
 
     assert quantities(list_all_trades(db, by_quantity)) == [1, 2, 3]
-    # Trades with the same ticker stay in the order they were saved.
     assert quantities(list_all_trades(db, by_ticker)) == [1, 3, 2]

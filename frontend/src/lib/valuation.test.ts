@@ -1,3 +1,5 @@
+// Tests for valuing holdings and adding up profit and sector weights.
+
 import { describe, expect, it } from 'vitest'
 
 import { makeHolding, makeUnpricedHolding } from '../testing/holdings'

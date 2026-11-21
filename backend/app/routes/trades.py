@@ -90,7 +90,6 @@ def list_imports(page: PageParams = Depends(page_params), db: Session = Depends(
     response_model=ImportResult,
     status_code=status.HTTP_201_CREATED,
     responses=IMPORT_ERROR_RESPONSES,
-    # Listed here so the role is checked before the file is read.
     dependencies=[Depends(require_role(Role.OPERATIONS))],
 )
 def import_trades(

@@ -1,3 +1,5 @@
+// Tests for the login return page and the address of a security page.
+
 import { describe, expect, it } from 'vitest'
 
 import { ROUTES, returnPage, securityPath } from './routes'

@@ -1,3 +1,5 @@
+// A button that fetches a file from the API and saves it.
+
 import { useState } from 'react'
 
 import { messageFrom } from '../api/client'
@@ -7,11 +9,9 @@ import Button from './Button'
 interface DownloadButtonProps {
   label: string
   fileName: string
-  /** Fetches the file from the API, for example exportTrades. */
   download: () => Promise<Blob>
 }
 
-/** A button that fetches a file and saves it, and says so if that fails. */
 function DownloadButton({ label, fileName, download }: DownloadButtonProps) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)

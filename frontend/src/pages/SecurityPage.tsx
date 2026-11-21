@@ -1,3 +1,5 @@
+// The page for one security: its position, price chart and trades.
+
 import { useCallback, useState } from 'react'
 import { Link, useParams } from 'react-router'
 
@@ -39,7 +41,6 @@ function SecurityPage() {
           </Link>
         </p>
       )}
-      {/* The key starts the trades and prices again when another security is opened. */}
       {state.status === 'loaded' && state.data !== null && (
         <SecurityDetails key={ticker} holding={state.data} />
       )}
@@ -122,7 +123,6 @@ function SecurityDetails({ holding }: { holding: Holding }) {
   )
 }
 
-/** "3 trades", or "Showing 500 of 620 trades" when there are more than the page lists. */
 function tradeCount(shown: number, total: number): string {
   const count = formatCount(total, 'trade', 'trades')
   return shown < total ? `Showing ${shown} of ${count}` : count

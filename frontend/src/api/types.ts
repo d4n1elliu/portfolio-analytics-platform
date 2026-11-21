@@ -30,7 +30,6 @@ export interface Security {
   currency: string
 }
 
-/** The closing price of a security on one day. */
 export interface SecurityPrice {
   /** Date only, as "YYYY-MM-DD". */
   date: string
@@ -106,7 +105,6 @@ export interface User {
 
 export type TradeSide = 'BUY' | 'SELL'
 
-/** The columns the API can order trades by. */
 export type TradeSortKey = 'trade_date' | 'ticker' | 'side' | 'quantity' | 'price' | 'fees'
 
 export interface Trade {
@@ -124,13 +122,10 @@ export interface Trade {
   created_at: string
 }
 
-/** One imported file of trades. */
 export interface ImportBatch {
   id: number
   file_name: string
   row_count: number
-  /** The name of the user who uploaded the file. */
   imported_by: string
-  /** Date and time, with a time zone. */
   created_at: string
 }

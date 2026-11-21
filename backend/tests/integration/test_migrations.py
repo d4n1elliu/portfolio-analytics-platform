@@ -6,7 +6,6 @@ APP_TABLES = {"prices", "securities", "trades", "users"}
 
 
 def test_models_match_the_migrations(migrated_engine, alembic):
-    """Fails when a model was changed without adding a migration."""
     alembic("check")
 
 

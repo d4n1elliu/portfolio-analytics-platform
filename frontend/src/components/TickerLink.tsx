@@ -1,9 +1,10 @@
+// A ticker that links to the page for its security.
+
 import { Link } from 'react-router'
 
 import { FOCUS_OUTLINE } from '../lib/styles'
 import { securityPath } from '../routes'
 
-/** A ticker that opens the page for its security. */
 function TickerLink({ ticker }: { ticker: string }) {
   return (
     <Link

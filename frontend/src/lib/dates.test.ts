@@ -1,8 +1,9 @@
+// Tests for the date helpers.
+
 import { describe, expect, it } from 'vitest'
 
 import { businessDaysSince, parseDate, toIsoDate } from './dates'
 
-// 13 Nov 2026 is a Friday.
 const FRIDAY = '2026-11-13'
 
 describe('parseDate', () => {

@@ -11,9 +11,7 @@ interface HoldingsFiltersProps {
   showClosed: boolean
   /** The tick box is disabled when this is 0. */
   closedCount: number
-  /** The date the positions are shown for, as "YYYY-MM-DD", or '' for today. */
   asOf: string
-  /** The latest date that can be picked. */
   today: string
   onAsOfChange: (asOf: string) => void
   onFiltersChange: (filters: Filters) => void

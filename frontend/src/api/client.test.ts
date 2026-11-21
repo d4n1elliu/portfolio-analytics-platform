@@ -1,3 +1,5 @@
+// Tests for the API client: JSON and file requests, errors, and an expired session.
+
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { ApiError, request, requestFile, setSessionExpiredHandler } from './client'

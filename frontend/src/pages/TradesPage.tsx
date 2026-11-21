@@ -51,7 +51,6 @@ function TradesPage() {
   const page = trades.status === 'loaded' ? trades.data : null
   const filtered = hasTradeFilters(query.filters)
 
-  /** A new filter or order changes which trades are on each page, so return to the first. */
   function showFromFirstPage(next: TradeQuery) {
     setQuery(next)
     setOffset(0)
@@ -62,7 +61,6 @@ function TradesPage() {
   }
 
   function handleImported() {
-    // New trades can fall anywhere in the order, so return to the first page.
     setOffset(0)
     reloadTrades()
     reloadImports()

@@ -1,3 +1,5 @@
+// The closing price of one security over time, with its trades marked.
+
 import { useCallback, useMemo } from 'react'
 
 import type { SecurityPrice, Trade } from '../api/types'
@@ -9,13 +11,10 @@ import TimeSeriesChart from './TimeSeriesChart'
 interface PriceChartProps {
   ticker: string
   currency: string
-  /** Oldest first. */
   prices: SecurityPrice[]
-  /** Each is marked on the line: a buy below it, a sell above it. */
   trades: Trade[]
 }
 
-/** The closing price of one security over time, with its trades marked. */
 function PriceChart({ ticker, currency, prices, trades }: PriceChartProps) {
   const dates = useMemo(() => prices.map((price) => price.date), [prices])
   const lines = useMemo(
