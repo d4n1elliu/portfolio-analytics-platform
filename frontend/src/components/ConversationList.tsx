@@ -7,7 +7,7 @@ import { COLOUR_TRANSITION, FOCUS_OUTLINE } from '../lib/styles'
 import Button from './Button'
 import LoadState from './LoadState'
 
-const ROW = `w-full rounded-md px-3 py-2 text-left text-sm ${COLOUR_TRANSITION} ${FOCUS_OUTLINE}`
+const ROW = `min-w-0 flex-1 rounded-md px-3 py-2 text-left text-sm ${COLOUR_TRANSITION} ${FOCUS_OUTLINE}`
 const OPEN = 'bg-slate-900 text-white'
 const NOT_OPEN = 'hover:bg-slate-100'
 
@@ -52,6 +52,7 @@ function ConversationList(props: ConversationListProps) {
                 </button>
                 <Button
                   variant="secondary"
+                  className="shrink-0"
                   aria-label={`Delete the conversation ${conversation.title}`}
                   onClick={() => onDelete(conversation.id)}
                 >

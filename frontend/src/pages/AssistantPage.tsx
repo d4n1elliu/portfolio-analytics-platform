@@ -38,7 +38,7 @@ function AssistantPage() {
 
   return (
     <PageLayout title="Assistant">
-      <div className="grid gap-6 lg:grid-cols-[18rem_1fr]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[18rem_1fr]">
         <Card title="Conversations">
           {deleteError !== null && <Alert variant="error">{deleteError}</Alert>}
           <ConversationList
