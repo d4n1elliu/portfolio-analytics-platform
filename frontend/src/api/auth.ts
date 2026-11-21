@@ -17,3 +17,10 @@ export async function getCurrentUser(signal?: AbortSignal): Promise<User | null>
     throw error
   }
 }
+
+export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+  await postJson('/auth/password', {
+    current_password: currentPassword,
+    new_password: newPassword,
+  })
+}
