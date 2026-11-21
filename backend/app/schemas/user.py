@@ -1,6 +1,9 @@
 """Request and response shapes for signing in."""
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
+
+from app.models import User
+from app.services.permissions import Permission, permissions_of
 
 
 class LoginRequest(BaseModel):
@@ -17,9 +20,16 @@ class PasswordChange(BaseModel):
 class UserRead(BaseModel):
     """The signed-in user. The password hash is never returned."""
 
-    # Lets this be built from a User model object.
-    model_config = ConfigDict(from_attributes=True)
-
     email: str
     name: str
     role: str
+    permissions: list[Permission]
+
+    @classmethod
+    def from_user(cls, user: User) -> "UserRead":
+        return cls(
+            email=user.email,
+            name=user.name,
+            role=user.role,
+            permissions=sorted(permissions_of(user.role)),
+        )

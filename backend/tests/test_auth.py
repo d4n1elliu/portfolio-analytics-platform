@@ -64,6 +64,7 @@ def test_sign_in_returns_the_user_without_the_password_hash(client_with_users):
         "email": "analyst@example.com",
         "name": "Test analyst",
         "role": "analyst",
+        "permissions": [],
     }
 
 
@@ -163,6 +164,7 @@ def test_signed_in_user_is_returned(client_with_users):
 
     assert response.status_code == 200
     assert response.json()["role"] == "operations"
+    assert response.json()["permissions"] == ["export_trades", "import_trades"]
 
 
 def test_no_session_is_rejected(client_with_users):

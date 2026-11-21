@@ -11,7 +11,6 @@ READ_ENDPOINTS = [
     "/portfolio/performance",
     "/securities",
     "/trades",
-    "/trades/export",
     "/trades/imports",
 ]
 SECURITY_ENDPOINTS = ["/holdings/BHP", "/securities/BHP/prices"]
@@ -27,7 +26,7 @@ def client_signed_in_as(client_with_users, role: Role):
     return client
 
 
-@pytest.mark.parametrize("path", READ_ENDPOINTS + SECURITY_ENDPOINTS)
+@pytest.mark.parametrize("path", [*READ_ENDPOINTS, *SECURITY_ENDPOINTS, "/trades/export"])
 def test_reading_data_needs_a_sign_in(client_with_users, path):
     response = client_with_users(make_user()).get(path)
 
@@ -93,3 +92,18 @@ def test_import_is_refused_before_the_file_is_looked_at(client_with_users):
     client = client_signed_in_as(client_with_users, Role.ANALYST)
 
     assert client.post("/trades/import").status_code == 403
+
+
+# --- GET /trades/export ---
+
+
+@pytest.mark.parametrize("role", [Role.OPERATIONS, Role.PORTFOLIO_MANAGER])
+def test_operations_and_portfolio_managers_can_export(client_with_users, role):
+    assert client_signed_in_as(client_with_users, role).get("/trades/export").status_code == 200
+
+
+def test_an_analyst_cannot_export(client_with_users):
+    response = client_signed_in_as(client_with_users, Role.ANALYST).get("/trades/export")
+
+    assert response.status_code == 403
+    assert response.json() == {"detail": "Your role does not allow this."}

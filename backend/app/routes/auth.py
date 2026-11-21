@@ -66,7 +66,7 @@ def login(
         max_age=SESSION_MINUTES * 60,
         **COOKIE_SETTINGS,
     )
-    return user
+    return UserRead.from_user(user)
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
@@ -101,7 +101,7 @@ def change_password(
 @router.get("/me", response_model=UserRead)
 def read_current_user(user: User = Depends(get_current_user)):
     """Return the signed-in user."""
-    return user
+    return UserRead.from_user(user)
 
 
 def _too_many_failures(wait: timedelta) -> HTTPException:
