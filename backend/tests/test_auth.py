@@ -28,6 +28,11 @@ def session_id_of(client) -> str:
     return read_token(client.cookies[SESSION_COOKIE])
 
 
+def replace_session_cookie(client, token: str) -> None:
+    client.cookies.clear()
+    client.cookies.set(SESSION_COOKIE, token)
+
+
 def change_password(client, current=USER_PASSWORD, new="a new test password"):
     return client.post("/auth/password", json={"current_password": current, "new_password": new})
 
@@ -183,7 +188,7 @@ def test_expired_session_is_rejected(client_with_users):
     client = client_with_users(make_user())
     sign_in(client)
     long_ago = datetime.now(UTC) - timedelta(days=1)
-    client.cookies.set(SESSION_COOKIE, create_token(session_id_of(client), long_ago))
+    replace_session_cookie(client, create_token(session_id_of(client), long_ago))
 
     assert client.get("/auth/me").status_code == 401
 
@@ -192,7 +197,7 @@ def test_tampered_session_is_rejected(client_with_users):
     client = client_with_users(make_user())
     sign_in(client)
     token = client.cookies[SESSION_COOKIE]
-    client.cookies.set(SESSION_COOKIE, token[:-2] + ("aa" if token[-2:] != "aa" else "bb"))
+    replace_session_cookie(client, token[:-2] + ("aa" if token[-2:] != "aa" else "bb"))
 
     assert client.get("/auth/me").status_code == 401
 
