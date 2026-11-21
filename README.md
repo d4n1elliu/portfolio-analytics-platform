@@ -2,554 +2,277 @@
 
 **Live site:** https://portfolio-analytics.daniel-liu.dev
 
-A full-stack web app for tracking portfolio holdings, performance and sector exposure, modelled on the kind of internal tool portfolio managers and analysts use at an investment fund.
+A full-stack web app for tracking a fund's holdings, performance and research, with an AI assistant that answers questions about the portfolio. It is modelled on the internal tools portfolio managers and analysts use at an investment fund.
 
-> **Personal project.** This is a learning project built around a fictional fund. It contains no real client data, no real holdings and is not affiliated with any investment firm.
+> **Personal project.** Built around a fictional fund. It contains no real client data and is not affiliated with any investment firm.
 
-## Status
+## Features
 
-Five features are in place:
-
-- **Trades.** Trades can be imported from a CSV file, then filtered, sorted and exported. Every import is recorded, and the same file cannot be imported twice.
-- **Holdings.** The Holdings page shows the fund's positions, calculated from those trades, either now or as at any past date. Each security has its own page with its position, price chart and trades.
-- **Prices and valuation.** Daily closing prices are stored for each security and refreshed on weekdays. The Holdings page uses them to show what each position is worth, and the Dashboard page shows the portfolio's value, its unrealised, realised and total profit, and charts of sector allocation and profit by holding.
-- **History and performance.** The Dashboard charts the portfolio's value on each past day and its time-weighted return over 1 month, 3 months, year to date, 1 year and since inception, next to a benchmark.
-- **Login and roles.** Every page needs a sign in, and each account has a role that decides what it can do. Signing out ends the session, and users can change their own password.
+- **Trades.** Import trades from a CSV file, then filter, sort and export them. An import is all or nothing, and the same file cannot be imported twice.
+- **Holdings.** Positions are calculated from the trades, now or as at any past date. Each security has its own page with its position, price chart and trades.
+- **Dashboard.** Market value, realised and unrealised profit, sector allocation, the portfolio's value over time, and its return against a benchmark.
+- **Login and roles.** Every page needs a sign in, and each role can do different things.
+- **AI assistant.** Ask questions about the portfolio in plain English. Answers stream in, show which tools were used, and conversations are saved.
+- **Research.** Upload research notes as PDF, Markdown or text. The assistant searches them and cites the passages it uses.
 
 ## Tech stack
 
-| Layer    | Technology                                                    |
-| -------- | ------------------------------------------------------------- |
-| Frontend | React, TypeScript, Vite, Tailwind CSS v4, ECharts, Vitest     |
-| Backend  | Python, FastAPI, uvicorn, python-dotenv, pytest, yfinance, argon2-cffi, PyJWT, LangChain, pgvector, FastEmbed |
-| Database | PostgreSQL on Neon, SQLAlchemy 2, Alembic, psycopg 3          |
-| Hosting  | Docker, Caddy, GitHub Actions, GitHub Container Registry      |
+| Layer    | Technology |
+| -------- | ---------- |
+| Frontend | React, TypeScript, Vite, Tailwind CSS, ECharts, Vitest |
+| Backend  | Python, FastAPI, SQLAlchemy, Alembic, pytest |
+| AI       | LangChain, LangGraph, pgvector, FastEmbed, Claude |
+| Database | PostgreSQL on Neon |
+| Hosting  | Docker, Caddy, GitHub Actions |
+
+## System design
+
+### Architecture
+
+The browser only ever talks to Caddy. Caddy serves the React app and passes API calls to the backend, which is the only part that touches the database or the AI model.
+
+```mermaid
+flowchart LR
+    user["Browser<br/>React app"]
+
+    subgraph vps["VPS (Docker)"]
+        caddy["Caddy<br/>HTTPS and static files"]
+        api["FastAPI backend"]
+        local["Local AI models<br/>embeddings and reranker"]
+    end
+
+    db[("PostgreSQL on Neon<br/>with pgvector")]
+    claude["Claude API<br/>chat model"]
+    yahoo["Yahoo Finance"]
+    actions["GitHub Actions"]
+
+    user -->|HTTPS| caddy
+    caddy -->|"/api/*"| api
+    api --> db
+    api --> local
+    api -->|"only when AI is on"| claude
+    actions -->|"deploy on merge"| vps
+    actions -->|"daily price job"| yahoo
+    actions -->|"save prices"| db
+```
+
+### Inside the backend
+
+A request moves in one direction. Routes handle HTTP, services hold the business rules, and models describe the tables, so each layer can be changed and tested separately.
+
+```mermaid
+flowchart LR
+    request["HTTP request"] --> routes["Routes<br/>sign-in, permissions, validation"]
+    routes --> services["Services<br/>positions, valuation, performance"]
+    routes --> ai["AI package<br/>assistant, research search"]
+    ai -->|"read-only tools"| services
+    services --> models["Models<br/>SQLAlchemy tables"]
+    ai --> models
+    models --> db[("PostgreSQL")]
+```
+
+### Data model
+
+Positions are never stored. They are calculated from `trades`, which is why there is no holdings table.
+
+```mermaid
+erDiagram
+    securities ||--o{ trades : "is traded in"
+    securities ||--o{ prices : "has a daily close"
+    securities ||--o{ research_documents : "is written about in"
+    import_batches ||--o{ trades : "brought in"
+    users ||--o{ import_batches : "imported"
+    users ||--o{ user_sessions : "signs in with"
+    users ||--o{ ai_usage : "spends"
+    users ||--o{ conversations : "owns"
+    users ||--o{ research_documents : "uploaded"
+    research_documents ||--o{ research_chunks : "is split into"
+
+    securities {
+        string ticker
+        string name
+        string sector
+    }
+    trades {
+        date trade_date
+        string side
+        decimal quantity
+        decimal price
+        decimal fees
+    }
+    prices {
+        date price_date
+        decimal close
+    }
+    users {
+        string email
+        string role
+    }
+    research_chunks {
+        text text
+        vector embedding
+        tsvector search_vector
+    }
+    conversations {
+        string title
+        datetime updated_at
+    }
+```
+
+### How the assistant answers a question
+
+The model decides which tools to call, but it never does the maths. Every figure in an answer comes back from a tool that runs the same code as the pages.
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant Page as Assistant page
+    participant API as FastAPI
+    participant Agent as LangChain agent
+    participant Model as Claude
+    participant Tools as Read-only tools
+    participant DB as PostgreSQL
+
+    User->>Page: Asks a question
+    Page->>API: POST /ai/chat
+    API->>API: Check sign-in and usage limits
+    API->>Agent: Question and conversation id
+    Agent->>DB: Load the earlier messages
+    Agent->>Model: Question, history and tool list
+    Model-->>Agent: Call list_holdings
+    Agent->>Tools: Run list_holdings
+    Tools->>DB: Read trades and prices
+    Tools-->>Agent: Figures, already calculated
+    Agent->>Model: Tool result
+    Model-->>Agent: Answer quoting the figures
+    Agent->>DB: Save the conversation
+    API-->>Page: Stream tool calls and text
+    Page-->>User: Answer with the tools shown
+```
+
+### How research is searched
+
+Two searches run side by side so that a question is matched both by what it means and by the exact words it uses.
+
+```mermaid
+flowchart TD
+    question["Search query"] --> followup{"Earlier questions<br/>in the conversation?"}
+    followup -->|Yes| rewrite["Chat model rewrites it<br/>to stand alone"]
+    followup -->|No| split(( ))
+    rewrite --> split
+    split --> vector["Vector search<br/>pgvector, by meaning"]
+    split --> words["Full-text search<br/>Postgres, by words"]
+    vector --> fuse["Reciprocal rank fusion<br/>combine both lists"]
+    words --> fuse
+    fuse --> rerank["Local reranker<br/>final order"]
+    rerank --> top["Top 5 passages<br/>each with a source number"]
+    top --> answer["Answer that cites its sources"]
+```
+
+## Key decisions
+
+**Positions come from trades.** There is no holdings table. A position is worked out by adding up its trades, using the weighted average cost method, so the trade ledger is the single source of truth and a position can be shown as at any past date. Money and quantities use exact decimals, never floats.
+
+**Prices are stored, not fetched live.** A job saves each security's closing price from Yahoo Finance on weekdays. The pages only read stored prices, so they keep working if Yahoo is unavailable.
+
+**Returns are time-weighted.** Each day's gain is measured on the value held at the start of that day, so money going in or out does not count as a gain or a loss. The benchmark is VAS, an ETF that follows the ASX 300.
+
+**Each role has its own permissions.**
+
+| Role              | View everything | Export trades | Import trades | Upload research |
+| ----------------- | --------------- | ------------- | ------------- | --------------- |
+| Operations        | Yes             | Yes           | Yes           | Yes             |
+| Portfolio Manager | Yes             | Yes           | No            | No              |
+| Analyst           | Yes             | No            | No            | Yes             |
+
+## AI features
+
+The AI features are off unless `AI_ENABLED` is `true`. While off, the AI pages are hidden and the app runs without any API key.
+
+- **The model never calculates a figure.** The assistant is a LangChain agent whose tools wrap the same services the pages use. Every tool only reads, and the model quotes figures exactly as a tool returned them.
+- **Research is searched three ways.** A vector search (pgvector) and a Postgres full-text search run side by side, their results are combined, and a small local model reranks them. Follow-up questions are rewritten to stand alone before they are searched.
+- **Answers cite their sources.** The list of sources is built from what the search found, not from what the model wrote. Text inside a document is treated as a quote, never as an instruction.
+- **Conversations are remembered.** They are stored in PostgreSQL with LangGraph's checkpointer, and each one belongs to the user who started it.
+- **Usage is capped.** Each user gets 20 requests an hour and 200,000 tokens a day by default.
+- **Embeddings and reranking run locally,** so only the chat model needs an API key.
+
+### Measuring search quality
+
+A set of 41 golden questions about the sample research notes scores each step of the search. Results are hit rate and MRR (1.000 means the right passage is always ranked first):
+
+| Search                      | Questions (25) | Keywords (10) | Follow-ups (6) |
+| --------------------------- | -------------- | ------------- | -------------- |
+| Meaning only                | 100%, 0.900    | 90%, 0.542    | 100%, 0.867    |
+| Meaning and words           | 100%, 0.860    | 100%, 0.925   | 100%, 1.000    |
+| Meaning and words, reranked | 100%, 0.933    | 100%, 1.000   | 100%, 0.917    |
+
+The library is only ten chunks, so treat these as a guide.
+
+```bash
+python -m scripts.run_evals              # search only: free
+python -m scripts.run_evals --answers    # also judges the assistant's answers: spends API credit
+```
 
 ## Project structure
 
 ```
 portfolio-analytics-platform/
-├── .env.prod.example         Template for the server's settings
-├── .gitignore
-├── .nvmrc                    Node version for local use and CI
-├── .python-version           Python version for local use and CI
-├── docker-compose.dev.yml    Local PostgreSQL for development and tests
-├── docker-compose.prod.yml   Production setup that runs both containers
-├── LICENSE
-├── README.md
-│
-├── .github/
-│   ├── dependabot.yml        Weekly pull requests for outdated packages
-│   └── workflows/
-│       ├── ci.yml            Lint, format check, tests, type check and Docker builds
-│       ├── deploy.yml        Publishes images and deploys after CI passes
-│       └── refresh-prices.yml  Fetches closing prices on weekdays
-│
-├── dev/
-│   └── postgres/             Creates the test database in the local PostgreSQL
-│
+├── backend/
+│   ├── app/
+│   │   ├── ai/           The assistant, its tools, research search and evals
+│   │   ├── models/       Database tables
+│   │   ├── routes/       HTTP endpoints
+│   │   ├── schemas/      Shapes of the JSON the API returns
+│   │   └── services/     Business logic such as positions and valuation
+│   ├── alembic/          Database migrations
+│   ├── jobs/             Price jobs that run outside the API
+│   ├── sample_data/      Example trades, prices, research notes and eval questions
+│   ├── scripts/          Seed scripts and the eval script
+│   └── tests/            pytest tests, with real PostgreSQL tests in integration/
 ├── frontend/
-│   ├── public/               Files served as they are, such as the favicon
-│   ├── src/
-│   │   ├── api/              Typed calls to the backend such as holdings
-│   │   ├── components/       Shared components such as DataTable and Chart
-│   │   ├── hooks/            Shared hooks such as useApiQuery and useSignInAttempt
-│   │   ├── lib/              Helpers such as formatting and chart colours
-│   │   ├── pages/            One component per screen such as DashboardPage
-│   │   ├── testing/          Builders the tests share, such as makeHolding
-│   │   ├── App.tsx           Root component and page routes
-│   │   ├── config.ts         API address, locale, currency and page size
-│   │   ├── main.tsx          React entry point
-│   │   └── routes.ts         Address of each page
-│   ├── .dockerignore
-│   ├── .env.example          Template for frontend environment variables
-│   ├── .oxlintrc.json        Linter settings
-│   ├── .prettierrc.json      Formatter settings
-│   ├── Caddyfile             Caddy settings for HTTPS, security headers and the /api proxy
-│   ├── Dockerfile            Builds the app and serves it with Caddy
-│   ├── index.html            HTML shell that Vite serves
-│   ├── package-lock.json
-│   ├── package.json          Dependencies and npm scripts
-│   ├── tsconfig.app.json     TypeScript settings for the app code
-│   ├── tsconfig.json         Points to the two TypeScript configs
-│   ├── tsconfig.node.json    TypeScript settings for vite.config.ts
-│   └── vite.config.ts        Vite and Vitest settings
-│
-└── backend/
-    ├── alembic/              Migration setup and the files in versions/
-    ├── app/
-    │   ├── ai/               The AI models and each user's allowance
-    │   ├── models/           Database tables such as Security, Trade and User
-    │   ├── routes/           HTTP endpoints such as holdings and auth
-    │   ├── schemas/          Shapes of the JSON the API returns
-    │   ├── services/         Business logic such as positions and valuation
-    │   ├── config.py         Reads settings from environment variables
-    │   ├── database.py       Engine, sessions and the get_db dependency
-    │   ├── main.py           FastAPI app, CORS and health endpoints
-    │   └── request_log.py    Logs one line for each request
-    ├── jobs/                 Price jobs that run outside the API
-    ├── sample_data/          Example trade files, a year of closing prices, research notes and eval questions
-    ├── scripts/              One-off scripts such as seed.py and seed_users.py
-    ├── tests/                pytest tests such as positions and valuation
-    │   └── integration/      Tests that run real queries against PostgreSQL
-    ├── .dockerignore
-    ├── .env.example          Template for backend environment variables
-    ├── alembic.ini           Alembic settings with no database URL
-    ├── Dockerfile            Production image for the API
-    ├── pytest.ini            pytest settings
-    ├── requirements-dev.txt  Runtime packages plus test and lint tools
-    ├── requirements-jobs.txt Runtime packages plus those the price jobs need
-    ├── requirements.txt      Pinned packages the app needs to run
-    └── ruff.toml             Linter and formatter settings
+│   └── src/
+│       ├── api/          Typed calls to the backend
+│       ├── components/   Shared components
+│       ├── hooks/        Shared hooks
+│       ├── lib/          Helpers such as formatting
+│       └── pages/        One component per screen
+└── .github/workflows/    CI, deploy and the daily price refresh
 ```
-
-A request flows through the backend in one direction: a route calls a service, and a service uses the models. Routes contain no business rules and services contain no HTTP code, so each can be changed and tested separately.
-
-## Data model
-
-Nine tables hold the data.
-
-| Table        | One row is                       | Key columns                                                        |
-| ------------ | -------------------------------- | ------------------------------------------------------------------ |
-| `securities` | An instrument the fund can hold  | `ticker` (unique), `name`, `sector`, `asset_class`, `currency`     |
-| `trades`     | One buy or sell of a security    | `security_id`, `trade_date`, `side`, `quantity`, `price`, `fees`   |
-| `prices`     | One day's closing price          | `security_id`, `price_date`, `close`                               |
-| `users`      | A person who can sign in         | `email` (unique), `name`, `password_hash`, `role`, `is_active`     |
-| `import_batches` | One imported file of trades  | `file_name`, `file_hash` (unique), `row_count`, `imported_by_id`   |
-| `user_sessions` | One sign in                   | `user_id`, `expires_at`, `ended_at`                                |
-| `ai_usage`    | One AI request                 | `user_id`, `input_tokens`, `output_tokens`                         |
-| `research_documents` | One uploaded research file | `security_id`, `title`, `file_hash` (unique), `document_date`, `uploaded_by_id` |
-| `research_chunks` | One piece of a document's text | `document_id`, `position`, `text`, `embedding` (384 numbers), `search_vector` (its words, filled in by Postgres) |
-
-A security has many trades and many prices. A trade points to the import it came from, in `import_batch_id`. The database enforces the basic rules itself: `side` must be `BUY` or `SELL`, quantities and prices must be greater than zero, fees cannot be negative, and a security can have only one closing price per day.
-
-**Why there is no holdings table.** The current position in a security is calculated by adding up its trades (buys minus sells). Storing positions in a second table would mean keeping two copies of the same fact in sync, and any bug that updates one but not the other would leave them disagreeing. With the trade ledger as the single source of truth, a position can always be recalculated and can be worked out as at any past date.
-
-**Why Numeric, not Float.** Money and quantity columns use exact decimal types. Floating-point numbers cannot represent values like 0.1 exactly, and the small errors add up across many trades.
-
-| Column                                      | Type             | Reason                                                                 |
-| ------------------------------------------- | ---------------- | ---------------------------------------------------------------------- |
-| `trades.quantity`                           | `Numeric(18, 6)` | Allows fractional units as well as whole shares                        |
-| `trades.price`, `prices.close`              | `Numeric(18, 6)` | Covers sub-cent prices and average fill prices with several decimals   |
-| `trades.fees`                               | `Numeric(18, 2)` | A cash amount in dollars and cents                                     |
-
-## API
-
-| Method | Path             | What it does                                                    |
-| ------ | ---------------- | --------------------------------------------------------------- |
-| `GET`  | `/health`        | Confirms the API is running                                     |
-| `GET`  | `/health/db`     | Confirms the API can reach the database                         |
-| `POST` | `/auth/login`    | Signs in with an email and password                             |
-| `POST` | `/auth/logout`   | Signs out                                                       |
-| `POST` | `/auth/password` | Changes the signed-in user's password                           |
-| `GET`  | `/ai/usage`      | Returns the signed-in user's AI requests and tokens, and their limits |
-| `POST` | `/ai/chat`       | Asks the assistant a question and streams its answer            |
-| `GET`  | `/ai/conversations` | Lists the signed-in user's conversations, most recently used first |
-| `GET`  | `/ai/conversations/{id}` | Returns one conversation with its questions and answers |
-| `DELETE` | `/ai/conversations/{id}` | Deletes one conversation and its messages          |
-| `GET`  | `/research/documents` | Lists the research documents, newest first              |
-| `POST` | `/research/documents` | Uploads a research file about one security              |
-| `GET`  | `/research/documents/{id}` | Returns one document with its chunks               |
-| `GET`  | `/auth/me`       | Returns the signed-in user                                      |
-| `GET`  | `/holdings`      | Lists the current position in each security, ordered by ticker  |
-| `GET`  | `/holdings/{ticker}` | Returns the current position in one security                |
-| `GET`  | `/portfolio/history` | Lists the value of the portfolio on each priced date, oldest first |
-| `GET`  | `/portfolio/performance` | Returns the portfolio's return over 1 month, 3 months, year to date, 1 year and since inception |
-| `GET`  | `/securities`    | Lists every security, ordered by ticker                         |
-| `GET`  | `/securities/{ticker}/prices` | Lists the closing prices of one security, oldest first |
-| `GET`  | `/trades`        | Lists trades, newest first, with the ticker and security name   |
-| `GET`  | `/trades/export` | Downloads the trades as a CSV file                              |
-| `GET`  | `/trades/imports` | Lists the files that have been imported, newest first          |
-| `POST` | `/trades/import` | Imports trades from a CSV file                                  |
-
-Every endpoint below `/auth/me` needs a sign in. See [Login and roles](#login-and-roles).
-
-`GET /trades` takes `limit` (1 to 500, default 50) and `offset` (default 0), and returns `{"items": [...], "total": 30, "limit": 50, "offset": 0}`. Decimal values are returned as strings, such as `"45.250000"`, so no precision is lost.
-
-It also takes filters and an order, and `total` counts the trades that match:
-
-| Parameter              | Meaning                                                                   |
-| ---------------------- | ------------------------------------------------------------------------- |
-| `ticker`               | Only this ticker. Case-insensitive                                        |
-| `side`                 | `BUY` or `SELL`                                                           |
-| `date_from`, `date_to` | Only trades between these dates, both included, as `YYYY-MM-DD`           |
-| `sort`                 | `trade_date` (default), `ticker`, `side`, `quantity`, `price` or `fees`   |
-| `order`                | `desc` (default) or `asc`                                                 |
-
-`GET /trades/export` takes the same filters and order and returns every matching trade as a CSV file with the columns the import reads. It needs the permission to export trades. `GET /trades/imports` is paged like `/trades`, and each item has `file_name`, `row_count`, `imported_by` and `created_at`.
-
-`GET /holdings` returns one item per security that has trades, with `ticker`, `security_name`, `sector`, `asset_class`, `currency`, `quantity`, `average_cost`, `cost_basis`, `realised_pnl` and `oversold_quantity`, plus the valuation fields described under [Prices and valuation](#prices-and-valuation). Positions that have been fully sold are left out unless `include_closed=true` is added.
-
-Add `as_of=YYYY-MM-DD` to get the positions at the end of a past date. Only the trades made by then are counted, and each position is valued at its latest closing price on or before that date, so a weekend uses Friday's close. A date in the future is refused with `422`.
-
-`GET /holdings/{ticker}` returns one item of the same shape, with its `weight` in the whole portfolio. A security that has never been traded has a quantity of zero, and a ticker no security has is answered with `404`. `GET /securities/{ticker}/prices` returns `[{"date": "2026-11-13", "close": "58.860000"}, ...]`.
-
-The interactive docs at http://localhost:8000/docs list every endpoint and let you try them.
-
-### Login and roles
-
-Every page needs a sign in. There is no sign-up: accounts are created by a seed script.
-
-| Role              | Can view everything | Can export trades | Can import trades | Can upload research |
-| ----------------- | ------------------- | ----------------- | ----------------- | ------------------- |
-| Operations        | Yes                 | Yes               | Yes               | Yes                 |
-| Portfolio Manager | Yes                 | Yes               | No                | No                  |
-| Analyst           | Yes                 | No                | No                | Yes                 |
-
-The table lives in one place, `backend/app/services/permissions.py`. The API checks it, and `/auth/login` and `/auth/me` return the signed-in user's `permissions`, such as `["export_trades"]`, so the pages show only what the user can do. They also return `ai_enabled`, which decides whether the AI pages appear. A request the role does not allow is answered with `403`.
-
-Signing in starts a session that lasts 8 hours and sets a cookie that names it. The session is checked on every request, so signing out ends it at once: a copy of the cookie stops working. After 10 failed attempts, sign-ins from that address are blocked for up to 15 minutes.
-
-A signed-in user can change their password on the Account page, opened by clicking their name. The new password must be at least 12 characters, and changing it signs the user out everywhere else. An account listed in `PASSWORD_LOCKED_EMAILS` cannot change its password, which stops a visitor locking others out of a shared demo account.
-
-The seed script creates one demo account per role: `operations@example.com`, `pm@example.com` and `analyst@example.com`. Their passwords are chosen when the script is run and are not stored in this repository.
-
-Not included: sign-up, resetting a forgotten password, email verification and managing other users' accounts.
-
-### AI features
-
-The AI features are off unless `AI_ENABLED` is `true`. While they are off, the AI pages are hidden, every endpoint under `/ai` answers `404`, and no AI package is loaded, so the app runs without any API key.
-
-The chat model and the embedding model are named in settings as `provider:model` and built by LangChain, so another provider can be used by changing a setting and installing its package. The keys are read from the environment by each provider's own package. The default embedding model, `fastembed:BAAI/bge-small-en-v1.5`, runs on the server itself and needs no key: FastEmbed downloads it, about 64 MB, the first time it is used.
-
-Each user has an allowance: 20 AI requests in any hour and 200,000 tokens in any day, by default. Every request is recorded in `ai_usage` with the tokens it used, so the count survives a restart. A request over either limit is answered with `429`. `GET /ai/usage` returns what has been used, and the Account page shows it.
-
-**The assistant.** `POST /ai/chat` takes one question, as `{"question": "...", "conversation_id": "..."}`, and streams the answer as server-sent events. Each event is a JSON object with a `type`:
-
-| Type | What it carries |
-| ---- | --------------- |
-| `tool_call` | The tool the assistant called and what it asked for |
-| `tool_result` | What that tool returned |
-| `sources` | The research excerpts a search returned, each with a number, its document and its chunk |
-| `text` | The next piece of the answer |
-| `done` | The answer is complete |
-| `error` | The assistant could not answer |
-
-**Conversation memory.** Each conversation is stored in PostgreSQL, so it survives a restart and can be reopened from the Assistant page. The first event of every answer is `conversation`, carrying the id to send with the next question. Leave `conversation_id` out to start a new conversation.
-
-The storage is in two parts. The `conversations` table, created by a migration, records who owns each conversation, its title (the first question) and when it was last used. The messages themselves, including tool calls, tool results and sources, are kept by LangGraph's PostgreSQL checkpointer in four tables of its own (`checkpoints`, `checkpoint_blobs`, `checkpoint_writes` and `checkpoint_migrations`). LangGraph creates and upgrades those tables itself when the app starts with `AI_ENABLED` on, so Alembic is told to ignore them.
-
-A conversation belongs to one user. Reading, carrying on or deleting another user's conversation answers `404`. Deleting a conversation removes its messages too. The whole conversation is kept, but only the most recent 40 messages are sent to the model, starting from a question, so a long conversation cannot grow the cost of every answer without limit.
-
-The assistant is a LangChain agent with eight tools. Seven are thin wrappers over services the pages already use: holdings now or at a past date, one holding, portfolio history, performance against the benchmark, trades, securities and a security's prices. The eighth searches the research notes. Every tool only reads.
-
-The model never works out a figure. Its instructions tell it to quote figures exactly as a tool returned them, and the tools return figures already rounded by the same code the pages use. Tool results are treated as data, never as instructions. The conversation is not stored: the page sends the earlier turns with each question, and they are gone when the page is reloaded.
-
-**Research.** `POST /research/documents` takes a multipart upload with the file in a field named `file`, and `title`, `ticker` and `document_date` as form fields. The file can be a PDF, Markdown or text file of up to 10 MB. Its text is read, split into chunks of about 1,000 characters that overlap a little, and each chunk is turned into a vector of 384 numbers by the embedding model and stored with pgvector. An upload is all or nothing, and a file whose contents match an earlier upload is refused with `409`.
-
-**Searching research.** The assistant's `search_research` tool finds chunks in three steps and returns the best five:
-
-1. **Two searches.** One by meaning: the question is turned into a vector with the same embedding model, and pgvector's cosine distance finds the closest chunks. One by words: Postgres full-text search finds chunks that share any word with the question. Each returns up to 20 chunks.
-2. **Fusion.** The two lists are combined with reciprocal rank fusion, so a chunk found by both searches rises to the top.
-3. **Reranking.** A small local model, `Xenova/ms-marco-MiniLM-L-6-v2` (about 80 MB, downloaded the first time it is used), reads the question next to each candidate and puts them in a final order. Set `AI_RERANK_MODEL=off` to skip this step.
-
-In a follow-up such as "is its dividend safe?", the search query can depend on the earlier questions. When a conversation has earlier questions, the chat model first rewrites the query so it stands alone, and the tool's result shows what was searched for. This costs one short model call per search, counted in the user's allowance, and is skipped for the first question. If the rewrite fails, the query is searched as asked.
-
-The search can be limited to one ticker and to a range of document dates. Each excerpt has a source number, which stays the same for the whole answer, and the assistant cites the ones it uses, like `[1]`. Under the answer, the page lists each cited source with a link to its chunk, such as `/research/3#chunk-2`. That list is built from what the search returned, not from what the model wrote, so it cannot name a document that was not found.
-
-Text from a document reaches the model only as a quoted field in the tool's result, and the assistant's instructions say that a note is an opinion, that no figure about the portfolio comes from one, and that an instruction inside one is never followed.
-
-`GET /research/documents` takes an optional `ticker`, which the page for a security uses to list the notes about it.
-
-Five fictional notes are in `backend/sample_data/research/`. To load them into a local database, as if the demo Operations account had uploaded them:
-
-```bash
-python -m scripts.seed_research
-```
-
-Changing to an embedding model with a different vector size needs a migration that changes the `embedding` column, and every document embedded again.
-
-No test calls a real model. The test setup refuses to build one, and the tests use a fake chat model that gives scripted answers and a fake embedding model.
-
-**Evals.** `backend/sample_data/evals/golden_questions.json` holds 41 golden questions about the five sample notes: 25 full questions, 10 short keyword searches such as "buy-back", and 6 follow-ups with the questions asked before them. Each names the ticker and a phrase from the passage that answers it, so a question stays valid if the notes are chunked differently. A test checks that every phrase is still in its note.
-
-```bash
-python -m scripts.run_evals              # search only: free, uses the local models
-python -m scripts.run_evals --answers    # also judges the assistant's answers: spends API credit
-```
-
-The script only reads from the database, and needs the sample notes loaded first. It reports:
-
-| Measure | What it means |
-| ------- | ------------- |
-| Hit rate | The share of questions whose passage was among the chunks the search returned (five by default, changed with `--top`) |
-| MRR | Mean reciprocal rank: 1 when the passage is always first, 0.5 when it is always second, and so on |
-| Faithfulness | With `--answers`: the share of answers in which every fact appears in what the tools returned |
-
-The script scores each step of the search, so the effect of each can be seen. With the default models, as hit rate and MRR:
-
-| Search | Questions (25) | Keywords (10) | Follow-ups (6) |
-| ------ | -------------- | ------------- | -------------- |
-| Meaning only | 100%, 0.900 | 90%, 0.542 | 100%, 0.867 |
-| Meaning and words | 100%, 0.860 | 100%, 0.925 | 100%, 1.000 |
-| Meaning and words, reranked | 100%, 0.933 | 100%, 1.000 | 100%, 0.917 |
-
-Matching words helps most where meaning is weakest, on short keyword searches. On full questions it is slightly worse by itself, and reranking more than recovers that. The library is only ten chunks, so finding the passage in the top five is easy, MRR is the number to watch, and these results say little about a large library. Follow-ups in this table are searched as asked. With `--answers` they are also rewritten by the chat model and scored again.
-
-For faithfulness the assistant answers each question as it would on the page, and the chat model is then asked whether the answer is supported by the tool results. An answer written without calling a tool counts as unsupported. Each question takes about three model calls, the script prints the tokens it used, and `--limit 5` judges only the first five questions. The model judges its own answers, so treat the number as a guide, not proof.
-
-**Tracing.** Tracing is off unless `LANGSMITH_TRACING` is `true`. With it on, and `LANGSMITH_API_KEY` set, LangChain sends each answer's model calls and tool calls to [LangSmith](https://smith.langchain.com), named `portfolio-assistant` and carrying the conversation id. Traces contain the questions and the portfolio data the tools returned, and they leave the server, so leave it off where that matters. `LANGSMITH_PROJECT` chooses the project they are filed under.
-
-### Holdings and average cost
-
-Positions are worked out from the trades on every request, using the weighted average cost method:
-
-- **A buy** adds `quantity × price + fees` to the cost basis. The average cost is the cost basis divided by the quantity held, so a buy changes it.
-- **A sell** removes units at the current average cost, so it does not change the average. The realised profit or loss is what the sale brought in, less its fees, minus the cost of the units sold.
-- Trades are applied oldest first. Trades on the same day are applied in the order they were imported.
-- The calculation uses exact decimals and is not rounded. The response rounds money to cents and average cost to six decimal places.
-
-For example, the three BHP trades in `sample_data/trades_sample.csv`:
-
-| Trade                          | Quantity | Cost basis | Average cost | Realised P&L |
-| ------------------------------ | -------- | ---------- | ------------ | ------------ |
-| Buy 400 at 41.85, fees 29.95   | 400      | 16,769.95  | 41.924875    | 0            |
-| Buy 200 at 43.10, fees 19.95   | 600      | 25,409.90  | 42.349833    | 0            |
-| Sell 250 at 45.72, fees 29.95  | 350      | 14,822.44  | 42.349833    | 812.59       |
-
-The sell brings in `250 × 45.72 − 29.95 = 11,400.05`. The 250 units cost `250 × 42.349833 = 10,587.46`, so the realised profit is `812.59`.
-
-**Sells that exceed the position.** The import does not check a sell against what is held. A sell is applied only to the units actually held, the quantity stops at zero, and the rest is reported as `oversold_quantity`. An oversold position is always returned, even when closed, and the Holdings page shows a warning naming the security.
-
-### Prices and valuation
-
-The database stores one closing price per security per day. Each open position is valued at its latest stored price, and `GET /holdings` returns:
-
-| Field               | Meaning                                              |
-| ------------------- | ---------------------------------------------------- |
-| `last_price`        | The latest stored closing price                      |
-| `price_date`        | The day that price is from                           |
-| `market_value`      | `quantity × last_price`                              |
-| `unrealised_pnl`    | `market_value − cost_basis`                          |
-| `unrealised_return` | `unrealised_pnl ÷ cost_basis`, as a fraction         |
-| `weight`            | The holding's share of the total market value        |
-
-These fields are `null` for a closed position or a security with no stored price.
-
-Prices come from Yahoo Finance and are saved by a job that runs outside the API. The pages only read stored prices, so they keep working if Yahoo is unavailable.
-
-### Portfolio value over time
-
-`GET /portfolio/history` returns the value of the portfolio on each day that has a price, oldest first:
-
-```json
-[
-  {"date": "2026-11-12", "market_value": "197787.90", "cost_basis": "173658.10", "unrealised_pnl": "24129.80"},
-  {"date": "2026-11-13", "market_value": "196592.45", "cost_basis": "173658.10", "unrealised_pnl": "22934.35"}
-]
-```
-
-Each point counts the trades made up to that day and values them at that day's prices. A security with no price yet is left out.
-
-### Portfolio performance
-
-`GET /portfolio/performance` returns a time-weighted return. Each day's gain is measured on the value held at the start of that day, so money going in or out does not count as a gain or a loss. A buy counts as cash in at its cost and fees, and a sell as cash out at its proceeds after fees.
-
-A period has no return when the price history does not reach back to its start. Dividends are not counted.
-
-Each period also has a `benchmark_return`: the change in the closing price of the benchmark security between the same two dates. The benchmark is VAS, an ETF that follows the ASX 300 index, unless `BENCHMARK_TICKER` names another security. A date with no benchmark price uses the latest earlier one, and the benchmark fields are `null` when the security does not exist or has no prices. Since inception, the portfolio's return counts the gain on its first day and the benchmark's is measured from that day's close.
-
-### Importing trades from CSV
-
-`POST /trades/import` takes a multipart upload with the file in a field named `file`:
-
-```bash
-curl -b cookies.txt -F "file=@sample_data/trades_sample.csv" http://localhost:8000/trades/import
-# {"imported":30}
-```
-
-Only the Operations role can import, so this needs that account's session cookie.
-
-The first row of the file must be a header. Column order does not matter and extra columns are ignored.
-
-| Column       | Required | Rules                                                              |
-| ------------ | -------- | ------------------------------------------------------------------ |
-| `trade_date` | Yes      | `YYYY-MM-DD`, not in the future (in the market's time zone)        |
-| `ticker`     | Yes      | Must match a security in the database. Case-insensitive            |
-| `side`       | Yes      | `BUY` or `SELL`. Case-insensitive                                  |
-| `quantity`   | Yes      | Greater than 0, at most 6 decimal places                           |
-| `price`      | Yes      | Greater than 0, at most 6 decimal places                           |
-| `fees`       | No       | 0 or more, at most 2 decimal places. Defaults to 0 if left out     |
-
-Numbers must be plain digits with an optional decimal point, such as `1500` or `45.25`. Thousands separators and currency symbols are rejected.
-
-```csv
-trade_date,ticker,side,quantity,price,fees
-2026-03-10,BHP,BUY,400,41.85,29.95
-2026-03-17,TLS,SELL,1500,4.385,19.95
-```
-
-**The import is all or nothing.** Every row is checked before anything is saved. If any row is invalid, no trades are saved and the response lists every problem, so the file can be fixed and uploaded again without creating a partial import.
-
-| Status | Meaning                                                                                      |
-| ------ | -------------------------------------------------------------------------------------------- |
-| `201`  | Every row was saved. The body is `{"imported": <count>}`                                     |
-| `400`  | The file is not a readable trades CSV: wrong extension, empty, missing a required column, or more than 5000 rows |
-| `409`  | The same file was imported before. Nothing was saved                                         |
-| `413`  | The file is larger than 1 MB                                                                 |
-| `422`  | One or more rows are invalid. Nothing was saved                                              |
-
-A `422` response lists each problem with its row number (the header is row 1), the column, and a message:
-
-```json
-{
-  "detail": "The import was rejected and nothing was saved. Fix 2 errors and upload the file again.",
-  "errors": [
-    {"row": 4, "column": "ticker", "message": "'XYZ' is not a known security."},
-    {"row": 6, "column": "quantity", "message": "quantity must be greater than 0."}
-  ]
-}
-```
-
-Two example files are in `backend/sample_data/`: `trades_sample.csv` (30 valid trades) and `trades_invalid.csv` (rows that each break a different rule).
-
-### Known limitations
-
-- **Only an identical file is recognised as a repeat.** A repeated upload is refused when its contents match an earlier import exactly. The same trades saved in a file that differs at all, even by a space, are imported again.
-- **Sells are not checked against holdings on import.** A file can sell more of a security than was ever bought. The position is then reported as oversold instead of the import being rejected.
-- **Every trade is read on each `/holdings` request.** This is fine at the current size and would need revisiting for a much larger ledger.
-- **Prices are daily closing prices for ASX tickers only.** There are no intraday prices.
-- **Dividends are not counted.** Profit is the change in price only.
-- **The benchmark is an ETF the fund can also hold.** VAS stands in for the ASX 300 index because its prices are already stored. It is compared on price alone, like the portfolio.
-- **Currencies are not converted.** The Dashboard shows a warning instead of totals if positions use more than one currency.
-- **The stale price warning does not know public holidays.** It counts Monday to Friday as business days, so it can appear a day early after a long weekend.
 
 ## Local setup
 
-Prerequisites: Python 3.12+, Node.js 24+ and Docker.
+You need Python 3.12+, Node.js 24+ and Docker.
 
-Run the backend and frontend in two separate terminals.
-
-### Database
-
-The backend needs a PostgreSQL database and will not start without `DATABASE_URL`. For local work, start one in Docker from the project folder:
+**1. Start the database** from the project folder. It listens on port 5433.
 
 ```bash
 docker compose -f docker-compose.dev.yml up -d
 ```
 
-It listens on port 5433 and holds two databases: `portfolio` for the app and `portfolio_test` for the tests. `backend/.env.example` already points at both, so nothing needs editing. To delete the local data and start again, run `docker compose -f docker-compose.dev.yml down -v`.
-
-The live site uses [Neon](https://neon.tech) instead. A connection string copied from the Neon dashboard works unchanged as `DATABASE_URL`: the app selects the psycopg 3 driver itself. Keep it out of `backend/.env`, so local work never changes the live data.
-
-### Backend
+**2. Start the backend.** It runs at http://localhost:8000, with interactive API docs at http://localhost:8000/docs.
 
 ```bash
 cd backend
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements-dev.txt
-cp .env.example .env    # points at the local database
-alembic upgrade head    # create the database tables
+cp .env.example .env
+alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
-The API runs at http://localhost:8000. Check it with:
+**3. Load the starting data.** Add a password of at least 12 characters for each demo account to `backend/.env` first, as `DEMO_PASSWORD_OPERATIONS`, `DEMO_PASSWORD_PORTFOLIO_MANAGER` and `DEMO_PASSWORD_ANALYST`.
 
 ```bash
-curl http://localhost:8000/health
-# {"status":"ok"}
-
-curl http://localhost:8000/health/db
-# {"status":"ok","database":"connected"}
+python -m scripts.seed            # 10 ASX securities
+python -m jobs.seed_prices        # a year of closing prices
+python -m scripts.seed_users      # one demo account per role
+python -m scripts.seed_research   # five sample research notes, for the AI features
 ```
 
-`/health` reports that the API process is up and does not touch the database. `/health/db` runs a query, and returns `503` if the database cannot be reached.
+The demo accounts are `operations@example.com`, `pm@example.com` and `analyst@example.com`. Sample trades to import are in `backend/sample_data/trades_sample.csv`.
 
-Interactive API docs are generated automatically at http://localhost:8000/docs.
-
-### Database migrations
-
-Schema changes are managed with Alembic. Run these from `backend/` with the virtual environment active.
-
-| Command                                            | What it does                                                   |
-| -------------------------------------------------- | -------------------------------------------------------------- |
-| `alembic revision --autogenerate -m "add accounts"` | Creates a migration by comparing the models with the database |
-| `alembic upgrade head`                             | Applies all migrations that have not been run yet              |
-| `alembic downgrade -1`                             | Reverts the most recent migration                              |
-| `alembic current`                                  | Shows which migration the database is on                       |
-| `alembic history`                                  | Lists all migrations in order                                  |
-
-Always read an autogenerated migration before applying it. Autogenerate does not detect everything, for example table or column renames, which it sees as a drop and an add.
-
-### Seed data
-
-After `alembic upgrade head` has created the tables, load the starting set of 10 ASX securities. Run this from `backend/` with the virtual environment active:
-
-```bash
-python -m scripts.seed
-```
-
-The script is safe to run more than once. A security whose ticker already exists is skipped, so no duplicates are created. It adds securities only, not trades or prices.
-
-Then load a year of closing prices for those securities. This needs no network and is also safe to run more than once:
-
-```bash
-python -m jobs.seed_prices
-```
-
-Last, create the three demo accounts. Add a password of at least 12 characters for each to `backend/.env`:
-
-```
-DEMO_PASSWORD_OPERATIONS=...
-DEMO_PASSWORD_PORTFOLIO_MANAGER=...
-DEMO_PASSWORD_ANALYST=...
-```
-
-```bash
-python -m scripts.seed_users
-```
-
-An account that already exists is skipped.
-
-### Refreshing prices
-
-To fetch the latest closing prices from Yahoo Finance:
-
-```bash
-pip install -r requirements-jobs.txt
-python -m jobs.refresh_prices
-```
-
-### Tests
-
-Run the backend tests from `backend/` with the virtual environment active:
-
-```bash
-pytest
-```
-
-Most tests cover the rules in the services: the CSV rules, positions, valuation, price refresh, portfolio history and performance, and login and roles. They use no database and no network.
-
-The tests in `tests/integration/` run the migrations, the queries and the API against PostgreSQL. They use `TEST_DATABASE_URL`, read from the shell or `backend/.env`, and are skipped when it is not set. Each test is undone afterwards, so no rows are left behind. The migration tests drop and rebuild every table, so the tests refuse a database whose name does not end in `_test`.
-
-Run the frontend tests from `frontend/`:
-
-```bash
-npm test
-```
-
-They cover the helpers in `src/lib/`, the shared hooks, and the API client.
-
-### Linting and formatting
-
-Check the backend code for common mistakes, and put it in the standard layout, from `backend/`:
-
-```bash
-ruff check .
-ruff format .
-```
-
-The settings are in `backend/ruff.toml`. The same for the frontend, from `frontend/`:
-
-```bash
-npm run lint
-npm run format
-```
-
-CI fails if either side is not formatted.
-
-### Frontend
+**4. Start the frontend** in a second terminal. It runs at http://localhost:5173.
 
 ```bash
 cd frontend
@@ -558,123 +281,40 @@ cp .env.example .env
 npm run dev
 ```
 
-The app runs at http://localhost:5173. It opens on a sign in page and has three main pages after that, plus a page for each security and an Account page. The backend must be running.
+**To use the AI features,** add `AI_ENABLED=true` and `ANTHROPIC_API_KEY` to `backend/.env`. Every other setting is optional and listed in `backend/.env.example` with its default.
 
-| Page      | What it shows |
-| --------- | ------------- |
-| Dashboard | Market value, unrealised P&L and return, realised P&L and total P&L, the return over each period next to the benchmark's, and charts of portfolio value over time, sector allocation and unrealised P&L by holding |
-| Holdings  | The current positions with their last price, market value, unrealised P&L and weight. Has sorting, a search box, filters for sector and asset class, summary figures, and a warning when prices are more than three business days old. An "As at" date shows the positions on a past date |
-| Security  | Opened by clicking a ticker. One security's position, a chart of its closing price with each buy and sell marked, and its trades. When the AI features are on, it also lists the research notes about the security |
-| Assistant | Shown only when `AI_ENABLED` is on. The user's stored conversations about the portfolio, which can be reopened, carried on or deleted. Each answer streams in as it is written and shows the tools it used and what they returned. An answer that draws on research cites it and lists its sources |
-| Research  | Shown only when `AI_ENABLED` is on. The library of research documents, with filters for ticker and date, and a form to upload a PDF, Markdown or text file about one security |
-| Research document | Opened by clicking a title in the library. One document's details and its text as numbered chunks. A link to a chunk, such as `/research/12#chunk-3`, scrolls to that chunk and highlights it |
-| Trades    | A form to upload a CSV file, the saved trades with filters, sorting and a CSV export, and a list of past imports |
+## Tests and linting
 
-### Environment variables
+```bash
+# backend, from backend/
+pytest
+ruff check .
+ruff format .
 
-Real `.env` files are git-ignored and must never be committed. The `.env.example` files list the variables each side expects, with placeholder values only.
+# frontend, from frontend/
+npm test
+npm run lint
+npm run format
+```
 
-| File                    | Variable              | Purpose                                              |
-| ----------------------- | --------------------- | ---------------------------------------------------- |
-| `backend/.env.example`  | `DATABASE_URL`        | PostgreSQL connection string (required). The example is the local database |
-| `backend/.env.example`  | `TEST_DATABASE_URL`   | Optional. Database for the tests in `tests/integration/`. Its name must end in `_test` |
-| `backend/.env.example`  | `JWT_SECRET`          | Secret for signing session tokens. Needed to sign in |
-| `backend/.env.example`  | `CORS_ORIGINS`        | Optional. Comma-separated addresses allowed to call the API. Defaults to `http://localhost:5173` |
-| `backend/.env.example`  | `MARKET_TIMEZONE`     | Optional. Time zone that decides "today" for trade dates. Defaults to `Australia/Sydney` |
-| `backend/.env.example`  | `SESSION_MINUTES`     | Optional. How long a sign in lasts. Defaults to 480  |
-| `backend/.env.example`  | `BENCHMARK_TICKER`    | Optional. The security the portfolio's return is compared with. Defaults to `VAS` |
-| `backend/.env.example`  | `AI_ENABLED`          | Optional. Set to `true` to turn on the AI pages and endpoints. Defaults to off |
-| `backend/.env.example`  | `AI_CHAT_MODEL`, `AI_EMBEDDING_MODEL` | Optional. The models to use, each as `provider:model`. Default to `anthropic:claude-opus-5-5` and `fastembed:BAAI/bge-small-en-v1.5` |
-| `backend/.env.example`  | `AI_RERANK_MODEL` | Optional. The local model that reorders search results, or `off`. Defaults to `fastembed:Xenova/ms-marco-MiniLM-L-6-v2` |
-| `backend/.env.example`  | `ANTHROPIC_API_KEY` | The key for the chat model. Needed only when the AI features are on. An embedding model from a provider needs that provider's key too, such as `OPENAI_API_KEY` |
-| `backend/.env.example`  | `RESEARCH_MAX_FILE_BYTES` | Optional. The largest research file that can be uploaded. Defaults to 10 MB |
-| `backend/.env.example`  | `AI_REQUESTS_PER_HOUR`, `AI_DAILY_TOKEN_CAP` | Optional. Each user's AI allowance. Default to 20 requests an hour and 200,000 tokens a day |
-| `backend/.env.example`  | `LANGSMITH_TRACING`, `LANGSMITH_API_KEY`, `LANGSMITH_PROJECT` | Optional. Set the first to `true`, with a key, to send traces of each answer to LangSmith. Defaults to off |
-| `backend/.env.example`  | `PASSWORD_LOCKED_EMAILS` | Optional. Comma-separated accounts whose password cannot be changed, such as shared demo accounts. Defaults to none |
-| `backend/.env.example`  | `IMPORT_MAX_FILE_BYTES`, `IMPORT_MAX_ROWS` | Optional. CSV upload limits. Default to 1 MB and 5000 rows |
-| `backend/.env.example`  | `PRICE_REFRESH_OVERLAP_DAYS`, `PRICE_LOOKBACK_DAYS` | Optional. Price refresh settings. Default to 5 and 365 days |
-| `backend/.env.example`  | `DEFAULT_PAGE_SIZE`, `MAX_PAGE_SIZE` | Optional. Page sizes for list endpoints. Default to 50 and 500 |
-| `frontend/.env.example` | `VITE_API_URL`        | Backend base URL, defaults to `http://localhost:8000` |
+No test calls a real AI model: the tests use fake ones. The tests in `tests/integration/` run against the local PostgreSQL and are skipped when `TEST_DATABASE_URL` is not set.
 
 ## Deployment
 
-The site runs on a VPS as two Docker containers. The database stays on Neon.
+The site runs on a VPS as two Docker containers: Caddy, which serves the React app over HTTPS and passes `/api/*` on, and the FastAPI backend. The database stays on Neon.
 
-| Container | What it does |
-| --------- | ------------ |
-| `web`     | Caddy. Serves the built React app, gets the HTTPS certificate, and passes `/api/*` to the backend. The only container open to the internet |
-| `backend` | The FastAPI app, run by uvicorn as a non-root user |
+1. A pull request runs CI: lint, format check, tests, type check and a build of both Docker images.
+2. When it is merged, the Deploy workflow publishes the images, connects to the server over SSH, runs the migrations and restarts the containers.
+3. It finishes by checking the site's health endpoint, and fails if the site does not come up healthy.
 
-### How a change goes live
+The server's settings are listed in `.env.prod.example`. Closing prices are refreshed by a scheduled workflow on weekdays.
 
-1. A pull request runs the CI workflow: lint, format check, tests, type check and a build of both Docker images.
-2. When the pull request is merged, CI runs again on `main`.
-3. If it passes, the Deploy workflow builds both images and pushes them to the GitHub Container Registry, tagged with the commit.
-4. The workflow then connects to the server over SSH, pulls those images, runs `alembic upgrade head`, and restarts the containers.
-5. It finishes by checking `https://<domain>/api/health/db`. The run fails if the site does not come up healthy.
+## Known limitations
 
-### What the server adds to each response
-
-Caddy adds security headers to every response:
-
-| Header | What it does |
-| ------ | ------------ |
-| `Strict-Transport-Security` | Tells the browser to use HTTPS for the next year |
-| `X-Content-Type-Options` | Stops the browser guessing a file's type |
-| `X-Frame-Options` | Stops other sites showing this one inside a frame |
-| `Referrer-Policy` | Sends only the site's address, not the page, to other sites |
-| `Permissions-Policy` | Turns off the camera, microphone and location |
-| `Content-Security-Policy` | On the pages of the app, allows scripts, styles and requests from this site only |
-
-Inline styles are allowed, because the charts set styles on their own elements.
-
-The API logs one line for each request, with its method, path, status and time taken, such as `GET /trades 200 12ms`. The query string, the cookie and the body are never logged, and the health check is left out. Read the log with `docker compose -f docker-compose.prod.yml --env-file .env.prod logs backend`.
-
-Dependabot opens pull requests for outdated Python packages, npm packages and GitHub Actions once a week. CI tests each one.
-
-### One-time server setup
-
-The server needs Docker with the Compose plugin, and ports 80 and 443 open.
-
-1. Add the SSH user to the `docker` group.
-2. Create the folder `~/portfolio-analytics` in that user's home folder.
-3. Copy `.env.prod.example` to `~/portfolio-analytics/.env.prod` and fill in real values. `SITE_DOMAIN` must already point at the server.
-
-The Deploy workflow needs these repository secrets:
-
-| Secret            | Value |
-| ----------------- | ----- |
-| `SSH_HOST`        | Address of the server |
-| `SSH_USER`        | User the workflow logs in as |
-| `SSH_PRIVATE_KEY` | Private key for that user, used only for deploys |
-| `SSH_KNOWN_HOSTS` | The server's host key, from `ssh-keyscan -t ed25519 <host>` |
-
-### Price refresh
-
-The Refresh prices workflow fetches the latest closing prices and saves them to the database. It runs on weekdays at 08:23 UTC, after the ASX has closed, and can also be started by hand from the Actions tab. If a run fails, it opens an issue in this repository, or adds a comment to the one already open.
-
-It needs one more repository secret:
-
-| Secret         | Value |
-| -------------- | ----- |
-| `DATABASE_URL` | The Neon connection string |
-
-### Running the production setup by hand
-
-From the folder holding `docker-compose.prod.yml` and `.env.prod`:
-
-```bash
-docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
-docker compose -f docker-compose.prod.yml --env-file .env.prod logs -f
-```
-
-To load the starting securities on a new database:
-
-```bash
-docker compose -f docker-compose.prod.yml --env-file .env.prod run --rm backend python -m scripts.seed
-```
-
-Create the demo accounts the same way, with `python -m scripts.seed_users`. `JWT_SECRET` must be set in `.env.prod`, or nobody can sign in.
+- Prices are daily closing prices for ASX tickers only, and dividends are not counted.
+- Currencies are not converted. The Dashboard shows a warning if positions use more than one.
+- A sell is not checked against what is held when imported. The position is reported as oversold instead.
+- There is no sign-up or password reset. Accounts are created by the seed script.
 
 ## License
 
