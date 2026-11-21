@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING
 
 from app.config import AI_CHAT_MODEL, AI_EMBEDDING_MODEL
 
+LOCAL_MODEL_PREFIX = "fastembed:"
+
 if TYPE_CHECKING:
     from langchain_core.embeddings import Embeddings
     from langchain_core.language_models import BaseChatModel
@@ -21,6 +23,11 @@ def get_chat_model() -> BaseChatModel:
 
 @cache
 def get_embeddings() -> Embeddings:
+    if AI_EMBEDDING_MODEL.startswith(LOCAL_MODEL_PREFIX):
+        from app.ai.local_embeddings import LocalEmbeddings
+
+        return LocalEmbeddings(AI_EMBEDDING_MODEL.removeprefix(LOCAL_MODEL_PREFIX))
+
     from langchain.embeddings import init_embeddings
 
     return init_embeddings(AI_EMBEDDING_MODEL)
