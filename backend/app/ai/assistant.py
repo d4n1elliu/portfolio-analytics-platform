@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 
 COULD_NOT_ANSWER = "The assistant could not answer. Try again."
 MAX_STEPS = 16
+TRACE_NAME = "portfolio-assistant"
 MAX_MESSAGES_SENT = 40
 TOOL_OUTPUT_SHOWN = 4000
 
@@ -49,6 +50,11 @@ portfolio from a note.
 class TokenCount:
     input_tokens: int = 0
     output_tokens: int = 0
+
+    def add(self, message: AIMessage) -> None:
+        usage = message.usage_metadata or {}
+        self.input_tokens += usage.get("input_tokens", 0)
+        self.output_tokens += usage.get("output_tokens", 0)
 
 
 @dataclass(frozen=True)
@@ -91,7 +97,12 @@ def stream_answer(
     )
     stream = agent.stream(
         {"messages": [{"role": "user", "content": question}]},
-        {**thread(conversation_id), "recursion_limit": MAX_STEPS},
+        {
+            **thread(conversation_id),
+            "recursion_limit": MAX_STEPS,
+            "run_name": TRACE_NAME,
+            "metadata": {"conversation_id": conversation_id},
+        },
         stream_mode=["messages", "updates"],
     )
     for mode, chunk in stream:
@@ -151,7 +162,7 @@ def _step_events(update: dict, tokens: TokenCount) -> Iterator[dict]:
     for step in update.values():
         for message in (step or {}).get("messages", []):
             if isinstance(message, AIMessage):
-                _count(message, tokens)
+                tokens.add(message)
             yield from _message_events(message)
 
 
@@ -173,9 +184,3 @@ def _message_events(message: BaseMessage) -> Iterator[dict]:
         }
         if message.artifact:
             yield {"type": "sources", "sources": message.artifact}
-
-
-def _count(message: AIMessage, tokens: TokenCount) -> None:
-    usage = message.usage_metadata or {}
-    tokens.input_tokens += usage.get("input_tokens", 0)
-    tokens.output_tokens += usage.get("output_tokens", 0)

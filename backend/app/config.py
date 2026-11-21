@@ -86,6 +86,7 @@ AI_EMBEDDING_MODEL = (
 )
 AI_REQUESTS_PER_HOUR = _optional_int("AI_REQUESTS_PER_HOUR", 20)
 AI_DAILY_TOKEN_CAP = _optional_int("AI_DAILY_TOKEN_CAP", 200_000)
+AI_TRACING = _optional_flag("LANGSMITH_TRACING")
 
 PASSWORD_LOCKED_EMAILS = [email.lower() for email in _optional_list("PASSWORD_LOCKED_EMAILS", [])]
 
