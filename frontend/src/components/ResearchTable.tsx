@@ -8,7 +8,6 @@ import { NAME_LINK } from '../lib/styles'
 import { researchDocumentPath } from '../routes'
 import DataTable from './DataTable'
 import type { Column } from './DataTable'
-import ResearchStatusBadge from './ResearchStatusBadge'
 import TickerLink from './TickerLink'
 
 const COLUMNS: Column<ResearchDocument>[] = [
@@ -32,10 +31,7 @@ const COLUMNS: Column<ResearchDocument>[] = [
     render: (document) => <TickerLink ticker={document.ticker} />,
     sortValue: (document) => document.ticker,
   },
-  {
-    header: 'Status',
-    render: (document) => <ResearchStatusBadge status={document.status} />,
-  },
+  { header: 'Chunks', align: 'right', render: (document) => document.chunk_count },
   {
     header: 'Uploaded by',
     render: (document) => document.uploaded_by,

@@ -14,7 +14,7 @@ const DOCUMENT: ResearchDocumentDetail = {
   file_name: 'bhp-outlook.pdf',
   ticker: 'BHP',
   document_date: '2026-11-13',
-  status: 'ready',
+  chunk_count: 2,
   uploaded_by: 'Demo Analyst',
   created_at: '2026-11-14T03:00:00Z',
   chunks: [
@@ -49,7 +49,6 @@ describe('ResearchDocumentView', () => {
     expect(screen.getByRole('link', { name: 'BHP' }).getAttribute('href')).toBe('/securities/BHP')
     expect(screen.getByText('bhp-outlook.pdf')).toBeTruthy()
     expect(screen.getByText('13 Nov 2026')).toBeTruthy()
-    expect(screen.getByText('Ready')).toBeTruthy()
   })
 
   it('lists each chunk in order with a link to itself', () => {
@@ -77,7 +76,7 @@ describe('ResearchDocumentView', () => {
   })
 
   it('says so when the document has no text yet', () => {
-    renderView({ ...DOCUMENT, status: 'processing', chunks: [] }, null)
+    renderView({ ...DOCUMENT, chunk_count: 0, chunks: [] }, null)
 
     expect(screen.getByText('This document has no text to show yet.')).toBeTruthy()
     expect(screen.queryByRole('list', { name: 'Chunks' })).toBeNull()

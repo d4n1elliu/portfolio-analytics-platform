@@ -6,7 +6,8 @@ from langchain_core.embeddings import Embeddings
 from langchain_core.language_models.fake_chat_models import FakeMessagesListChatModel
 from langchain_core.messages import AIMessage
 
-EMBEDDING_SIZE = 8
+from app.models.research import EMBEDDING_DIMENSIONS
+
 TOKENS_PER_ANSWER = {"input_tokens": 10, "output_tokens": 5, "total_tokens": 15}
 
 
@@ -33,7 +34,7 @@ def _message(answer: str | AIMessage) -> AIMessage:
 class FakeEmbeddings(Embeddings):
     def embed_query(self, text: str) -> list[float]:
         digest = hashlib.sha256(text.encode()).digest()
-        return [byte / 255 for byte in digest[:EMBEDDING_SIZE]]
+        return [digest[index % len(digest)] / 255 for index in range(EMBEDDING_DIMENSIONS)]
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         return [self.embed_query(text) for text in texts]

@@ -6,7 +6,6 @@ import { MUTED_TEXT } from '../lib/styles'
 import Card from './Card'
 import DetailsList from './DetailsList'
 import ResearchChunks from './ResearchChunks'
-import ResearchStatusBadge from './ResearchStatusBadge'
 import TickerLink from './TickerLink'
 
 interface ResearchDocumentViewProps {
@@ -27,7 +26,6 @@ function ResearchDocumentView({ document, highlightedPosition }: ResearchDocumen
             { label: 'File', value: document.file_name },
             { label: 'Uploaded by', value: document.uploaded_by },
             { label: 'Uploaded', value: formatDateTime(document.created_at) },
-            { label: 'Status', value: <ResearchStatusBadge status={document.status} /> },
           ]}
         />
       </Card>

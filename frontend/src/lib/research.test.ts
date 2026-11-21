@@ -23,7 +23,7 @@ function document(ticker: string, documentDate: string): ResearchDocument {
     file_name: 'note.pdf',
     ticker,
     document_date: documentDate,
-    status: 'ready',
+    chunk_count: 3,
     uploaded_by: 'Demo Analyst',
     created_at: '2026-11-21T03:00:00Z',
   }

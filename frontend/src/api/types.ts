@@ -175,15 +175,13 @@ export interface ImportBatch {
   created_at: string
 }
 
-export type ResearchStatus = 'processing' | 'ready' | 'failed'
-
 export interface ResearchDocument {
   id: number
   title: string
   file_name: string
   ticker: string
   document_date: string
-  status: ResearchStatus
+  chunk_count: number
   uploaded_by: string
   created_at: string
 }

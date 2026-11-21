@@ -19,5 +19,5 @@ known-third-party = ["alembic"]
 known-first-party = ["ai_fakes", "factories"]
 
 [lint.flake8-bugbear]
-# FastAPI routes use Depends(...) and Query(...) as default arguments.
-extend-immutable-calls = ["fastapi.Depends", "fastapi.Query"]
+# FastAPI routes use Depends(...), Query(...) and Form(...) as default arguments.
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Form", "fastapi.Query"]

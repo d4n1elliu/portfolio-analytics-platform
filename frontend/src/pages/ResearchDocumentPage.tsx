@@ -1,35 +1,39 @@
 // The page for one research document. A link to a chunk highlights that chunk.
 
-import { useLocation } from 'react-router'
+import { useCallback } from 'react'
+import { useLocation, useParams } from 'react-router'
 
-import type { ResearchDocumentDetail } from '../api/types'
+import { getResearchDocument } from '../api/research'
+import LoadError from '../components/LoadError'
 import NotFoundNote from '../components/NotFoundNote'
 import PageLayout from '../components/PageLayout'
 import ResearchDocumentView from '../components/ResearchDocumentView'
+import { useApiQuery } from '../hooks/useApiQuery'
 import { chunkPositionIn } from '../lib/research'
+import { MUTED_TEXT } from '../lib/styles'
 import { ROUTES } from '../routes'
 
-const NO_DOCUMENT: ResearchDocumentDetail | null = null
-
 function ResearchDocumentPage() {
+  const { id = '' } = useParams()
   const { hash } = useLocation()
-  const document = NO_DOCUMENT
+  const loadDocument = useCallback((signal: AbortSignal) => getResearchDocument(id, signal), [id])
+  const { state, reload } = useApiQuery(loadDocument)
+  const document = state.status === 'loaded' ? state.data : null
 
-  if (document === null) {
-    return (
-      <PageLayout title="Research document">
+  return (
+    <PageLayout title={document?.title ?? 'Research document'}>
+      {state.status === 'loading' && <p className={MUTED_TEXT}>Loading the document…</p>}
+      {state.status === 'error' && <LoadError message={state.message} onRetry={reload} />}
+      {state.status === 'loaded' && document === null && (
         <NotFoundNote
           message="This document could not be found."
           backTo={ROUTES.research}
           backLabel="Back to Research"
         />
-      </PageLayout>
-    )
-  }
-
-  return (
-    <PageLayout title={document.title}>
-      <ResearchDocumentView document={document} highlightedPosition={chunkPositionIn(hash)} />
+      )}
+      {document !== null && (
+        <ResearchDocumentView document={document} highlightedPosition={chunkPositionIn(hash)} />
+      )}
     </PageLayout>
   )
 }

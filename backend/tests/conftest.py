@@ -44,6 +44,7 @@ OPTIONAL_SETTINGS = (
     "MARKET_TIMEZONE",
     "MAX_PAGE_SIZE",
     "PASSWORD_LOCKED_EMAILS",
+    "RESEARCH_MAX_FILE_BYTES",
     "SESSION_MINUTES",
 )
 os.environ.update(dict.fromkeys(OPTIONAL_SETTINGS, ""))
@@ -126,6 +127,7 @@ def no_real_ai_models(monkeypatch):
 
     monkeypatch.setattr("langchain.chat_models.init_chat_model", refuse)
     monkeypatch.setattr("langchain.embeddings.init_embeddings", refuse)
+    monkeypatch.setattr("fastembed.TextEmbedding", refuse)
     providers.get_chat_model.cache_clear()
     providers.get_embeddings.cache_clear()
 

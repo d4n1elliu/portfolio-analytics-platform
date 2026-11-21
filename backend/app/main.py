@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 from app.config import CORS_ORIGINS
 from app.database import get_db
 from app.request_log import LOG_FORMAT, log_request
-from app.routes import ai, auth, holdings, portfolio, securities, trades
+from app.routes import ai, auth, holdings, portfolio, research, securities, trades
 from app.routes.dependencies import get_current_user
 from app.routes.errors import register_error_handlers
 
@@ -65,7 +65,14 @@ register_error_handlers(app)
 # Each router holds the endpoints for one area of the API.
 app.include_router(auth.router)
 # Every endpoint in these routers needs a signed-in user.
-for router in (ai.router, holdings.router, portfolio.router, securities.router, trades.router):
+for router in (
+    ai.router,
+    holdings.router,
+    portfolio.router,
+    research.router,
+    securities.router,
+    trades.router,
+):
     app.include_router(router, dependencies=[Depends(get_current_user)])
 
 

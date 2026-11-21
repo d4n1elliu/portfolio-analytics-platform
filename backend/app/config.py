@@ -72,6 +72,7 @@ MARKET_TIMEZONE = os.getenv("MARKET_TIMEZONE", "").strip() or "Australia/Sydney"
 # Limits on uploaded CSV files.
 IMPORT_MAX_FILE_BYTES = _optional_int("IMPORT_MAX_FILE_BYTES", 1024 * 1024)
 IMPORT_MAX_ROWS = _optional_int("IMPORT_MAX_ROWS", 5000)
+RESEARCH_MAX_FILE_BYTES = _optional_int("RESEARCH_MAX_FILE_BYTES", 10 * 1024 * 1024)
 
 # A price refresh starts this many days before a security's latest stored
 # price, or a full lookback ago when it has none.
@@ -80,7 +81,9 @@ PRICE_LOOKBACK_DAYS = _optional_int("PRICE_LOOKBACK_DAYS", 365)
 
 AI_ENABLED = _optional_flag("AI_ENABLED")
 AI_CHAT_MODEL = os.getenv("AI_CHAT_MODEL", "").strip() or "anthropic:claude-opus-5-5"
-AI_EMBEDDING_MODEL = os.getenv("AI_EMBEDDING_MODEL", "").strip() or "openai:text-embedding-3-small"
+AI_EMBEDDING_MODEL = (
+    os.getenv("AI_EMBEDDING_MODEL", "").strip() or "fastembed:BAAI/bge-small-en-v1.5"
+)
 AI_REQUESTS_PER_HOUR = _optional_int("AI_REQUESTS_PER_HOUR", 20)
 AI_DAILY_TOKEN_CAP = _optional_int("AI_DAILY_TOKEN_CAP", 200_000)
 

@@ -8,9 +8,9 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import TradeSide, User
 from app.routes.dependencies import (
-    CsvUpload,
     PageParams,
     SortOrder,
+    UploadedFile,
     get_current_user,
     page_of,
     page_params,
@@ -102,7 +102,7 @@ def list_imports(page: PageParams = Depends(page_params), db: Session = Depends(
     dependencies=[Depends(require_permission(Permission.IMPORT_TRADES))],
 )
 def import_trades(
-    upload: CsvUpload = Depends(read_csv_upload),
+    upload: UploadedFile = Depends(read_csv_upload),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
