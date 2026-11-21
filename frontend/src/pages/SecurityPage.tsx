@@ -1,7 +1,7 @@
 // The page for one security: its position, price chart and trades.
 
 import { useCallback, useState } from 'react'
-import { Link, useParams } from 'react-router'
+import { useParams } from 'react-router'
 
 import { getHolding } from '../api/holdings'
 import { listSecurityPrices } from '../api/securities'
@@ -10,6 +10,7 @@ import type { Holding, TradeSortKey } from '../api/types'
 import Card from '../components/Card'
 import LoadError from '../components/LoadError'
 import LoadState from '../components/LoadState'
+import NotFoundNote from '../components/NotFoundNote'
 import PageLayout from '../components/PageLayout'
 import PriceChart from '../components/PriceChart'
 import SecurityPosition from '../components/SecurityPosition'
@@ -18,7 +19,7 @@ import { SECURITY_TRADES_LIMIT } from '../config'
 import { useApiQuery } from '../hooks/useApiQuery'
 import { formatCount } from '../lib/format'
 import { nextSort } from '../lib/sorting'
-import { MUTED_TEXT, TEXT_LINK } from '../lib/styles'
+import { MUTED_TEXT } from '../lib/styles'
 import { pricesAsAt } from '../lib/valuation'
 import { NEWEST_FIRST, NO_TRADE_FILTERS } from '../lib/trades'
 import { ROUTES } from '../routes'
@@ -34,12 +35,11 @@ function SecurityPage() {
       {state.status === 'loading' && <p className={MUTED_TEXT}>Loading {ticker}…</p>}
       {state.status === 'error' && <LoadError message={state.message} onRetry={reload} />}
       {state.status === 'loaded' && state.data === null && (
-        <p className={MUTED_TEXT}>
-          No security has the ticker {ticker}.{' '}
-          <Link to={ROUTES.holdings} className={TEXT_LINK}>
-            Back to Holdings
-          </Link>
-        </p>
+        <NotFoundNote
+          message={`No security has the ticker ${ticker}.`}
+          backTo={ROUTES.holdings}
+          backLabel="Back to Holdings"
+        />
       )}
       {state.status === 'loaded' && state.data !== null && (
         <SecurityDetails key={ticker} holding={state.data} />
