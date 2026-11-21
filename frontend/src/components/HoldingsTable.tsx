@@ -1,17 +1,24 @@
 import type { ReactNode } from 'react'
 
 import type { Holding } from '../api/types'
-import { NO_VALUE, formatCurrency, formatPercent, formatQuantity } from '../lib/format'
+import {
+  NO_VALUE,
+  UNIT_PRICE_DECIMALS,
+  formatCurrency,
+  formatPercent,
+  formatQuantity,
+} from '../lib/format'
 import DataTable from './DataTable'
 import type { Column } from './DataTable'
 import Profit from './Profit'
-
-const UNIT_COST_DECIMALS = 4
+import TickerLink from './TickerLink'
 
 const COLUMNS: Column<Holding>[] = [
   {
     header: 'Security',
-    render: (holding) => <TwoLines main={holding.ticker} detail={holding.security_name} bold />,
+    render: (holding) => (
+      <TwoLines main={<TickerLink ticker={holding.ticker} />} detail={holding.security_name} />
+    ),
     sortValue: (holding) => holding.ticker,
   },
   {
@@ -71,15 +78,14 @@ function moneyColumn(
 }
 
 interface TwoLinesProps {
-  main: string
+  main: ReactNode
   detail: string
-  bold?: boolean
 }
 
-function TwoLines({ main, detail, bold = false }: TwoLinesProps) {
+function TwoLines({ main, detail }: TwoLinesProps) {
   return (
     <div className="min-w-32">
-      <div className={bold ? 'font-medium' : ''}>{main}</div>
+      <div>{main}</div>
       <div className="text-xs text-slate-500">{detail}</div>
     </div>
   )
@@ -87,7 +93,7 @@ function TwoLines({ main, detail, bold = false }: TwoLinesProps) {
 
 /** Shows the same number of decimals on every row. */
 function formatUnitCost(value: string, currency: string): string {
-  return formatCurrency(value, currency, UNIT_COST_DECIMALS, UNIT_COST_DECIMALS)
+  return formatCurrency(value, currency, UNIT_PRICE_DECIMALS, UNIT_PRICE_DECIMALS)
 }
 
 function HoldingsTable({ holdings }: { holdings: Holding[] }) {

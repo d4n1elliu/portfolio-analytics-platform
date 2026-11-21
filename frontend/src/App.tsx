@@ -7,6 +7,7 @@ import SessionGate from './components/SessionGate'
 import DashboardPage from './pages/DashboardPage'
 import HoldingsPage from './pages/HoldingsPage'
 import LoginPage from './pages/LoginPage'
+import SecurityPage from './pages/SecurityPage'
 import TradesPage from './pages/TradesPage'
 import { ROUTES } from './routes'
 
@@ -21,6 +22,7 @@ function App() {
               <Route path={ROUTES.dashboard} element={<DashboardPage />} />
               <Route path={ROUTES.holdings} element={<HoldingsPage />} />
               <Route path={ROUTES.trades} element={<TradesPage />} />
+              <Route path={ROUTES.security} element={<SecurityPage />} />
             </Route>
             <Route path="*" element={<HomeRedirect />} />
           </Routes>

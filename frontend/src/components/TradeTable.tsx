@@ -1,11 +1,9 @@
 import type { Trade, TradeSide, TradeSortKey } from '../api/types'
-import { formatCurrency, formatDate, formatQuantity } from '../lib/format'
+import { UNIT_PRICE_DECIMALS, formatCurrency, formatDate, formatQuantity } from '../lib/format'
 import DataTable from './DataTable'
 import type { Column } from './DataTable'
+import TickerLink from './TickerLink'
 import type { SortBy } from '../lib/sorting'
-
-// Unit prices can be quoted in fractions of a cent.
-const PRICE_DECIMALS = 4
 
 const SIDE_COLOURS: Record<TradeSide, string> = {
   BUY: 'bg-emerald-50 text-emerald-700',
@@ -22,8 +20,7 @@ const COLUMNS: (Column<Trade> & { sortKey?: TradeSortKey })[] = [
   },
   {
     header: 'Ticker',
-    render: (trade) => trade.ticker,
-    className: 'font-medium',
+    render: (trade) => <TickerLink ticker={trade.ticker} />,
     sortKey: 'ticker',
   },
   { header: 'Security', render: (trade) => trade.security_name, className: 'text-slate-600' },
@@ -45,7 +42,7 @@ const COLUMNS: (Column<Trade> & { sortKey?: TradeSortKey })[] = [
   {
     header: 'Price',
     align: 'right',
-    render: (trade) => formatCurrency(trade.price, trade.currency, PRICE_DECIMALS),
+    render: (trade) => formatCurrency(trade.price, trade.currency, UNIT_PRICE_DECIMALS),
     sortKey: 'price',
   },
   {

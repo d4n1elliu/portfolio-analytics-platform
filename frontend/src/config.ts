@@ -15,3 +15,6 @@ export const PAGE_SIZE = 25
 
 /** How many of the latest imports the Trades page lists. */
 export const IMPORT_HISTORY_SIZE = 10
+
+/** The most trades the page for one security lists. The API returns no more in one request. */
+export const SECURITY_TRADES_LIMIT = 500
