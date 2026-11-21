@@ -146,18 +146,26 @@ export interface ChatMessage {
   sources: ChatSource[]
 }
 
-export interface ChatTurn {
-  role: ChatRole
-  text: string
-}
-
 export type ChatEvent =
+  | { type: 'conversation'; id: string; title: string }
   | { type: 'text'; text: string }
   | { type: 'tool_call'; id: string; name: string; input: Record<string, unknown> }
   | { type: 'tool_result'; id: string; output: string; failed: boolean }
   | { type: 'sources'; sources: ChatSource[] }
   | { type: 'done' }
   | { type: 'error'; message: string }
+
+export type StoredTurn = { role: 'user'; text: string } | { role: 'assistant'; events: ChatEvent[] }
+
+export interface Conversation {
+  id: string
+  title: string
+  updated_at: string
+}
+
+export interface ConversationDetail extends Conversation {
+  turns: StoredTurn[]
+}
 
 export type TradeSide = 'BUY' | 'SELL'
 

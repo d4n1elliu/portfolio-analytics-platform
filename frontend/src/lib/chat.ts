@@ -1,6 +1,13 @@
 // How a conversation with the assistant is built up from the events its answer streams.
 
-import type { ChatEvent, ChatMessage, ChatRole, ChatSource, ChatTurn, ToolCall } from '../api/types'
+import type {
+  ChatEvent,
+  ChatMessage,
+  ChatRole,
+  ChatSource,
+  StoredTurn,
+  ToolCall,
+} from '../api/types'
 
 export const SUGGESTED_QUESTIONS = [
   'What are my five largest holdings?',
@@ -19,8 +26,18 @@ export function isSendable(text: string): boolean {
   return text.trim() !== ''
 }
 
-export function toTurns(messages: ChatMessage[]): ChatTurn[] {
-  return messages.filter((message) => message.text !== '').map(({ role, text }) => ({ role, text }))
+export function messagesFromTurns(turns: StoredTurn[]): ChatMessage[] {
+  return turns.map((turn) => {
+    if (turn.role === 'user') return newMessage('user', turn.text)
+    return withNothingRunning(turn.events.reduce(answerAfter, newMessage('assistant', '')))
+  })
+}
+
+function withNothingRunning(answer: ChatMessage): ChatMessage {
+  const toolCalls = answer.toolCalls.map((toolCall) =>
+    toolCall.status === 'running' ? { ...toolCall, status: 'failed' as const } : toolCall,
+  )
+  return { ...answer, toolCalls }
 }
 
 export function readEvents(buffer: string): { events: ChatEvent[]; rest: string } {

@@ -3,7 +3,7 @@
 import { describe, expect, it } from 'vitest'
 
 import type { ChatMessage } from '../api/types'
-import { applyEvent, citedSources, describeInput, readEvents, toTurns } from './chat'
+import { applyEvent, citedSources, describeInput, messagesFromTurns, readEvents } from './chat'
 
 const QUESTION: ChatMessage = {
   id: '1',
@@ -126,8 +126,35 @@ describe('describeInput', () => {
   })
 })
 
-describe('toTurns', () => {
-  it('keeps the role and text, and drops an answer that never arrived', () => {
-    expect(toTurns([QUESTION, EMPTY_ANSWER])).toEqual([{ role: 'user', text: 'What do I hold?' }])
+describe('messagesFromTurns', () => {
+  it('rebuilds each answer from its stored events', () => {
+    const messages = messagesFromTurns([
+      { role: 'user', text: 'What do I hold?' },
+      {
+        role: 'assistant',
+        events: [
+          { type: 'tool_call', id: 'a', name: 'list_holdings', input: {} },
+          { type: 'tool_result', id: 'a', output: 'BHP 350', failed: false },
+          { type: 'text', text: 'You hold 350 BHP.' },
+        ],
+      },
+    ])
+
+    expect(messages.map(({ role, text }) => ({ role, text }))).toEqual([
+      { role: 'user', text: 'What do I hold?' },
+      { role: 'assistant', text: 'You hold 350 BHP.' },
+    ])
+    expect(messages[1].toolCalls).toMatchObject([{ name: 'list_holdings', status: 'done' }])
+  })
+
+  it('shows a tool call that was cut off before its result as failed, not running', () => {
+    const [answer] = messagesFromTurns([
+      {
+        role: 'assistant',
+        events: [{ type: 'tool_call', id: 'a', name: 'list_holdings', input: {} }],
+      },
+    ])
+
+    expect(answer.toolCalls).toMatchObject([{ name: 'list_holdings', status: 'failed' }])
   })
 })
