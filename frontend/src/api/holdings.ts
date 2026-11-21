@@ -1,4 +1,4 @@
-import { request } from './client'
+import { ApiError, request } from './client'
 import type { Holding } from './types'
 
 interface HoldingsParams {
@@ -12,4 +12,16 @@ export function listHoldings(params: HoldingsParams, signal?: AbortSignal): Prom
   const query = new URLSearchParams({ include_closed: String(params.includeClosed) })
   if (params.asOf) query.set('as_of', params.asOf)
   return request<Holding[]>(`/holdings?${query}`, { signal })
+}
+
+const NOT_FOUND = 404
+
+/** Fetch the current position in one security, or null if no security has the ticker. */
+export async function getHolding(ticker: string, signal?: AbortSignal): Promise<Holding | null> {
+  try {
+    return await request<Holding>(`/holdings/${encodeURIComponent(ticker)}`, { signal })
+  } catch (error) {
+    if (error instanceof ApiError && error.status === NOT_FOUND) return null
+    throw error
+  }
 }

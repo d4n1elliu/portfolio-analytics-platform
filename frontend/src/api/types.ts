@@ -30,6 +30,13 @@ export interface Security {
   currency: string
 }
 
+/** The closing price of a security on one day. */
+export interface SecurityPrice {
+  /** Date only, as "YYYY-MM-DD". */
+  date: string
+  close: string
+}
+
 /** The position in one security. Decimals arrive as text, like Trade. */
 export interface Holding {
   ticker: string
