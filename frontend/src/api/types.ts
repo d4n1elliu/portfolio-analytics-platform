@@ -100,7 +100,7 @@ export interface PortfolioPerformance {
 
 export type Role = 'operations' | 'portfolio_manager' | 'analyst'
 
-export type Permission = 'import_trades' | 'export_trades'
+export type Permission = 'import_trades' | 'export_trades' | 'upload_research'
 
 export interface User {
   email: string
@@ -153,5 +153,18 @@ export interface ImportBatch {
   file_name: string
   row_count: number
   imported_by: string
+  created_at: string
+}
+
+export type ResearchStatus = 'processing' | 'ready' | 'failed'
+
+export interface ResearchDocument {
+  id: number
+  title: string
+  file_name: string
+  ticker: string
+  document_date: string
+  status: ResearchStatus
+  uploaded_by: string
   created_at: string
 }

@@ -6,6 +6,7 @@ export const ROUTES = {
   dashboard: '/dashboard',
   holdings: '/holdings',
   login: '/login',
+  research: '/research',
   security: '/securities/:ticker',
   trades: '/trades',
 } as const
@@ -21,6 +22,7 @@ export const PAGES: Page[] = [
   { path: ROUTES.holdings, label: 'Holdings' },
   { path: ROUTES.trades, label: 'Trades' },
   { path: ROUTES.assistant, label: 'Assistant', needsAi: true },
+  { path: ROUTES.research, label: 'Research', needsAi: true },
 ]
 
 export function pagesFor(user: { ai_enabled: boolean }): Page[] {

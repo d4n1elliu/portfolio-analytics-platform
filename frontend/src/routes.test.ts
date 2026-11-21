@@ -33,6 +33,6 @@ describe('pagesFor', () => {
   })
 
   it('lists the AI pages once they are on', () => {
-    expect(labels(true)).toEqual(['Dashboard', 'Holdings', 'Trades', 'Assistant'])
+    expect(labels(true)).toEqual(['Dashboard', 'Holdings', 'Trades', 'Assistant', 'Research'])
   })
 })

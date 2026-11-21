@@ -18,3 +18,6 @@ export const IMPORT_HISTORY_SIZE = 10
 export const SECURITY_TRADES_LIMIT = 500
 
 export const MIN_PASSWORD_LENGTH = 12
+
+export const RESEARCH_FILE_TYPES = ['.pdf', '.md', '.txt']
+export const RESEARCH_MAX_FILE_BYTES = 10 * 1024 * 1024

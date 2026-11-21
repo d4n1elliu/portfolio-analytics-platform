@@ -18,3 +18,6 @@ export const TEXT_INPUT = `h-10 ${TEXT_BOX}`
 
 /** Small grey text for loading and empty messages. */
 export const MUTED_TEXT = 'text-sm text-slate-500'
+
+export const FILE_INPUT =
+  'block text-sm text-slate-700 file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-slate-800 hover:file:bg-slate-200'

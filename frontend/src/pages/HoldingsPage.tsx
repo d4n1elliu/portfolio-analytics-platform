@@ -13,7 +13,7 @@ import OversoldWarning from '../components/OversoldWarning'
 import PageLayout from '../components/PageLayout'
 import StalePriceWarning from '../components/StalePriceWarning'
 import { useApiQuery } from '../hooks/useApiQuery'
-import { toIsoDate } from '../lib/dates'
+import { useToday } from '../hooks/useToday'
 import { formatCount, formatDate } from '../lib/format'
 import {
   NO_FILTERS,
@@ -33,7 +33,7 @@ function HoldingsPage() {
   const [showClosed, setShowClosed] = useState(false)
   const [filters, setFilters] = useState(NO_FILTERS)
   const [asOf, setAsOf] = useState('')
-  const [today] = useState(() => toIsoDate(new Date()))
+  const today = useToday()
 
   const loadAllHoldings = useCallback(
     (signal: AbortSignal) => listHoldings({ includeClosed: true, asOf }, signal),

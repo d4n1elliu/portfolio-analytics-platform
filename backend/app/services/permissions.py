@@ -8,12 +8,15 @@ from app.models import Role
 class Permission(StrEnum):
     IMPORT_TRADES = "import_trades"
     EXPORT_TRADES = "export_trades"
+    UPLOAD_RESEARCH = "upload_research"
 
 
 ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
-    Role.OPERATIONS: frozenset({Permission.IMPORT_TRADES, Permission.EXPORT_TRADES}),
+    Role.OPERATIONS: frozenset(
+        {Permission.IMPORT_TRADES, Permission.EXPORT_TRADES, Permission.UPLOAD_RESEARCH}
+    ),
     Role.PORTFOLIO_MANAGER: frozenset({Permission.EXPORT_TRADES}),
-    Role.ANALYST: frozenset(),
+    Role.ANALYST: frozenset({Permission.UPLOAD_RESEARCH}),
 }
 
 
