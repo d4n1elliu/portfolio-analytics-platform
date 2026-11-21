@@ -74,6 +74,8 @@ IMPORT_MAX_ROWS = _optional_int("IMPORT_MAX_ROWS", 5000)
 PRICE_REFRESH_OVERLAP_DAYS = _optional_int("PRICE_REFRESH_OVERLAP_DAYS", 5)
 PRICE_LOOKBACK_DAYS = _optional_int("PRICE_LOOKBACK_DAYS", 365)
 
+BENCHMARK_TICKER = os.getenv("BENCHMARK_TICKER", "").strip().upper() or "VAS"
+
 # How long a sign in lasts before the user has to sign in again.
 SESSION_MINUTES = _optional_int("SESSION_MINUTES", 480)
 
