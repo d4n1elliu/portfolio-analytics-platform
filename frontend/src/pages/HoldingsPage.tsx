@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Link } from 'react-router'
 
 import { listHoldings } from '../api/holdings'
+import AsOfNotice from '../components/AsOfNotice'
 import Button from '../components/Button'
 import Card from '../components/Card'
 import HoldingsFilters from '../components/HoldingsFilters'
@@ -12,7 +13,8 @@ import OversoldWarning from '../components/OversoldWarning'
 import PageLayout from '../components/PageLayout'
 import StalePriceWarning from '../components/StalePriceWarning'
 import { useApiQuery } from '../hooks/useApiQuery'
-import { formatCount } from '../lib/format'
+import { toIsoDate } from '../lib/dates'
+import { formatCount, formatDate } from '../lib/format'
 import {
   NO_FILTERS,
   assetClassesOf,
@@ -27,15 +29,19 @@ import { MUTED_TEXT, TEXT_LINK } from '../lib/styles'
 import { latestPriceDate, pricesAsAt } from '../lib/valuation'
 import { ROUTES } from '../routes'
 
-/** Every position is fetched once. Closed ones are hidden in the browser. */
-function loadAllHoldings(signal: AbortSignal) {
-  return listHoldings({ includeClosed: true }, signal)
-}
-
 function HoldingsPage() {
   const [showClosed, setShowClosed] = useState(false)
   const [filters, setFilters] = useState(NO_FILTERS)
+  // The date the positions are shown for, or '' for today.
+  const [asOf, setAsOf] = useState('')
+  // Read once, so the answer does not change between renders.
+  const [today] = useState(() => toIsoDate(new Date()))
 
+  // Every position is fetched once for a date. Closed ones are hidden in the browser.
+  const loadAllHoldings = useCallback(
+    (signal: AbortSignal) => listHoldings({ includeClosed: true, asOf }, signal),
+    [asOf],
+  )
   const { state, reload } = useApiQuery(loadAllHoldings, { keepPreviousData: true })
 
   const holdings = state.status === 'loaded' ? state.data : null
@@ -45,8 +51,10 @@ function HoldingsPage() {
 
   return (
     <PageLayout title="Holdings">
+      {asOf !== '' && <AsOfNotice asOf={asOf} onBackToToday={() => setAsOf('')} />}
       {holdings && <OversoldWarning holdings={findOversold(holdings)} />}
-      <StalePriceWarning priceDate={priceDate} />
+      {/* Old prices are expected for a past date. */}
+      {asOf === '' && <StalePriceWarning priceDate={priceDate} />}
       {holdings && <HoldingsSummary holdings={shown} />}
 
       <Card
@@ -60,6 +68,9 @@ function HoldingsPage() {
           assetClasses={holdings ? assetClassesOf(holdings) : []}
           showClosed={showClosed}
           closedCount={holdings ? countClosed(holdings) : 0}
+          asOf={asOf}
+          today={today}
+          onAsOfChange={setAsOf}
           onFiltersChange={setFilters}
           onShowClosedChange={setShowClosed}
         />
@@ -72,7 +83,13 @@ function HoldingsPage() {
           <LoadError message={state.message} onRetry={reload} className="px-6 pb-6" />
         )}
 
-        {holdings && holdings.length === 0 && (
+        {holdings && holdings.length === 0 && asOf !== '' && (
+          <p className={`px-6 pb-6 ${MUTED_TEXT}`}>
+            Nothing had been traded by {formatDate(asOf)}.
+          </p>
+        )}
+
+        {holdings && holdings.length === 0 && asOf === '' && (
           <p className={`px-6 pb-6 ${MUTED_TEXT}`}>
             No positions yet.{' '}
             <Link to={ROUTES.trades} className={TEXT_LINK}>

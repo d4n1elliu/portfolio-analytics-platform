@@ -2,6 +2,7 @@
 
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
+from datetime import date
 from decimal import Decimal
 
 from sqlalchemy.orm import Session
@@ -23,9 +24,14 @@ class Holding:
     weight: Decimal | None = None
 
 
-def list_holdings(db: Session, include_closed: bool) -> list[Holding]:
-    """Return the position in every traded security, ordered by ticker."""
-    return build_holdings(list_trades_oldest_first(db), include_closed, latest_prices(db))
+def list_holdings(db: Session, include_closed: bool, as_of: date | None = None) -> list[Holding]:
+    """Return the position in every traded security, ordered by ticker.
+
+    Give as_of to get the positions at the end of that date: only the trades
+    made by then count, and each is valued at its latest price by then.
+    """
+    trades = list_trades_oldest_first(db, up_to=as_of)
+    return build_holdings(trades, include_closed, latest_prices(db, up_to=as_of))
 
 
 def build_holdings(

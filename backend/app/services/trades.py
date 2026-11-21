@@ -45,14 +45,19 @@ class TradeQuery:
     descending: bool = True
 
 
-def list_trades_oldest_first(db: Session) -> list[Trade]:
-    """Return every trade, with its security, oldest first."""
+def list_trades_oldest_first(db: Session, up_to: date | None = None) -> list[Trade]:
+    """Return every trade, with its security, oldest first.
+
+    Give up_to to leave out the trades made after that date.
+    """
     statement = (
         select(Trade)
         .options(joinedload(Trade.security))
         # The id decides the order of trades on the same day.
         .order_by(Trade.trade_date, Trade.id)
     )
+    if up_to is not None:
+        statement = statement.where(Trade.trade_date <= up_to)
     return list(db.scalars(statement))
 
 

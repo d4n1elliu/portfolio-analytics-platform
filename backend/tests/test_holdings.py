@@ -244,3 +244,13 @@ def test_endpoint_includes_closed_positions_when_asked(client_with_data):
 
     assert [holding["ticker"] for holding in response.json()] == ["BHP", "CBA"]
     assert response.json()[1]["average_cost"] is None
+
+
+def test_endpoint_accepts_a_past_date_and_refuses_a_future_one(client_with_data):
+    client = client_with_data([])
+
+    assert client.get("/holdings", params={"as_of": "2026-06-30"}).status_code == 200
+
+    response = client.get("/holdings", params={"as_of": "2999-01-01"})
+    assert response.status_code == 422
+    assert response.json() == {"detail": "The date must not be in the future."}

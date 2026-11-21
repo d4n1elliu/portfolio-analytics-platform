@@ -12,13 +12,15 @@ from app.services.inserts import insert_missing
 from app.services.price_provider import DailyClose
 
 
-def latest_prices(db: Session) -> dict[str, Price]:
-    """Return the most recent price of each security, by ticker, in one query."""
-    latest_dates = (
-        select(Price.security_id, func.max(Price.price_date).label("price_date"))
-        .group_by(Price.security_id)
-        .subquery()
-    )
+def latest_prices(db: Session, up_to: date | None = None) -> dict[str, Price]:
+    """Return the most recent price of each security, by ticker, in one query.
+
+    Give up_to to get the most recent price on or before that date instead.
+    """
+    dates = select(Price.security_id, func.max(Price.price_date).label("price_date"))
+    if up_to is not None:
+        dates = dates.where(Price.price_date <= up_to)
+    latest_dates = dates.group_by(Price.security_id).subquery()
     statement = (
         select(Price)
         .join(
