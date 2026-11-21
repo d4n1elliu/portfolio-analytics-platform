@@ -27,8 +27,6 @@ A full-stack web app for tracking a fund's holdings, performance and research, w
 
 ## System design
 
-### Architecture
-
 The browser only ever talks to Caddy. Caddy serves the React app and passes API calls to the backend, which is the only part that touches the database or the AI model.
 
 ```mermaid
@@ -56,119 +54,6 @@ flowchart LR
     actions -->|"save prices"| db
 ```
 
-### Inside the backend
-
-A request moves in one direction. Routes handle HTTP, services hold the business rules, and models describe the tables, so each layer can be changed and tested separately.
-
-```mermaid
-flowchart LR
-    request["HTTP request"] --> routes["Routes<br/>sign-in, permissions, validation"]
-    routes --> services["Services<br/>positions, valuation, performance"]
-    routes --> ai["AI package<br/>assistant, research search"]
-    ai -->|"read-only tools"| services
-    services --> models["Models<br/>SQLAlchemy tables"]
-    ai --> models
-    models --> db[("PostgreSQL")]
-```
-
-### Data model
-
-Positions are never stored. They are calculated from `trades`, which is why there is no holdings table.
-
-```mermaid
-erDiagram
-    securities ||--o{ trades : "is traded in"
-    securities ||--o{ prices : "has a daily close"
-    securities ||--o{ research_documents : "is written about in"
-    import_batches ||--o{ trades : "brought in"
-    users ||--o{ import_batches : "imported"
-    users ||--o{ user_sessions : "signs in with"
-    users ||--o{ ai_usage : "spends"
-    users ||--o{ conversations : "owns"
-    users ||--o{ research_documents : "uploaded"
-    research_documents ||--o{ research_chunks : "is split into"
-
-    securities {
-        string ticker
-        string name
-        string sector
-    }
-    trades {
-        date trade_date
-        string side
-        decimal quantity
-        decimal price
-        decimal fees
-    }
-    prices {
-        date price_date
-        decimal close
-    }
-    users {
-        string email
-        string role
-    }
-    research_chunks {
-        text text
-        vector embedding
-        tsvector search_vector
-    }
-    conversations {
-        string title
-        datetime updated_at
-    }
-```
-
-### How the assistant answers a question
-
-The model decides which tools to call, but it never does the maths. Every figure in an answer comes back from a tool that runs the same code as the pages.
-
-```mermaid
-sequenceDiagram
-    actor User
-    participant Page as Assistant page
-    participant API as FastAPI
-    participant Agent as LangChain agent
-    participant Model as Claude
-    participant Tools as Read-only tools
-    participant DB as PostgreSQL
-
-    User->>Page: Asks a question
-    Page->>API: POST /ai/chat
-    API->>API: Check sign-in and usage limits
-    API->>Agent: Question and conversation id
-    Agent->>DB: Load the earlier messages
-    Agent->>Model: Question, history and tool list
-    Model-->>Agent: Call list_holdings
-    Agent->>Tools: Run list_holdings
-    Tools->>DB: Read trades and prices
-    Tools-->>Agent: Figures, already calculated
-    Agent->>Model: Tool result
-    Model-->>Agent: Answer quoting the figures
-    Agent->>DB: Save the conversation
-    API-->>Page: Stream tool calls and text
-    Page-->>User: Answer with the tools shown
-```
-
-### How research is searched
-
-Two searches run side by side so that a question is matched both by what it means and by the exact words it uses.
-
-```mermaid
-flowchart TD
-    question["Search query"] --> followup{"Earlier questions<br/>in the conversation?"}
-    followup -->|Yes| rewrite["Chat model rewrites it<br/>to stand alone"]
-    followup -->|No| split(( ))
-    rewrite --> split
-    split --> vector["Vector search<br/>pgvector, by meaning"]
-    split --> words["Full-text search<br/>Postgres, by words"]
-    vector --> fuse["Reciprocal rank fusion<br/>combine both lists"]
-    words --> fuse
-    fuse --> rerank["Local reranker<br/>final order"]
-    rerank --> top["Top 5 passages<br/>each with a source number"]
-    top --> answer["Answer that cites its sources"]
-```
-
 ## Key decisions
 
 **Positions come from trades.** There is no holdings table. A position is worked out by adding up its trades, using the weighted average cost method, so the trade ledger is the single source of truth and a position can be shown as at any past date. Money and quantities use exact decimals, never floats.
@@ -184,6 +69,8 @@ flowchart TD
 | Operations        | Yes             | Yes           | Yes           | Yes             |
 | Portfolio Manager | Yes             | Yes           | No            | No              |
 | Analyst           | Yes             | No            | No            | Yes             |
+
+**The code is layered.** A route calls a service, and a service uses the models. Routes hold no business rules and services hold no HTTP code.
 
 ## AI features
 
