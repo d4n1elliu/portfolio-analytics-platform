@@ -10,11 +10,13 @@ from langchain.agents.middleware import wrap_model_call
 from langchain_core.embeddings import Embeddings
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMessage, trim_messages
+from langchain_core.tools import BaseTool
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from sqlalchemy.orm import Session
 
 from app.ai.conversations import mark_used
 from app.ai.memory import stored_messages, thread
+from app.ai.query_rewriting import follow_up_rewriter
 from app.ai.retrieval import Reranker, no_reranker
 from app.ai.tools import portfolio_tools, research_tools
 from app.ai.usage import record_usage
@@ -92,10 +94,7 @@ def stream_answer(
 ) -> Iterator[dict]:
     agent = create_agent(
         assistant.chat_model,
-        [
-            *portfolio_tools(db),
-            *research_tools(db, assistant.load_embeddings, assistant.load_reranker),
-        ],
+        [*portfolio_tools(db), *_research_tools(assistant, db, conversation_id, tokens_used)],
         system_prompt=SYSTEM_PROMPT.format(today=market_today()),
         middleware=[send_recent_messages_only],
         checkpointer=assistant.memory,
@@ -115,6 +114,18 @@ def stream_answer(
             yield from _text_events(chunk)
         else:
             yield from _step_events(chunk, tokens_used)
+
+
+def _research_tools(
+    assistant: Assistant, db: Session, conversation_id: str, tokens_used: TokenCount
+) -> list[BaseTool]:
+    earlier_questions = [
+        message.text
+        for message in stored_messages(assistant.memory, conversation_id)
+        if isinstance(message, HumanMessage)
+    ]
+    rewrite = follow_up_rewriter(assistant.chat_model, earlier_questions, tokens_used)
+    return research_tools(db, assistant.load_embeddings, assistant.load_reranker, rewrite)
 
 
 def conversation_turns(memory: BaseCheckpointSaver, conversation_id: str) -> list[dict]:

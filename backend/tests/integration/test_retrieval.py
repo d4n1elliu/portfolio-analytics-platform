@@ -4,6 +4,7 @@ import json
 from datetime import date
 
 import pytest
+from langgraph.checkpoint.memory import InMemorySaver
 
 from ai_fakes import (
     KeywordEmbeddings,
@@ -12,6 +13,7 @@ from ai_fakes import (
     streamed_events,
     tool_call,
 )
+from app.ai.assistant import Assistant, TokenCount, stream_answer
 from app.ai.providers import embeddings_loader, get_chat_model, reranker_loader
 from app.ai.retrieval import ResearchFilters, SearchOptions, search
 from app.ai.tools import research_tools
@@ -90,6 +92,31 @@ def test_a_reranker_decides_the_final_order(db, library):
     assert titles(search(db, EMBEDDINGS, "plasma", options=options))[0] == "BHP margins"
 
 
+def test_a_follow_up_search_is_rewritten_using_the_earlier_questions(db, library):
+    assistant = Assistant(
+        scripted_chat_model(
+            tool_call("search_research", question="plasma"),
+            "Plasma volumes rose [1].",
+            tool_call("search_research", question="its margin"),
+            "BHP margin on iron ore",
+            "The margin fell [1].",
+        ),
+        lambda: EMBEDDINGS,
+        InMemorySaver(),
+    )
+    tokens_used = TokenCount()
+    list(stream_answer(assistant, db, "c1", "How is plasma going?", TokenCount()))
+
+    events = list(stream_answer(assistant, db, "c1", "And its margin?", tokens_used))
+
+    (result,) = [event for event in events if event["type"] == "tool_result"]
+    assert json.loads(result["output"])["searched_for"] == "BHP margin on iron ore"
+    assert [event["text"] for event in events if event["type"] == "text"] == [
+        "The margin fell [1]."
+    ]
+    assert tokens_used.input_tokens == 30
+
+
 def test_the_search_tool_numbers_its_sources_and_keeps_the_numbers(db, library):
     (search_research,) = research_tools(db, lambda: EMBEDDINGS)
 
@@ -124,7 +151,7 @@ def test_text_inside_a_note_reaches_the_model_only_as_quoted_text(db, library):
 
     excerpt = content["excerpts"][0]
     assert INJECTION in excerpt["quoted_text"]
-    assert set(content) == {"excerpts"}
+    assert set(content) == {"searched_for", "excerpts"}
 
 
 def test_the_search_tool_says_so_when_nothing_matches(db, library):
