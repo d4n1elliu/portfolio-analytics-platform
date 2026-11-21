@@ -14,6 +14,8 @@ READ_ENDPOINTS = [
     "/trades/export",
     "/trades/imports",
 ]
+# These answer 404 without a database, so only the sign in check is tested here.
+SECURITY_ENDPOINTS = ["/holdings/BHP", "/securities/BHP/prices"]
 OPEN_ENDPOINTS = ["/health", "/docs"]
 
 NOT_SIGNED_IN = {"detail": "Sign in to continue."}
@@ -26,7 +28,7 @@ def client_signed_in_as(client_with_users, role: Role):
     return client
 
 
-@pytest.mark.parametrize("path", READ_ENDPOINTS)
+@pytest.mark.parametrize("path", READ_ENDPOINTS + SECURITY_ENDPOINTS)
 def test_reading_data_needs_a_sign_in(client_with_users, path):
     response = client_with_users(make_user()).get(path)
 

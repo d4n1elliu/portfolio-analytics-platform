@@ -8,8 +8,9 @@ from sqlalchemy.orm import Session
 
 from app.config import DEFAULT_PAGE_SIZE, IMPORT_MAX_FILE_BYTES, MAX_PAGE_SIZE
 from app.database import get_db
-from app.models import Role, User
+from app.models import Role, Security, User
 from app.schemas.common import Page
+from app.services import securities as securities_service
 from app.services import users as users_service
 from app.services.tokens import InvalidTokenError, read_token
 
@@ -86,6 +87,17 @@ def get_current_user(
     if user is None or not user.is_active:
         raise not_signed_in
     return user
+
+
+def get_security(ticker: str, db: Session = Depends(get_db)) -> Security:
+    """Return the security named in the path. Use with Depends().
+
+    Answers 404 if no security has that ticker.
+    """
+    security = securities_service.find_by_ticker(db, ticker)
+    if security is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"No security has the ticker '{ticker}'.")
+    return security
 
 
 def require_role(*allowed: Role):

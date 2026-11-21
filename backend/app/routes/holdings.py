@@ -6,6 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.models import Security
+from app.routes.dependencies import get_security
 from app.schemas.holding import HoldingRead
 from app.services import holdings as holdings_service
 from app.services.market_time import market_today
@@ -26,3 +28,9 @@ def list_holdings(
         )
     holdings = holdings_service.list_holdings(db, include_closed=include_closed, as_of=as_of)
     return [HoldingRead.from_holding(holding) for holding in holdings]
+
+
+@router.get("/{ticker}", response_model=HoldingRead)
+def read_holding(security: Security = Depends(get_security), db: Session = Depends(get_db)):
+    """Return the current position in one security. Zero if it has never been traded."""
+    return HoldingRead.from_holding(holdings_service.find_holding(db, security))
