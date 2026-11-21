@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react'
 
 import { useSortedRows } from '../hooks/useSortedRows'
-import type { SortDirection, SortValue } from '../hooks/useSortedRows'
+import type { SortValue } from '../hooks/useSortedRows'
+import type { SortBy, SortDirection } from '../lib/sorting'
 
 export interface Column<T> {
   header: string
@@ -13,6 +14,8 @@ export interface Column<T> {
   className?: string
   /** Add this to make the column sortable. Returns the value to sort a row by. */
   sortValue?: (row: T) => SortValue
+  /** Add this instead when the rows are sorted outside the table. Passed to onSort. */
+  sortKey?: string
 }
 
 interface DataTableProps<T> {
@@ -20,6 +23,12 @@ interface DataTableProps<T> {
   rows: T[]
   /** A value that is different for every row, such as its id. */
   getRowKey: (row: T) => string | number
+  /**
+   * Give both to sort the rows outside the table, such as on the server. The
+   * rows are then shown in the order given, and columns with a sortKey can be sorted.
+   */
+  sort?: SortBy<string>
+  onSort?: (sortKey: string) => void
 }
 
 // The first column stays in place when the table scrolls sideways.
@@ -28,8 +37,21 @@ const CELL_SPACING = 'px-2 py-3 first:sticky first:left-0 first:bg-white first:p
 const NUMBER_CELL = 'text-right tabular-nums whitespace-nowrap'
 
 /** A table for any kind of row. The columns decide what is shown. */
-function DataTable<T>({ columns, rows, getRowKey }: DataTableProps<T>) {
-  const { sortedRows, toggleSort, directionOf } = useSortedRows(rows, columns)
+function DataTable<T>({ columns, rows, getRowKey, sort, onSort }: DataTableProps<T>) {
+  const local = useSortedRows(rows, columns)
+  const sortedOutside = sort !== undefined && onSort !== undefined
+  const shownRows = sortedOutside ? rows : local.sortedRows
+
+  /** What a column is sorted by: its sortKey outside the table, its header inside. */
+  function sortIdOf(column: Column<T>): string | undefined {
+    if (sortedOutside) return column.sortKey
+    return column.sortValue ? column.header : undefined
+  }
+
+  function directionOf(sortId: string): SortDirection | undefined {
+    if (!sortedOutside) return local.directionOf(sortId)
+    return sort.key === sortId ? sort.direction : undefined
+  }
 
   return (
     <div className="overflow-x-auto">
@@ -38,19 +60,20 @@ function DataTable<T>({ columns, rows, getRowKey }: DataTableProps<T>) {
           <tr>
             {columns.map((column) => {
               const alignRight = column.align === 'right'
-              const direction = directionOf(column.header)
+              const sortId = sortIdOf(column)
+              const direction = sortId === undefined ? undefined : directionOf(sortId)
               return (
                 <th
                   key={column.header}
-                  aria-sort={column.sortValue ? (direction ?? 'none') : undefined}
+                  aria-sort={sortId === undefined ? undefined : (direction ?? 'none')}
                   className={`${CELL_SPACING} whitespace-nowrap font-medium ${alignRight ? 'text-right' : ''}`}
                 >
-                  {column.sortValue ? (
+                  {sortId !== undefined ? (
                     <SortButton
                       label={column.header}
                       direction={direction}
                       alignRight={alignRight}
-                      onClick={() => toggleSort(column.header)}
+                      onClick={() => (sortedOutside ? onSort(sortId) : local.toggleSort(sortId))}
                     />
                   ) : (
                     column.header
@@ -61,7 +84,7 @@ function DataTable<T>({ columns, rows, getRowKey }: DataTableProps<T>) {
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
-          {sortedRows.map((row) => (
+          {shownRows.map((row) => (
             <tr key={getRowKey(row)}>
               {columns.map((column) => (
                 <td
