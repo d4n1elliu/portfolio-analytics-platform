@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 
 COULD_NOT_ANSWER = "The assistant could not answer. Try again."
 MAX_STEPS = 16
+TRACE_NAME = "portfolio-assistant"
 MAX_MESSAGES_SENT = 40
 TOOL_OUTPUT_SHOWN = 4000
 
@@ -96,7 +97,12 @@ def stream_answer(
     )
     stream = agent.stream(
         {"messages": [{"role": "user", "content": question}]},
-        {**thread(conversation_id), "recursion_limit": MAX_STEPS},
+        {
+            **thread(conversation_id),
+            "recursion_limit": MAX_STEPS,
+            "run_name": TRACE_NAME,
+            "metadata": {"conversation_id": conversation_id},
+        },
         stream_mode=["messages", "updates"],
     )
     for mode, chunk in stream:

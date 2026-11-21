@@ -15,7 +15,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from app.config import AI_ENABLED, CORS_ORIGINS
+from app.config import AI_ENABLED, AI_TRACING, CORS_ORIGINS
 from app.database import get_db
 from app.request_log import LOG_FORMAT, log_request
 from app.routes import ai, auth, holdings, portfolio, research, securities, trades
@@ -35,6 +35,8 @@ async def prepare_ai(app: FastAPI) -> AsyncIterator[None]:
             create_checkpoint_tables()
         except Exception:
             logger.exception("Could not prepare the tables that hold conversations")
+        if AI_TRACING:
+            logger.info("Tracing is on: each answer's model and tool calls are sent to LangSmith")
     yield
 
 
