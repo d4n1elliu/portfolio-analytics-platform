@@ -86,7 +86,9 @@ def test_window_is_the_full_lookback_when_nothing_is_stored():
 
 
 def test_closes_are_fetched_and_saved_for_each_security():
-    provider = FakeProvider({"BHP": [close(12, "60.39"), close(13, "58.86")], "CBA": [close(13, "170.87")]})
+    provider = FakeProvider(
+        {"BHP": [close(12, "60.39"), close(13, "58.86")], "CBA": [close(13, "170.87")]}
+    )
     store = FakeStore()
 
     result = refresh([BHP, CBA], provider, store)
@@ -123,7 +125,9 @@ def test_no_closes_is_not_a_failure_and_saves_nothing():
 
 
 def test_one_provider_failure_does_not_stop_the_others():
-    provider = FakeProvider({"BHP": [close(13, "58.86")], "VAS": [close(13, "112.57")]}, failing=("CBA",))
+    provider = FakeProvider(
+        {"BHP": [close(13, "58.86")], "VAS": [close(13, "112.57")]}, failing=("CBA",)
+    )
     store = FakeStore()
 
     result = refresh([BHP, CBA, VAS], provider, store)

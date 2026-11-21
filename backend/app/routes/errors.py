@@ -18,9 +18,7 @@ IMPORT_ERROR_RESPONSES = {
 
 
 def _file_error(request: Request, error: ImportFileError) -> JSONResponse:
-    return JSONResponse(
-        status_code=status.HTTP_400_BAD_REQUEST, content={"detail": str(error)}
-    )
+    return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST, content={"detail": str(error)})
 
 
 def _rows_error(request: Request, error: ImportRowsError) -> JSONResponse:
@@ -31,8 +29,7 @@ def _rows_error(request: Request, error: ImportRowsError) -> JSONResponse:
             f"Fix {count} {'error' if count == 1 else 'errors'} and upload the file again."
         ),
         errors=[
-            ImportRowError(row=e.row, column=e.column, message=e.message)
-            for e in error.errors
+            ImportRowError(row=e.row, column=e.column, message=e.message) for e in error.errors
         ],
     )
     return JSONResponse(

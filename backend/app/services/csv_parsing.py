@@ -81,9 +81,7 @@ def read_rows(text: str, required_columns: tuple[str, ...], max_rows: int) -> li
     columns = [name.strip().lower() for name in header]
     missing = [name for name in required_columns if name not in columns]
     if missing:
-        raise ImportFileError(
-            f"The header row is missing required columns: {', '.join(missing)}."
-        )
+        raise ImportFileError(f"The header row is missing required columns: {', '.join(missing)}.")
 
     rows: list[Row] = []
     for values in reader:
@@ -134,9 +132,7 @@ def parse_date(value: str, column: str, today: date, errors: RowErrors) -> date 
     return parsed
 
 
-def parse_ticker(
-    value: str, column: str, known_tickers: set[str], errors: RowErrors
-) -> str | None:
+def parse_ticker(value: str, column: str, known_tickers: set[str], errors: RowErrors) -> str | None:
     """Parse a ticker that must be one of known_tickers (upper case)."""
     if not value:
         errors.add(column, f"{column} is required.")

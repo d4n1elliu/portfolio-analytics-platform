@@ -22,7 +22,7 @@ Five features are in place:
 
 | Layer    | Technology                                                    |
 | -------- | ------------------------------------------------------------- |
-| Frontend | React, TypeScript, Vite, Tailwind CSS v4, ECharts             |
+| Frontend | React, TypeScript, Vite, Tailwind CSS v4, ECharts, Vitest     |
 | Backend  | Python, FastAPI, uvicorn, python-dotenv, pytest, yfinance, argon2-cffi, PyJWT |
 | Database | PostgreSQL on Neon, SQLAlchemy 2, Alembic, psycopg 3          |
 | Hosting  | Docker, Caddy, GitHub Actions, GitHub Container Registry      |
@@ -35,15 +35,19 @@ portfolio-analytics-platform/
 ├── .gitignore
 ├── .nvmrc                    Node version for local use and CI
 ├── .python-version           Python version for local use and CI
+├── docker-compose.dev.yml    Local PostgreSQL for development and tests
 ├── docker-compose.prod.yml   Production setup that runs both containers
 ├── LICENSE
 ├── README.md
 │
 ├── .github/
 │   └── workflows/
-│       ├── ci.yml            Lint, tests, type check and Docker builds
+│       ├── ci.yml            Lint, format check, tests, type check and Docker builds
 │       ├── deploy.yml        Publishes images and deploys after CI passes
 │       └── refresh-prices.yml  Fetches closing prices on weekdays
+│
+├── dev/
+│   └── postgres/             Creates the test database in the local PostgreSQL
 │
 ├── frontend/
 │   ├── public/               Files served as they are, such as the favicon
@@ -53,6 +57,7 @@ portfolio-analytics-platform/
 │   │   ├── hooks/            Shared hooks such as useApiQuery and useSignInAttempt
 │   │   ├── lib/              Helpers such as formatting and chart colours
 │   │   ├── pages/            One component per screen such as DashboardPage
+│   │   ├── testing/          Builders the tests share, such as makeHolding
 │   │   ├── App.tsx           Root component and page routes
 │   │   ├── config.ts         API address, locale, currency and page size
 │   │   ├── main.tsx          React entry point
@@ -60,6 +65,7 @@ portfolio-analytics-platform/
 │   ├── .dockerignore
 │   ├── .env.example          Template for frontend environment variables
 │   ├── .oxlintrc.json        Linter settings
+│   ├── .prettierrc.json      Formatter settings
 │   ├── Caddyfile             Caddy settings for HTTPS and the /api proxy
 │   ├── Dockerfile            Builds the app and serves it with Caddy
 │   ├── index.html            HTML shell that Vite serves
@@ -68,7 +74,7 @@ portfolio-analytics-platform/
 │   ├── tsconfig.app.json     TypeScript settings for the app code
 │   ├── tsconfig.json         Points to the two TypeScript configs
 │   ├── tsconfig.node.json    TypeScript settings for vite.config.ts
-│   └── vite.config.ts        Vite settings with React and Tailwind plugins
+│   └── vite.config.ts        Vite and Vitest settings
 │
 └── backend/
     ├── alembic/              Migration setup and the files in versions/
@@ -84,6 +90,7 @@ portfolio-analytics-platform/
     ├── sample_data/          Example trade files and a year of closing prices
     ├── scripts/              One-off scripts such as seed.py and seed_users.py
     ├── tests/                pytest tests such as positions and valuation
+    │   └── integration/      Tests that run real queries against PostgreSQL
     ├── .dockerignore
     ├── .env.example          Template for backend environment variables
     ├── alembic.ini           Alembic settings with no database URL
@@ -92,7 +99,7 @@ portfolio-analytics-platform/
     ├── requirements-dev.txt  Runtime packages plus test and lint tools
     ├── requirements-jobs.txt Runtime packages plus those the price jobs need
     ├── requirements.txt      Pinned packages the app needs to run
-    └── ruff.toml             Linter settings
+    └── ruff.toml             Linter and formatter settings
 ```
 
 A request flows through the backend in one direction: a route calls a service, and a service uses the models. Routes contain no business rules and services contain no HTTP code, so each can be changed and tested separately.
@@ -283,19 +290,21 @@ Two example files are in `backend/sample_data/`: `trades_sample.csv` (30 valid t
 
 ## Local setup
 
-Prerequisites: Python 3.12+ and Node.js 24+.
+Prerequisites: Python 3.12+, Node.js 24+ and Docker.
 
 Run the backend and frontend in two separate terminals.
 
-### Database (Neon)
+### Database
 
-The backend needs a PostgreSQL database and will not start without `DATABASE_URL`.
+The backend needs a PostgreSQL database and will not start without `DATABASE_URL`. For local work, start one in Docker from the project folder:
 
-1. Create a free project at https://neon.tech.
-2. In the project dashboard, click **Connect** and copy the connection string. It starts with `postgresql://`.
-3. Paste it unchanged as `DATABASE_URL` in `backend/.env` (created in the next step). The app selects the psycopg 3 driver itself.
+```bash
+docker compose -f docker-compose.dev.yml up -d
+```
 
-Neon suspends a database after a few minutes without activity, so the first request after a pause takes around a second longer while it wakes up.
+It listens on port 5433 and holds two databases: `portfolio` for the app and `portfolio_test` for the tests. `backend/.env.example` already points at both, so nothing needs editing. To delete the local data and start again, run `docker compose -f docker-compose.dev.yml down -v`.
+
+The live site uses [Neon](https://neon.tech) instead. A connection string copied from the Neon dashboard works unchanged as `DATABASE_URL`: the app selects the psycopg 3 driver itself. Keep it out of `backend/.env`, so local work never changes the live data.
 
 ### Backend
 
@@ -304,7 +313,7 @@ cd backend
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements-dev.txt
-cp .env.example .env    # then set DATABASE_URL in .env
+cp .env.example .env    # points at the local database
 alembic upgrade head    # create the database tables
 uvicorn app.main:app --reload
 ```
@@ -384,17 +393,35 @@ Run the backend tests from `backend/` with the virtual environment active:
 pytest
 ```
 
-The tests cover the CSV rules, positions, valuation, price refresh, portfolio history and performance, and login and roles. They do not use a database or the network, so they run without a `.env` file.
+Most tests cover the rules in the services: the CSV rules, positions, valuation, price refresh, portfolio history and performance, and login and roles. They use no database and no network.
 
-### Linting
+The tests in `tests/integration/` run the migrations, the queries and the API against PostgreSQL. They use `TEST_DATABASE_URL`, read from the shell or `backend/.env`, and are skipped when it is not set. Each test is undone afterwards, so no rows are left behind. The migration tests drop and rebuild every table, so the tests refuse a database whose name does not end in `_test`.
 
-Check the backend code for common mistakes from `backend/`:
+Run the frontend tests from `frontend/`:
+
+```bash
+npm test
+```
+
+They cover the helpers in `src/lib/`, the shared hooks, and the API client.
+
+### Linting and formatting
+
+Check the backend code for common mistakes, and put it in the standard layout, from `backend/`:
 
 ```bash
 ruff check .
+ruff format .
 ```
 
-The settings are in `backend/ruff.toml`.
+The settings are in `backend/ruff.toml`. The same for the frontend, from `frontend/`:
+
+```bash
+npm run lint
+npm run format
+```
+
+CI fails if either side is not formatted.
 
 ### Frontend
 
@@ -419,7 +446,8 @@ Real `.env` files are git-ignored and must never be committed. The `.env.example
 
 | File                    | Variable              | Purpose                                              |
 | ----------------------- | --------------------- | ---------------------------------------------------- |
-| `backend/.env.example`  | `DATABASE_URL`        | Neon PostgreSQL connection string (required)         |
+| `backend/.env.example`  | `DATABASE_URL`        | PostgreSQL connection string (required). The example is the local database |
+| `backend/.env.example`  | `TEST_DATABASE_URL`   | Optional. Database for the tests in `tests/integration/`. Its name must end in `_test` |
 | `backend/.env.example`  | `JWT_SECRET`          | Secret for signing session tokens. Needed to sign in |
 | `backend/.env.example`  | `CORS_ORIGINS`        | Optional. Comma-separated addresses allowed to call the API. Defaults to `http://localhost:5173` |
 | `backend/.env.example`  | `MARKET_TIMEZONE`     | Optional. Time zone that decides "today" for trade dates. Defaults to `Australia/Sydney` |
@@ -440,7 +468,7 @@ The site runs on a VPS as two Docker containers. The database stays on Neon.
 
 ### How a change goes live
 
-1. A pull request runs the CI workflow: lint, tests, type check and a build of both Docker images.
+1. A pull request runs the CI workflow: lint, format check, tests, type check and a build of both Docker images.
 2. When the pull request is merged, CI runs again on `main`.
 3. If it passes, the Deploy workflow builds both images and pushes them to the GitHub Container Registry, tagged with the commit.
 4. The workflow then connects to the server over SSH, pulls those images, runs `alembic upgrade head`, and restarts the containers.

@@ -54,9 +54,7 @@ class Trade(CreatedAtMixin, Base):
     # Price paid or received for one unit, in the security's currency.
     price: Mapped[Decimal] = mapped_column(UNIT_PRICE)
     # Brokerage and other costs for the whole trade.
-    fees: Mapped[Decimal] = mapped_column(
-        CASH_AMOUNT, default=Decimal("0"), server_default="0"
-    )
+    fees: Mapped[Decimal] = mapped_column(CASH_AMOUNT, default=Decimal("0"), server_default="0")
 
     security: Mapped[Security] = relationship(back_populates="trades")
 

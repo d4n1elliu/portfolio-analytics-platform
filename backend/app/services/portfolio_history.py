@@ -29,7 +29,9 @@ class HistoryPoint:
 
 def list_portfolio_history(db: Session) -> list[HistoryPoint]:
     """Return one point per priced date, oldest first."""
-    return build_portfolio_history(list_trades_oldest_first(db), list_prices_of_traded_securities(db))
+    return build_portfolio_history(
+        list_trades_oldest_first(db), list_prices_of_traded_securities(db)
+    )
 
 
 def build_portfolio_history(trades: Iterable[Trade], prices: Iterable[Price]) -> list[HistoryPoint]:

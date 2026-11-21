@@ -22,9 +22,7 @@ class Price(Base):
         # A security can have only one closing price per day. PostgreSQL
         # enforces this with an index, which also makes it fast to look up the
         # prices for one security.
-        UniqueConstraint(
-            "security_id", "price_date", name="uq_prices_security_id_price_date"
-        ),
+        UniqueConstraint("security_id", "price_date", name="uq_prices_security_id_price_date"),
         CheckConstraint("close > 0", name="close_positive"),
     )
 

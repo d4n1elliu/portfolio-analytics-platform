@@ -162,7 +162,9 @@ def test_response_rounds_valuation_money_to_cents_and_fractions_to_six_places():
     ]
     prices = {"BHP": price(bhp, "46.10"), "CBA": price(cba, "158")}
 
-    holding = HoldingRead.from_holding(build_holdings(trades, include_closed=False, prices=prices)[0])
+    holding = HoldingRead.from_holding(
+        build_holdings(trades, include_closed=False, prices=prices)[0]
+    )
 
     assert str(holding.last_price) == "46.10"
     assert holding.price_date == PRICE_DATE
@@ -175,7 +177,9 @@ def test_response_rounds_valuation_money_to_cents_and_fractions_to_six_places():
 def test_response_has_no_valuation_fields_without_a_price():
     bhp = make_security("BHP")
 
-    holding = HoldingRead.from_holding(build_holdings([buy(bhp, "100", "40")], include_closed=False)[0])
+    holding = HoldingRead.from_holding(
+        build_holdings([buy(bhp, "100", "40")], include_closed=False)[0]
+    )
 
     assert holding.last_price is None
     assert holding.price_date is None

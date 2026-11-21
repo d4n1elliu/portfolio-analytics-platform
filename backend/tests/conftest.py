@@ -1,14 +1,33 @@
 """Test setup. pytest runs this file before it collects any tests."""
 
 import os
+from pathlib import Path
 
 import pytest
+from dotenv import dotenv_values
 
-# app.config requires DATABASE_URL. A placeholder lets the tests run without
-# a .env file. Nothing connects to it: creating the engine does not open a
-# connection, and no test runs a query. A value already set in the shell is
-# kept, and an empty one counts as unset.
-if not os.environ.get("DATABASE_URL", "").strip():
+TEST_DATABASE_VARIABLE = "TEST_DATABASE_URL"
+
+
+def _test_database_url() -> str:
+    """Return TEST_DATABASE_URL from the shell or backend/.env, or "" when it is unset."""
+    env_file = dotenv_values(Path(__file__).resolve().parent.parent / ".env")
+    return (
+        os.environ.get(TEST_DATABASE_VARIABLE) or env_file.get(TEST_DATABASE_VARIABLE) or ""
+    ).strip()
+
+
+# The tests in tests/integration run queries against the test database. It
+# replaces DATABASE_URL here, before the app is imported, so no test can reach
+# the database the app itself uses.
+os.environ[TEST_DATABASE_VARIABLE] = _test_database_url()
+if os.environ[TEST_DATABASE_VARIABLE]:
+    os.environ["DATABASE_URL"] = os.environ[TEST_DATABASE_VARIABLE]
+# Without a test database, app.config still requires DATABASE_URL. A
+# placeholder lets the other tests run without a .env file. Nothing connects
+# to it: creating the engine does not open a connection. A value already set
+# in the shell is kept, and an empty one counts as unset.
+elif not os.environ.get("DATABASE_URL", "").strip():
     os.environ["DATABASE_URL"] = "postgresql://test:test@localhost:5432/test"
 
 # A made-up secret for signing tokens, so the tests never use a real one.
@@ -80,6 +99,12 @@ def _restore_app():
     from app.main import app
 
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def client_with_session(_restore_app):
+    """Make a test client that uses the given session, such as one on a real database."""
+    return _client
 
 
 @pytest.fixture

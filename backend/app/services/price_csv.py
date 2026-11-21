@@ -62,7 +62,9 @@ def validate_rows(
             return None, errors
         first_row = first_rows.setdefault((price.ticker, price.price_date), row_number)
         if first_row != row_number:
-            message = f"{price.ticker} already has a price for {price.price_date} on row {first_row}."
+            message = (
+                f"{price.ticker} already has a price for {price.price_date} on row {first_row}."
+            )
             return None, [RowError(row_number, "price_date", message)]
         return price, []
 
