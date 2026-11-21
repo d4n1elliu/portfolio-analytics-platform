@@ -6,10 +6,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Role, TradeSide
+from app.models import Role, TradeSide, User
 from app.routes.dependencies import (
+    CsvUpload,
     PageParams,
     SortOrder,
+    get_current_user,
     page_of,
     page_params,
     read_csv_upload,
@@ -17,7 +19,9 @@ from app.routes.dependencies import (
 )
 from app.routes.errors import IMPORT_ERROR_RESPONSES
 from app.schemas.common import ImportResult, Page
+from app.schemas.import_batch import ImportBatchRead
 from app.schemas.trade import TradeRead
+from app.services import import_batches as import_batches_service
 from app.services import trades as trades_service
 from app.services.trade_export import trades_to_csv
 from app.services.trade_import import import_trades_csv
@@ -72,16 +76,30 @@ def export_trades(query: TradeQuery = Depends(trade_query), db: Session = Depend
     )
 
 
+@router.get("/imports", response_model=Page[ImportBatchRead])
+def list_imports(page: PageParams = Depends(page_params), db: Session = Depends(get_db)):
+    """List the files that have been imported, newest first."""
+    batches, total = import_batches_service.list_import_batches(
+        db, limit=page.limit, offset=page.offset
+    )
+    return page_of([ImportBatchRead.from_batch(batch) for batch in batches], total, page)
+
+
 @router.post(
     "/import",
     response_model=ImportResult,
     status_code=status.HTTP_201_CREATED,
     responses=IMPORT_ERROR_RESPONSES,
+    # Listed here so the role is checked before the file is read.
     dependencies=[Depends(require_role(Role.OPERATIONS))],
 )
-def import_trades(content: bytes = Depends(read_csv_upload), db: Session = Depends(get_db)):
+def import_trades(
+    upload: CsvUpload = Depends(read_csv_upload),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """Import trades from a CSV file. Either every row is saved or none are.
 
-    Only the Operations role may import.
+    Only the Operations role may import. A file that was imported before is refused.
     """
-    return ImportResult(imported=import_trades_csv(db, content))
+    return ImportResult(imported=import_trades_csv(db, upload.file_name, upload.content, user))

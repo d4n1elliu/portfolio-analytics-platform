@@ -20,6 +20,7 @@ from app.database import Base
 from app.models.common import CASH_AMOUNT, QUANTITY, UNIT_PRICE, CreatedAtMixin, one_of
 
 if TYPE_CHECKING:
+    from app.models.import_batch import ImportBatch
     from app.models.security import Security
 
 
@@ -56,7 +57,11 @@ class Trade(CreatedAtMixin, Base):
     # Brokerage and other costs for the whole trade.
     fees: Mapped[Decimal] = mapped_column(CASH_AMOUNT, default=Decimal("0"), server_default="0")
 
+    # The file the trade came from. None for a trade saved before imports were recorded.
+    import_batch_id: Mapped[int | None] = mapped_column(ForeignKey("import_batches.id"), index=True)
+
     security: Mapped[Security] = relationship(back_populates="trades")
+    import_batch: Mapped[ImportBatch | None] = relationship()
 
     def __repr__(self) -> str:
         return f"<Trade {self.side} {self.quantity} of security {self.security_id}>"

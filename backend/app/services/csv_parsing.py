@@ -39,6 +39,10 @@ class ImportFileError(Exception):
     """The file as a whole cannot be imported."""
 
 
+class ImportDuplicateError(Exception):
+    """The same file was imported before."""
+
+
 class ImportRowsError(Exception):
     """The file was readable but one or more rows broke a rule."""
 
