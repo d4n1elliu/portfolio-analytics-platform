@@ -13,7 +13,7 @@ Five features are in place:
 - **Trades.** Trades can be imported from a CSV file, then filtered, sorted and exported. Every import is recorded, and the same file cannot be imported twice.
 - **Holdings.** The Holdings page shows the fund's positions, calculated from those trades, either now or as at any past date. Each security has its own page with its position, price chart and trades.
 - **Prices and valuation.** Daily closing prices are stored for each security and refreshed on weekdays. The Holdings page uses them to show what each position is worth, and the Dashboard page shows the portfolio's value, its unrealised, realised and total profit, and charts of sector allocation and profit by holding.
-- **History and performance.** The Dashboard charts the portfolio's value on each past day and its time-weighted return over 1 month, 3 months, year to date, 1 year and since inception.
+- **History and performance.** The Dashboard charts the portfolio's value on each past day and its time-weighted return over 1 month, 3 months, year to date, 1 year and since inception, next to a benchmark.
 - **Login and roles.** Every page needs a sign in, and each account has a role that decides what it can do.
 
 ## Tech stack
@@ -243,6 +243,8 @@ Each point counts the trades made up to that day and values them at that day's p
 
 A period has no return when the price history does not reach back to its start. Dividends are not counted.
 
+Each period also has a `benchmark_return`: the change in the closing price of the benchmark security between the same two dates. The benchmark is VAS, an ETF that follows the ASX 300 index, unless `BENCHMARK_TICKER` names another security. A date with no benchmark price uses the latest earlier one, and the benchmark fields are `null` when the security does not exist or has no prices. Since inception, the portfolio's return counts the gain on its first day and the benchmark's is measured from that day's close.
+
 ### Importing trades from CSV
 
 `POST /trades/import` takes a multipart upload with the file in a field named `file`:
@@ -304,6 +306,7 @@ Two example files are in `backend/sample_data/`: `trades_sample.csv` (30 valid t
 - **Every trade is read on each `/holdings` request.** This is fine at the current size and would need revisiting for a much larger ledger.
 - **Prices are daily closing prices for ASX tickers only.** There are no intraday prices.
 - **Dividends are not counted.** Profit is the change in price only.
+- **The benchmark is an ETF the fund can also hold.** VAS stands in for the ASX 300 index because its prices are already stored. It is compared on price alone, like the portfolio.
 - **Currencies are not converted.** The Dashboard shows a warning instead of totals if positions use more than one currency.
 - **Signing out does not cancel the session.** A copied session cookie would work until it expires.
 - **The stale price warning does not know public holidays.** It counts Monday to Friday as business days, so it can appear a day early after a long weekend.
@@ -456,7 +459,7 @@ The app runs at http://localhost:5173. It opens on a sign in page and has three 
 
 | Page      | What it shows |
 | --------- | ------------- |
-| Dashboard | Market value, unrealised P&L and return, realised P&L and total P&L, the return over each period, and charts of portfolio value over time, sector allocation and unrealised P&L by holding |
+| Dashboard | Market value, unrealised P&L and return, realised P&L and total P&L, the return over each period next to the benchmark's, and charts of portfolio value over time, sector allocation and unrealised P&L by holding |
 | Holdings  | The current positions with their last price, market value, unrealised P&L and weight. Has sorting, a search box, filters for sector and asset class, summary figures, and a warning when prices are more than three business days old. An "As at" date shows the positions on a past date |
 | Security  | Opened by clicking a ticker. One security's position, a chart of its closing price with each buy and sell marked, and its trades |
 | Trades    | A form to upload a CSV file, the saved trades with filters, sorting and a CSV export, and a list of past imports |
@@ -473,6 +476,7 @@ Real `.env` files are git-ignored and must never be committed. The `.env.example
 | `backend/.env.example`  | `CORS_ORIGINS`        | Optional. Comma-separated addresses allowed to call the API. Defaults to `http://localhost:5173` |
 | `backend/.env.example`  | `MARKET_TIMEZONE`     | Optional. Time zone that decides "today" for trade dates. Defaults to `Australia/Sydney` |
 | `backend/.env.example`  | `SESSION_MINUTES`     | Optional. How long a sign in lasts. Defaults to 480  |
+| `backend/.env.example`  | `BENCHMARK_TICKER`    | Optional. The security the portfolio's return is compared with. Defaults to `VAS` |
 | `backend/.env.example`  | `IMPORT_MAX_FILE_BYTES`, `IMPORT_MAX_ROWS` | Optional. CSV upload limits. Default to 1 MB and 5000 rows |
 | `backend/.env.example`  | `PRICE_REFRESH_OVERLAP_DAYS`, `PRICE_LOOKBACK_DAYS` | Optional. Price refresh settings. Default to 5 and 365 days |
 | `backend/.env.example`  | `DEFAULT_PAGE_SIZE`, `MAX_PAGE_SIZE` | Optional. Page sizes for list endpoints. Default to 50 and 500 |
