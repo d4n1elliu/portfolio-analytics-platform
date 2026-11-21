@@ -88,7 +88,7 @@ portfolio-analytics-platform/
     │   ├── main.py           FastAPI app, CORS and health endpoints
     │   └── request_log.py    Logs one line for each request
     ├── jobs/                 Price jobs that run outside the API
-    ├── sample_data/          Example trade files and a year of closing prices
+    ├── sample_data/          Example trade files, a year of closing prices, research notes and eval questions
     ├── scripts/              One-off scripts such as seed.py and seed_users.py
     ├── tests/                pytest tests such as positions and valuation
     │   └── integration/      Tests that run real queries against PostgreSQL
@@ -252,6 +252,27 @@ python -m scripts.seed_research
 Changing to an embedding model with a different vector size needs a migration that changes the `embedding` column, and every document embedded again.
 
 No test calls a real model. The test setup refuses to build one, and the tests use a fake chat model that gives scripted answers and a fake embedding model.
+
+**Evals.** `backend/sample_data/evals/research_questions.json` holds 25 golden questions about the five sample notes. Each names the ticker and a phrase from the passage that answers it, so a question stays valid if the notes are chunked differently. A test checks that every phrase is still in its note.
+
+```bash
+python -m scripts.run_evals              # search only: free, uses the local embedding model
+python -m scripts.run_evals --answers    # also judges the assistant's answers: spends API credit
+```
+
+The script only reads from the database, and needs the sample notes loaded first. It reports:
+
+| Measure | What it means |
+| ------- | ------------- |
+| Hit rate | The share of questions whose passage was among the chunks the search returned (five by default, changed with `--top`) |
+| MRR | Mean reciprocal rank: 1 when the passage is always first, 0.5 when it is always second, and so on |
+| Faithfulness | With `--answers`: the share of answers in which every fact appears in what the tools returned |
+
+With the default embedding model the search scores a hit rate of 100% and an MRR of 0.900. The library is only ten chunks, so finding the passage in the top five is easy, and MRR is the number to watch.
+
+For faithfulness the assistant answers each question as it would on the page, and the chat model is then asked whether the answer is supported by the tool results. An answer written without calling a tool counts as unsupported. Each question takes about three model calls, the script prints the tokens it used, and `--limit 5` judges only the first five questions. The model judges its own answers, so treat the number as a guide, not proof.
+
+**Tracing.** Tracing is off unless `LANGSMITH_TRACING` is `true`. With it on, and `LANGSMITH_API_KEY` set, LangChain sends each answer's model calls and tool calls to [LangSmith](https://smith.langchain.com), named `portfolio-assistant` and carrying the conversation id. Traces contain the questions and the portfolio data the tools returned, and they leave the server, so leave it off where that matters. `LANGSMITH_PROJECT` chooses the project they are filed under.
 
 ### Holdings and average cost
 
@@ -551,6 +572,7 @@ Real `.env` files are git-ignored and must never be committed. The `.env.example
 | `backend/.env.example`  | `ANTHROPIC_API_KEY` | The key for the chat model. Needed only when the AI features are on. An embedding model from a provider needs that provider's key too, such as `OPENAI_API_KEY` |
 | `backend/.env.example`  | `RESEARCH_MAX_FILE_BYTES` | Optional. The largest research file that can be uploaded. Defaults to 10 MB |
 | `backend/.env.example`  | `AI_REQUESTS_PER_HOUR`, `AI_DAILY_TOKEN_CAP` | Optional. Each user's AI allowance. Default to 20 requests an hour and 200,000 tokens a day |
+| `backend/.env.example`  | `LANGSMITH_TRACING`, `LANGSMITH_API_KEY`, `LANGSMITH_PROJECT` | Optional. Set the first to `true`, with a key, to send traces of each answer to LangSmith. Defaults to off |
 | `backend/.env.example`  | `PASSWORD_LOCKED_EMAILS` | Optional. Comma-separated accounts whose password cannot be changed, such as shared demo accounts. Defaults to none |
 | `backend/.env.example`  | `IMPORT_MAX_FILE_BYTES`, `IMPORT_MAX_ROWS` | Optional. CSV upload limits. Default to 1 MB and 5000 rows |
 | `backend/.env.example`  | `PRICE_REFRESH_OVERLAP_DAYS`, `PRICE_LOOKBACK_DAYS` | Optional. Price refresh settings. Default to 5 and 365 days |
