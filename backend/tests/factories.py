@@ -1,7 +1,11 @@
 """Builders for the models that more than one test file needs."""
 
+import io
 from datetime import date
 from decimal import Decimal
+
+from pypdf import PdfWriter
+from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject
 
 from app.models import Price, Role, Security, Trade, TradeSide, User
 from app.services.passwords import hash_password
@@ -81,3 +85,23 @@ def closes(security: Security, by_date: dict[date, str]) -> list[Price]:
         Price(security=security, price_date=day, close=Decimal(close))
         for day, close in by_date.items()
     ]
+
+
+def make_pdf(text: str) -> bytes:
+    writer = PdfWriter()
+    page = writer.add_blank_page(width=300, height=144)
+    content = DecodedStreamObject()
+    content.set_data(f"BT /F1 12 Tf 20 100 Td ({text}) Tj ET".encode())
+    font = DictionaryObject(
+        {
+            NameObject("/Type"): NameObject("/Font"),
+            NameObject("/Subtype"): NameObject("/Type1"),
+            NameObject("/BaseFont"): NameObject("/Helvetica"),
+        }
+    )
+    fonts = DictionaryObject({NameObject("/F1"): writer._add_object(font)})
+    page[NameObject("/Contents")] = writer._add_object(content)
+    page[NameObject("/Resources")] = DictionaryObject({NameObject("/Font"): fonts})
+    output = io.BytesIO()
+    writer.write(output)
+    return output.getvalue()

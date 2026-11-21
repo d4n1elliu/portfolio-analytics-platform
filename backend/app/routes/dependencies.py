@@ -7,9 +7,16 @@ from enum import StrEnum
 from fastapi import Cookie, Depends, HTTPException, Query, UploadFile, status
 from sqlalchemy.orm import Session
 
+from app.ai import research
 from app.ai import usage as ai_usage
 from app.ai.usage import Allowance
-from app.config import AI_ENABLED, DEFAULT_PAGE_SIZE, IMPORT_MAX_FILE_BYTES, MAX_PAGE_SIZE
+from app.config import (
+    AI_ENABLED,
+    DEFAULT_PAGE_SIZE,
+    IMPORT_MAX_FILE_BYTES,
+    MAX_PAGE_SIZE,
+    RESEARCH_MAX_FILE_BYTES,
+)
 from app.database import get_db
 from app.models import Security, User, UserSession
 from app.schemas.common import Page
@@ -29,7 +36,7 @@ class PageParams:
 
 
 @dataclass(frozen=True)
-class CsvUpload:
+class UploadedFile:
     file_name: str
     content: bytes
 
@@ -52,26 +59,34 @@ def page_of(items: list, total: int, page: PageParams) -> Page:
     return Page(items=items, total=total, limit=page.limit, offset=page.offset)
 
 
-def read_csv_upload(file: UploadFile) -> CsvUpload:
+def read_csv_upload(file: UploadFile) -> UploadedFile:
     """Return the name and contents of an uploaded CSV. Use with Depends().
 
     Rejects a file that is not a .csv (400) or is too large (413).
     """
+    return _read_upload(file, (CSV_EXTENSION,), IMPORT_MAX_FILE_BYTES)
+
+
+def read_research_upload(file: UploadFile) -> UploadedFile:
+    return _read_upload(file, research.FILE_TYPES, RESEARCH_MAX_FILE_BYTES)
+
+
+def _read_upload(file: UploadFile, extensions: tuple[str, ...], max_bytes: int) -> UploadedFile:
     file_name = file.filename or ""
-    if not file_name.lower().endswith(CSV_EXTENSION):
+    if not file_name.lower().endswith(extensions):
         raise HTTPException(
-            status.HTTP_400_BAD_REQUEST, f"The file must be a {CSV_EXTENSION} file."
+            status.HTTP_400_BAD_REQUEST, f"The file must be a {' or '.join(extensions)} file."
         )
 
     # Reading one byte past the limit shows the file is too big without
     # loading all of it.
-    content = file.file.read(IMPORT_MAX_FILE_BYTES + 1)
-    if len(content) > IMPORT_MAX_FILE_BYTES:
+    content = file.file.read(max_bytes + 1)
+    if len(content) > max_bytes:
         raise HTTPException(
             status.HTTP_413_CONTENT_TOO_LARGE,
-            f"The file is larger than {_format_size(IMPORT_MAX_FILE_BYTES)}.",
+            f"The file is larger than {_format_size(max_bytes)}.",
         )
-    return CsvUpload(file_name, content)
+    return UploadedFile(file_name, content)
 
 
 def find_current_session(

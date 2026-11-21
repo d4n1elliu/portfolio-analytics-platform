@@ -80,6 +80,19 @@ def test_asking_the_assistant_needs_a_sign_in(client_with_users, monkeypatch):
     assert response.json() == NOT_SIGNED_IN
 
 
+@pytest.mark.parametrize("path", ["/research/documents", "/research/documents/1"])
+def test_reading_research_needs_a_sign_in(client_with_users, monkeypatch, path):
+    monkeypatch.setattr("app.routes.dependencies.AI_ENABLED", True)
+
+    assert client_with_users(make_user()).get(path).status_code == 401
+
+
+def test_research_is_not_found_while_the_ai_features_are_off(client_with_users):
+    client = client_signed_in_as(client_with_users, Role.ANALYST)
+
+    assert client.get("/research/documents").status_code == 404
+
+
 def test_ai_endpoints_are_not_found_while_the_ai_features_are_off(client_with_users):
     response = client_signed_in_as(client_with_users, Role.ANALYST).get("/ai/usage")
 
