@@ -10,6 +10,8 @@ from app.config import AI_CHAT_MODEL, AI_EMBEDDING_MODEL
 LOCAL_MODEL_PREFIX = "fastembed:"
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from langchain_core.embeddings import Embeddings
     from langchain_core.language_models import BaseChatModel
 
@@ -31,3 +33,7 @@ def get_embeddings() -> Embeddings:
     from langchain.embeddings import init_embeddings
 
     return init_embeddings(AI_EMBEDDING_MODEL)
+
+
+def embeddings_loader() -> Callable[[], Embeddings]:
+    return get_embeddings
