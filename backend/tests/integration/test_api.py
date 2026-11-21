@@ -53,6 +53,27 @@ def test_imported_trades_are_listed_newest_first(client):
     assert dates == sorted(dates, reverse=True)
 
 
+def test_trades_can_be_filtered_sorted_and_exported(client):
+    import_file(client, "trades_sample.csv")
+    bhp_by_quantity = {"ticker": "bhp", "sort": "quantity", "order": "asc"}
+
+    page = client.get("/trades", params=bhp_by_quantity).json()
+    export = client.get("/trades/export", params=bhp_by_quantity)
+
+    assert page["total"] == 3
+    assert [trade["quantity"] for trade in page["items"]] == [
+        "200.000000",
+        "250.000000",
+        "400.000000",
+    ]
+    assert export.text.splitlines() == [
+        "trade_date,ticker,side,quantity,price,fees",
+        "2026-02-17,BHP,BUY,200.000000,43.100000,19.95",
+        "2026-05-05,BHP,SELL,250.000000,45.720000,29.95",
+        "2025-11-18,BHP,BUY,400.000000,41.850000,29.95",
+    ]
+
+
 def test_a_rejected_import_saves_nothing(client):
     response = import_file(client, "trades_invalid.csv")
 

@@ -1,6 +1,7 @@
 """Reusable request handling for routes: paging, CSV uploads and the signed-in user."""
 
 from dataclasses import dataclass
+from enum import StrEnum
 
 from fastapi import Cookie, Depends, HTTPException, Query, UploadFile, status
 from sqlalchemy.orm import Session
@@ -8,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.config import DEFAULT_PAGE_SIZE, IMPORT_MAX_FILE_BYTES, MAX_PAGE_SIZE
 from app.database import get_db
 from app.models import Role, User
+from app.schemas.common import Page
 from app.services import users as users_service
 from app.services.tokens import InvalidTokenError, read_token
 
@@ -21,12 +23,22 @@ class PageParams:
     offset: int
 
 
+class SortOrder(StrEnum):
+    ASC = "asc"
+    DESC = "desc"
+
+
 def page_params(
     limit: int = Query(DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE, description="Items per page."),
     offset: int = Query(0, ge=0, description="Items to skip."),
 ) -> PageParams:
     """Read limit and offset from the query string. Use with Depends()."""
     return PageParams(limit=limit, offset=offset)
+
+
+def page_of(items: list, total: int, page: PageParams) -> Page:
+    """Build the response for one page of a list."""
+    return Page(items=items, total=total, limit=page.limit, offset=page.offset)
 
 
 def read_csv_upload(file: UploadFile) -> bytes:

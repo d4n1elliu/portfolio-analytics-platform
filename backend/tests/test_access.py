@@ -11,6 +11,7 @@ READ_ENDPOINTS = [
     "/portfolio/performance",
     "/securities",
     "/trades",
+    "/trades/export",
 ]
 OPEN_ENDPOINTS = ["/health", "/docs"]
 
