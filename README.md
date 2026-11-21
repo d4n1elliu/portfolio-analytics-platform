@@ -184,7 +184,7 @@ Every page needs a sign in. There is no sign-up: accounts are created by a seed 
 | Portfolio Manager | Yes                 | Yes               | No                |
 | Analyst           | Yes                 | No                | No                |
 
-The table lives in one place, `backend/app/services/permissions.py`. The API checks it, and `/auth/login` and `/auth/me` return the signed-in user's `permissions`, such as `["export_trades"]`, so the pages show only what the user can do. A request the role does not allow is answered with `403`.
+The table lives in one place, `backend/app/services/permissions.py`. The API checks it, and `/auth/login` and `/auth/me` return the signed-in user's `permissions`, such as `["export_trades"]`, so the pages show only what the user can do. They also return `ai_enabled`, which decides whether the AI pages appear. A request the role does not allow is answered with `403`.
 
 Signing in starts a session that lasts 8 hours and sets a cookie that names it. The session is checked on every request, so signing out ends it at once: a copy of the cookie stops working. After 10 failed attempts, sign-ins from that address are blocked for up to 15 minutes.
 
@@ -469,6 +469,7 @@ The app runs at http://localhost:5173. It opens on a sign in page and has three 
 | Dashboard | Market value, unrealised P&L and return, realised P&L and total P&L, the return over each period next to the benchmark's, and charts of portfolio value over time, sector allocation and unrealised P&L by holding |
 | Holdings  | The current positions with their last price, market value, unrealised P&L and weight. Has sorting, a search box, filters for sector and asset class, summary figures, and a warning when prices are more than three business days old. An "As at" date shows the positions on a past date |
 | Security  | Opened by clicking a ticker. One security's position, a chart of its closing price with each buy and sell marked, and its trades |
+| Assistant | Shown only when `AI_ENABLED` is on. A conversation about the portfolio, with the tools each answer used. The page is in place but not yet connected to a model, so it cannot answer |
 | Trades    | A form to upload a CSV file, the saved trades with filters, sorting and a CSV export, and a list of past imports |
 
 ### Environment variables
@@ -484,6 +485,7 @@ Real `.env` files are git-ignored and must never be committed. The `.env.example
 | `backend/.env.example`  | `MARKET_TIMEZONE`     | Optional. Time zone that decides "today" for trade dates. Defaults to `Australia/Sydney` |
 | `backend/.env.example`  | `SESSION_MINUTES`     | Optional. How long a sign in lasts. Defaults to 480  |
 | `backend/.env.example`  | `BENCHMARK_TICKER`    | Optional. The security the portfolio's return is compared with. Defaults to `VAS` |
+| `backend/.env.example`  | `AI_ENABLED`          | Optional. Set to `true` to show the AI pages. Defaults to off |
 | `backend/.env.example`  | `PASSWORD_LOCKED_EMAILS` | Optional. Comma-separated accounts whose password cannot be changed, such as shared demo accounts. Defaults to none |
 | `backend/.env.example`  | `IMPORT_MAX_FILE_BYTES`, `IMPORT_MAX_ROWS` | Optional. CSV upload limits. Default to 1 MB and 5000 rows |
 | `backend/.env.example`  | `PRICE_REFRESH_OVERLAP_DAYS`, `PRICE_LOOKBACK_DAYS` | Optional. Price refresh settings. Default to 5 and 365 days |
