@@ -9,10 +9,11 @@ from sqlalchemy.orm import Session
 
 from app.config import DEFAULT_PAGE_SIZE, IMPORT_MAX_FILE_BYTES, MAX_PAGE_SIZE
 from app.database import get_db
-from app.models import Role, Security, User, UserSession
+from app.models import Security, User, UserSession
 from app.schemas.common import Page
 from app.services import securities as securities_service
 from app.services import user_sessions as user_sessions_service
+from app.services.permissions import Permission, permissions_of
 from app.services.tokens import InvalidTokenError, read_token
 
 CSV_EXTENSION = ".csv"
@@ -108,18 +109,18 @@ def get_security(ticker: str, db: Session = Depends(get_db)) -> Security:
     return security
 
 
-def require_role(*allowed: Role):
-    """Build a dependency that only lets the given roles through. Use with Depends().
+def require_permission(permission: Permission):
+    """Build a dependency that only lets through roles with the permission. Use with Depends().
 
     Answers 401 when nobody is signed in and 403 when the user's role is not allowed.
     """
 
-    def check_role(user: User = Depends(get_current_user)) -> User:
-        if user.role not in allowed:
+    def check_permission(user: User = Depends(get_current_user)) -> User:
+        if permission not in permissions_of(user.role):
             raise HTTPException(status.HTTP_403_FORBIDDEN, "Your role does not allow this.")
         return user
 
-    return check_role
+    return check_permission
 
 
 def _format_size(size_bytes: int) -> str:

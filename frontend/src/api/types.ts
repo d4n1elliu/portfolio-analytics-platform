@@ -100,10 +100,13 @@ export interface PortfolioPerformance {
 
 export type Role = 'operations' | 'portfolio_manager' | 'analyst'
 
+export type Permission = 'import_trades' | 'export_trades'
+
 export interface User {
   email: string
   name: string
   role: Role
+  permissions: Permission[]
 }
 
 export type TradeSide = 'BUY' | 'SELL'

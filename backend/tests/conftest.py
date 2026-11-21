@@ -113,10 +113,11 @@ def client_with_session(_restore_app):
 @pytest.fixture
 def client_with_data(_restore_app):
     """Make a test client, signed in, whose database holds the given trades and prices."""
+    from app.models import Role
     from factories import make_user
 
     return lambda trades, prices=None: _client(
-        FakeSession(trades, prices or []), signed_in_as=make_user()
+        FakeSession(trades, prices or []), signed_in_as=make_user(Role.OPERATIONS)
     )
 
 
