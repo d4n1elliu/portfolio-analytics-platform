@@ -9,10 +9,7 @@ const INACTIVE = 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
 
 function HeaderLink({ to, children }: { to: string; children: ReactNode }) {
   return (
-    <NavLink
-      to={to}
-      className={({ isActive }) => `${BASE} ${isActive ? ACTIVE : INACTIVE}`}
-    >
+    <NavLink to={to} className={({ isActive }) => `${BASE} ${isActive ? ACTIVE : INACTIVE}`}>
       {children}
     </NavLink>
   )

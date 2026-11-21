@@ -43,9 +43,7 @@ function TradesPage() {
       <Card
         title="Trades"
         padded={false}
-        aside={
-          page && page.total > 0 && formatRange(page.offset, page.items.length, page.total)
-        }
+        aside={page && page.total > 0 && formatRange(page.offset, page.items.length, page.total)}
       >
         {trades.status === 'loading' && (
           <p className={`px-6 pb-6 ${MUTED_TEXT}`}>Loading trades…</p>

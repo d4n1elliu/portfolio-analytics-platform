@@ -3,9 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { isAbortError, messageFrom } from '../api/client'
 
 export type QueryState<T> =
-  | { status: 'loading' }
-  | { status: 'error'; message: string }
-  | { status: 'loaded'; data: T }
+  { status: 'loading' } | { status: 'error'; message: string } | { status: 'loaded'; data: T }
 
 type Outcome<T> = Exclude<QueryState<T>, { status: 'loading' }>
 

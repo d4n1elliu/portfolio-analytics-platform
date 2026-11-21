@@ -57,8 +57,8 @@ function Returns({ performance }: { performance: Performance }) {
         formatAxisValue={formatSignedPercent}
       />
       <p className={MUTED_TEXT}>
-        Time-weighted return: buying and selling do not count as gains or losses. Dividends are
-        not included.
+        Time-weighted return: buying and selling do not count as gains or losses. Dividends are not
+        included.
       </p>
     </div>
   )
