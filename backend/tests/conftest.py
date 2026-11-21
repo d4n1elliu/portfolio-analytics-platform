@@ -124,8 +124,8 @@ def no_real_ai_models(monkeypatch):
     def refuse(name, *args, **kwargs):
         raise AssertionError(f"A test tried to build the real model {name}. Use a fake one.")
 
-    monkeypatch.setattr(providers, "init_chat_model", refuse)
-    monkeypatch.setattr(providers, "init_embeddings", refuse)
+    monkeypatch.setattr("langchain.chat_models.init_chat_model", refuse)
+    monkeypatch.setattr("langchain.embeddings.init_embeddings", refuse)
     providers.get_chat_model.cache_clear()
     providers.get_embeddings.cache_clear()
 
