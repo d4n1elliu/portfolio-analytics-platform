@@ -147,6 +147,18 @@ def fake_embeddings():
 
 
 @pytest.fixture
+def assistant_memory():
+    from langgraph.checkpoint.memory import InMemorySaver
+
+    from app.ai.memory import get_checkpointer
+    from app.main import app
+
+    memory = InMemorySaver()
+    app.dependency_overrides[get_checkpointer] = lambda: memory
+    return memory
+
+
+@pytest.fixture
 def _restore_app():
     """Undo the changes _client makes to the app, after the test."""
     yield

@@ -112,7 +112,7 @@ def test_the_search_tool_says_so_when_nothing_matches(db, library):
 
 
 def test_an_answer_that_uses_research_streams_its_sources(
-    db, library, client_with_session, monkeypatch
+    db, library, client_with_session, assistant_memory, monkeypatch
 ):
     monkeypatch.setattr("app.routes.dependencies.AI_ENABLED", True)
     app.dependency_overrides[embeddings_loader] = lambda: lambda: EMBEDDINGS
@@ -123,19 +123,18 @@ def test_an_answer_that_uses_research_streams_its_sources(
     client = client_with_session(db)
     sign_in(client, Role.ANALYST)
 
-    response = client.post(
-        "/ai/chat", json={"messages": [{"role": "user", "text": "How is plasma going?"}]}
-    )
+    response = client.post("/ai/chat", json={"question": "How is plasma going?"})
 
     events = streamed_events(response)
     assert [event["type"] for event in events] == [
+        "conversation",
         "tool_call",
         "tool_result",
         "sources",
         "text",
         "done",
     ]
-    (source,) = events[2]["sources"]
+    (source,) = events[3]["sources"]
     assert (source["source"], source["title"], source["chunk"]) == (1, "CSL plasma", 1)
 
 

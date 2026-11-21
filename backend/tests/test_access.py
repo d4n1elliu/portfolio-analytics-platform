@@ -72,7 +72,7 @@ def test_ai_endpoints_need_a_sign_in(client_with_users, monkeypatch):
 
 def test_asking_the_assistant_needs_a_sign_in(client_with_users, monkeypatch):
     monkeypatch.setattr("app.routes.dependencies.AI_ENABLED", True)
-    question = {"messages": [{"role": "user", "text": "What do I hold?"}]}
+    question = {"question": "What do I hold?"}
 
     response = client_with_users(make_user()).post("/ai/chat", json=question)
 

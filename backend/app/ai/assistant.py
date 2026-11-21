@@ -3,23 +3,28 @@
 import logging
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
-from datetime import UTC, date, datetime
+from datetime import UTC, datetime
 
 from langchain.agents import create_agent
+from langchain.agents.middleware import wrap_model_call
 from langchain_core.embeddings import Embeddings
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import AIMessage, ToolMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMessage, trim_messages
+from langgraph.checkpoint.base import BaseCheckpointSaver
 from sqlalchemy.orm import Session
 
+from app.ai.conversations import mark_used
+from app.ai.memory import stored_messages, thread
 from app.ai.tools import portfolio_tools, research_tools
 from app.ai.usage import record_usage
-from app.models import User
+from app.models import Conversation, User
 from app.services.market_time import market_today
 
 logger = logging.getLogger(__name__)
 
 COULD_NOT_ANSWER = "The assistant could not answer. Try again."
 MAX_STEPS = 16
+MAX_MESSAGES_SENT = 40
 TOOL_OUTPUT_SHOWN = 4000
 
 SYSTEM_PROMPT = """\
@@ -47,49 +52,93 @@ class TokenCount:
 
 
 @dataclass(frozen=True)
-class ChatTurn:
-    role: str
-    text: str
-
-
-@dataclass(frozen=True)
-class Models:
-    chat: BaseChatModel
+class Assistant:
+    chat_model: BaseChatModel
     load_embeddings: Callable[[], Embeddings]
+    memory: BaseCheckpointSaver
 
 
-def answer_events(models: Models, db: Session, user: User, turns: list[ChatTurn]) -> Iterator[dict]:
+def answer_events(
+    assistant: Assistant, db: Session, user: User, conversation: Conversation, question: str
+) -> Iterator[dict]:
     tokens_used = TokenCount()
+    yield {"type": "conversation", "id": conversation.id, "title": conversation.title}
     try:
-        yield from stream_answer(models, db, turns, market_today(), tokens_used)
+        yield from stream_answer(assistant, db, conversation.id, question, tokens_used)
         yield {"type": "done"}
     except Exception:
         logger.exception("The assistant failed while answering")
         yield {"type": "error", "message": COULD_NOT_ANSWER}
     finally:
-        record_usage(
-            db, user, tokens_used.input_tokens, tokens_used.output_tokens, datetime.now(UTC)
-        )
+        now = datetime.now(UTC)
+        record_usage(db, user, tokens_used.input_tokens, tokens_used.output_tokens, now)
+        mark_used(db, conversation, now)
 
 
 def stream_answer(
-    models: Models,
+    assistant: Assistant,
     db: Session,
-    turns: list[ChatTurn],
-    today: date,
+    conversation_id: str,
+    question: str,
     tokens_used: TokenCount,
 ) -> Iterator[dict]:
-    tools = [*portfolio_tools(db), *research_tools(db, models.load_embeddings)]
-    agent = create_agent(models.chat, tools, system_prompt=SYSTEM_PROMPT.format(today=today))
-    conversation = {"messages": [{"role": turn.role, "content": turn.text} for turn in turns]}
+    agent = create_agent(
+        assistant.chat_model,
+        [*portfolio_tools(db), *research_tools(db, assistant.load_embeddings)],
+        system_prompt=SYSTEM_PROMPT.format(today=market_today()),
+        middleware=[send_recent_messages_only],
+        checkpointer=assistant.memory,
+    )
     stream = agent.stream(
-        conversation, {"recursion_limit": MAX_STEPS}, stream_mode=["messages", "updates"]
+        {"messages": [{"role": "user", "content": question}]},
+        {**thread(conversation_id), "recursion_limit": MAX_STEPS},
+        stream_mode=["messages", "updates"],
     )
     for mode, chunk in stream:
         if mode == "messages":
             yield from _text_events(chunk)
         else:
             yield from _step_events(chunk, tokens_used)
+
+
+def conversation_turns(memory: BaseCheckpointSaver, conversation_id: str) -> list[dict]:
+    turns: list[dict] = []
+    for message in stored_messages(memory, conversation_id):
+        if isinstance(message, HumanMessage):
+            turns.append({"role": "user", "text": message.text})
+            continue
+        if not turns or turns[-1]["role"] != "assistant":
+            turns.append({"role": "assistant", "events": []})
+        turns[-1]["events"].extend(_message_events(message))
+        if isinstance(message, AIMessage) and message.text:
+            turns[-1]["events"].append({"type": "text", "text": message.text})
+    return turns
+
+
+@wrap_model_call
+def send_recent_messages_only(request, handler):
+    return handler(request.override(messages=recent_messages(request.messages)))
+
+
+def recent_messages(messages: list[BaseMessage]) -> list[BaseMessage]:
+    recent = trim_messages(
+        messages,
+        max_tokens=MAX_MESSAGES_SENT,
+        token_counter=len,
+        strategy="last",
+        start_on="human",
+    )
+    return without_unanswered_tool_calls(recent)
+
+
+def without_unanswered_tool_calls(messages: list[BaseMessage]) -> list[BaseMessage]:
+    answered = {message.tool_call_id for message in messages if isinstance(message, ToolMessage)}
+    return [
+        message
+        for message in messages
+        if not isinstance(message, AIMessage)
+        or all(call["id"] in answered for call in message.tool_calls)
+    ]
 
 
 def _text_events(chunk) -> Iterator[dict]:
@@ -103,22 +152,27 @@ def _step_events(update: dict, tokens: TokenCount) -> Iterator[dict]:
         for message in (step or {}).get("messages", []):
             if isinstance(message, AIMessage):
                 _count(message, tokens)
-                for call in message.tool_calls:
-                    yield {
-                        "type": "tool_call",
-                        "id": call["id"],
-                        "name": call["name"],
-                        "input": call["args"],
-                    }
-            elif isinstance(message, ToolMessage):
-                yield {
-                    "type": "tool_result",
-                    "id": message.tool_call_id,
-                    "output": message.text[:TOOL_OUTPUT_SHOWN],
-                    "failed": message.status == "error",
-                }
-                if message.artifact:
-                    yield {"type": "sources", "sources": message.artifact}
+            yield from _message_events(message)
+
+
+def _message_events(message: BaseMessage) -> Iterator[dict]:
+    if isinstance(message, AIMessage):
+        for call in message.tool_calls:
+            yield {
+                "type": "tool_call",
+                "id": call["id"],
+                "name": call["name"],
+                "input": call["args"],
+            }
+    elif isinstance(message, ToolMessage):
+        yield {
+            "type": "tool_result",
+            "id": message.tool_call_id,
+            "output": message.text[:TOOL_OUTPUT_SHOWN],
+            "failed": message.status == "error",
+        }
+        if message.artifact:
+            yield {"type": "sources", "sources": message.artifact}
 
 
 def _count(message: AIMessage, tokens: TokenCount) -> None:
