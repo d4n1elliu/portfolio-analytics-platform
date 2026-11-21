@@ -26,6 +26,7 @@ export class ApiError extends Error {
 }
 
 export const NOT_SIGNED_IN = 401
+const NOT_FOUND = 404
 const AUTH_PATHS = '/auth/'
 
 let onSessionExpired: (() => void) | null = null
@@ -63,6 +64,15 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json().catch(() => null)) as T
 }
 
+export async function requestOrNull<T>(path: string, init?: RequestInit): Promise<T | null> {
+  try {
+    return await request<T>(path, init)
+  } catch (error) {
+    if (error instanceof ApiError && error.status === NOT_FOUND) return null
+    throw error
+  }
+}
+
 export async function requestFile(path: string, init?: RequestInit): Promise<Blob> {
   return (await send(path, init)).blob()
 }
@@ -89,11 +99,15 @@ export async function requestStream(
   return response.body
 }
 
+export function postForm<T>(path: string, fields: Record<string, string | File>): Promise<T> {
+  const form = new FormData()
+  Object.entries(fields).forEach(([name, value]) => form.append(name, value))
+  return request<T>(path, { method: 'POST', body: form })
+}
+
 /** Upload one file as a form field named "file". */
 export function uploadFile<T>(path: string, file: File): Promise<T> {
-  const form = new FormData()
-  form.append('file', file)
-  return request<T>(path, { method: 'POST', body: form })
+  return postForm<T>(path, { file })
 }
 
 /** True for the error thrown when a request is cancelled. */

@@ -1,4 +1,4 @@
-import { ApiError, request } from './client'
+import { request, requestOrNull } from './client'
 import type { Holding } from './types'
 
 interface HoldingsParams {
@@ -13,13 +13,6 @@ export function listHoldings(params: HoldingsParams, signal?: AbortSignal): Prom
   return request<Holding[]>(`/holdings?${query}`, { signal })
 }
 
-const NOT_FOUND = 404
-
-export async function getHolding(ticker: string, signal?: AbortSignal): Promise<Holding | null> {
-  try {
-    return await request<Holding>(`/holdings/${encodeURIComponent(ticker)}`, { signal })
-  } catch (error) {
-    if (error instanceof ApiError && error.status === NOT_FOUND) return null
-    throw error
-  }
+export function getHolding(ticker: string, signal?: AbortSignal): Promise<Holding | null> {
+  return requestOrNull<Holding>(`/holdings/${encodeURIComponent(ticker)}`, { signal })
 }
