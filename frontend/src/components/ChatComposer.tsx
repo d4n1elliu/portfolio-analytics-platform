@@ -10,11 +10,14 @@ interface ChatComposerProps {
   text: string
   onChange: (text: string) => void
   onSend: (text: string) => void
+  busy: boolean
 }
 
-function ChatComposer({ text, onChange, onSend }: ChatComposerProps) {
+function ChatComposer({ text, onChange, onSend, busy }: ChatComposerProps) {
+  const canSend = isSendable(text) && !busy
+
   function send() {
-    if (!isSendable(text)) return
+    if (!canSend) return
     onSend(text)
     onChange('')
   }
@@ -41,8 +44,8 @@ function ChatComposer({ text, onChange, onSend }: ChatComposerProps) {
         onKeyDown={handleKeyDown}
         className={`${TEXT_BOX} resize-none py-2 ${FOCUS_OUTLINE}`}
       />
-      <Button type="submit" disabled={!isSendable(text)}>
-        Send
+      <Button type="submit" disabled={!canSend}>
+        {busy ? 'Answering…' : 'Send'}
       </Button>
     </form>
   )

@@ -141,6 +141,7 @@ A security has many trades and many prices. A trade points to the import it came
 | `POST` | `/auth/logout`   | Signs out                                                       |
 | `POST` | `/auth/password` | Changes the signed-in user's password                           |
 | `GET`  | `/ai/usage`      | Returns the signed-in user's AI requests and tokens, and their limits |
+| `POST` | `/ai/chat`       | Asks the assistant a question and streams its answer            |
 | `GET`  | `/auth/me`       | Returns the signed-in user                                      |
 | `GET`  | `/holdings`      | Lists the current position in each security, ordered by ticker  |
 | `GET`  | `/holdings/{ticker}` | Returns the current position in one security                |
@@ -204,6 +205,20 @@ The AI features are off unless `AI_ENABLED` is `true`. While they are off, the A
 The chat model and the embedding model are named in settings as `provider:model` and built by LangChain, so another provider can be used by changing a setting and installing its package. The keys are read from the environment by each provider's own package.
 
 Each user has an allowance: 20 AI requests in any hour and 200,000 tokens in any day, by default. Every request is recorded in `ai_usage` with the tokens it used, so the count survives a restart. A request over either limit is answered with `429`. `GET /ai/usage` returns what has been used, and the Account page shows it.
+
+**The assistant.** `POST /ai/chat` takes the conversation so far, as `{"messages": [{"role": "user", "text": "..."}]}`, and streams the answer as server-sent events. Each event is a JSON object with a `type`:
+
+| Type | What it carries |
+| ---- | --------------- |
+| `tool_call` | The tool the assistant called and what it asked for |
+| `tool_result` | What that tool returned |
+| `text` | The next piece of the answer |
+| `done` | The answer is complete |
+| `error` | The assistant could not answer |
+
+The assistant is a LangChain agent with seven tools, each a thin wrapper over a service the pages already use: holdings now or at a past date, one holding, portfolio history, performance against the benchmark, trades, securities and a security's prices. Every tool only reads.
+
+The model never works out a figure. Its instructions tell it to quote figures exactly as a tool returned them, and the tools return figures already rounded by the same code the pages use. Tool results are treated as data, never as instructions. The conversation is not stored: the page sends the earlier turns with each question, and they are gone when the page is reloaded.
 
 No test calls a real model. The test setup refuses to build one, and the tests use a fake chat model that gives scripted answers and a fake embedding model.
 
@@ -482,7 +497,7 @@ The app runs at http://localhost:5173. It opens on a sign in page and has three 
 | Dashboard | Market value, unrealised P&L and return, realised P&L and total P&L, the return over each period next to the benchmark's, and charts of portfolio value over time, sector allocation and unrealised P&L by holding |
 | Holdings  | The current positions with their last price, market value, unrealised P&L and weight. Has sorting, a search box, filters for sector and asset class, summary figures, and a warning when prices are more than three business days old. An "As at" date shows the positions on a past date |
 | Security  | Opened by clicking a ticker. One security's position, a chart of its closing price with each buy and sell marked, and its trades |
-| Assistant | Shown only when `AI_ENABLED` is on. A conversation about the portfolio, with the tools each answer used. The page is in place but not yet connected to a model, so it cannot answer |
+| Assistant | Shown only when `AI_ENABLED` is on. A conversation about the portfolio. Each answer streams in as it is written and shows the tools it used and what they returned |
 | Research  | Shown only when `AI_ENABLED` is on. The library of research documents, with filters for ticker and date, and a form to upload a PDF, Markdown or text file for a ticker. The page is in place but uploads are not yet connected, so nothing is saved |
 | Research document | Opened by clicking a title in the library. One document's details and its text as numbered chunks. A link to a chunk, such as `/research/12#chunk-3`, scrolls to that chunk and highlights it. No documents are stored yet, so every address says the document could not be found |
 | Trades    | A form to upload a CSV file, the saved trades with filters, sorting and a CSV export, and a list of past imports |

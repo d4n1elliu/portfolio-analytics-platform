@@ -136,6 +136,18 @@ export interface ChatMessage {
   toolCalls: ToolCall[]
 }
 
+export interface ChatTurn {
+  role: ChatRole
+  text: string
+}
+
+export type ChatEvent =
+  | { type: 'text'; text: string }
+  | { type: 'tool_call'; id: string; name: string; input: Record<string, unknown> }
+  | { type: 'tool_result'; id: string; output: string; failed: boolean }
+  | { type: 'done' }
+  | { type: 'error'; message: string }
+
 export type TradeSide = 'BUY' | 'SELL'
 
 export type TradeSortKey = 'trade_date' | 'ticker' | 'side' | 'quantity' | 'price' | 'fees'

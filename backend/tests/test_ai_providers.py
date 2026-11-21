@@ -16,8 +16,12 @@ def test_a_test_cannot_build_a_real_model():
 
 def test_the_models_named_in_the_settings_are_built_once(monkeypatch):
     built = []
-    monkeypatch.setattr(providers, "init_chat_model", lambda name: built.append(name) or "chat")
-    monkeypatch.setattr(providers, "init_embeddings", lambda name: built.append(name) or "embed")
+    monkeypatch.setattr(
+        "langchain.chat_models.init_chat_model", lambda name: built.append(name) or "chat"
+    )
+    monkeypatch.setattr(
+        "langchain.embeddings.init_embeddings", lambda name: built.append(name) or "embed"
+    )
 
     assert providers.get_chat_model() == providers.get_chat_model() == "chat"
     assert providers.get_embeddings() == providers.get_embeddings() == "embed"

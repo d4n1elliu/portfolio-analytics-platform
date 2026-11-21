@@ -26,6 +26,28 @@ elif not os.environ.get("DATABASE_URL", "").strip():
 # A made-up secret for signing tokens, so the tests never use a real one.
 os.environ["JWT_SECRET"] = "test-secret-that-is-long-enough-for-hs256"
 
+# Every optional setting is emptied, so the tests use the defaults whatever is
+# in the developer's own .env file, and never hold a real API key.
+OPTIONAL_SETTINGS = (
+    "AI_ENABLED",
+    "AI_CHAT_MODEL",
+    "AI_EMBEDDING_MODEL",
+    "AI_REQUESTS_PER_HOUR",
+    "AI_DAILY_TOKEN_CAP",
+    "ANTHROPIC_API_KEY",
+    "OPENAI_API_KEY",
+    "BENCHMARK_TICKER",
+    "CORS_ORIGINS",
+    "DEFAULT_PAGE_SIZE",
+    "IMPORT_MAX_FILE_BYTES",
+    "IMPORT_MAX_ROWS",
+    "MARKET_TIMEZONE",
+    "MAX_PAGE_SIZE",
+    "PASSWORD_LOCKED_EMAILS",
+    "SESSION_MINUTES",
+)
+os.environ.update(dict.fromkeys(OPTIONAL_SETTINGS, ""))
+
 
 class FakeSession:
     """Stands in for the database session. Returns the rows that match the query."""
@@ -102,8 +124,8 @@ def no_real_ai_models(monkeypatch):
     def refuse(name, *args, **kwargs):
         raise AssertionError(f"A test tried to build the real model {name}. Use a fake one.")
 
-    monkeypatch.setattr(providers, "init_chat_model", refuse)
-    monkeypatch.setattr(providers, "init_embeddings", refuse)
+    monkeypatch.setattr("langchain.chat_models.init_chat_model", refuse)
+    monkeypatch.setattr("langchain.embeddings.init_embeddings", refuse)
     providers.get_chat_model.cache_clear()
     providers.get_embeddings.cache_clear()
 

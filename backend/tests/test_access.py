@@ -70,6 +70,16 @@ def test_ai_endpoints_need_a_sign_in(client_with_users, monkeypatch):
     assert response.json() == NOT_SIGNED_IN
 
 
+def test_asking_the_assistant_needs_a_sign_in(client_with_users, monkeypatch):
+    monkeypatch.setattr("app.routes.dependencies.AI_ENABLED", True)
+    question = {"messages": [{"role": "user", "text": "What do I hold?"}]}
+
+    response = client_with_users(make_user()).post("/ai/chat", json=question)
+
+    assert response.status_code == 401
+    assert response.json() == NOT_SIGNED_IN
+
+
 def test_ai_endpoints_are_not_found_while_the_ai_features_are_off(client_with_users):
     response = client_signed_in_as(client_with_users, Role.ANALYST).get("/ai/usage")
 

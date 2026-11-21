@@ -67,12 +67,26 @@ export async function requestFile(path: string, init?: RequestInit): Promise<Blo
   return (await send(path, init)).blob()
 }
 
-export function postJson<T>(path: string, body?: unknown): Promise<T> {
-  return request<T>(path, {
+function jsonPost(body: unknown): RequestInit {
+  return {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body ?? {}),
-  })
+  }
+}
+
+export function postJson<T>(path: string, body?: unknown): Promise<T> {
+  return request<T>(path, jsonPost(body))
+}
+
+export async function requestStream(
+  path: string,
+  body: unknown,
+  signal?: AbortSignal,
+): Promise<ReadableStream<Uint8Array>> {
+  const response = await send(path, { ...jsonPost(body), signal })
+  if (response.body === null) throw new ApiError('The response had no body to read.', 0)
+  return response.body
 }
 
 /** Upload one file as a form field named "file". */

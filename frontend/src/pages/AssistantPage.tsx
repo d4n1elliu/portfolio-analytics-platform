@@ -13,7 +13,7 @@ import { useChat } from '../hooks/useChat'
 import { MUTED_TEXT } from '../lib/styles'
 
 function AssistantPage() {
-  const { messages, error, send, startOver } = useChat()
+  const { messages, answering, error, send, startOver } = useChat()
   const [draft, setDraft] = useState('')
   const hasMessages = messages.length > 0
 
@@ -35,8 +35,8 @@ function AssistantPage() {
           ) : (
             <SuggestedQuestions onChoose={setDraft} />
           )}
-          {error !== null && <Alert variant="warning">{error}</Alert>}
-          <ChatComposer text={draft} onChange={setDraft} onSend={send} />
+          {error !== null && <Alert variant="error">{error}</Alert>}
+          <ChatComposer text={draft} onChange={setDraft} onSend={send} busy={answering} />
           <p className={MUTED_TEXT}>
             Answers are written by an AI model. Every figure comes from the same data as the other
             pages, where it can be checked.
