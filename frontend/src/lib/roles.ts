@@ -1,4 +1,4 @@
-import type { Role } from '../api/types'
+import type { Permission, Role, User } from '../api/types'
 
 export const ROLE_LABELS: Record<Role, string> = {
   operations: 'Operations',
@@ -6,9 +6,16 @@ export const ROLE_LABELS: Record<Role, string> = {
   analyst: 'Analyst',
 }
 
-/** Keep in step with POST /trades/import in the backend. */
-export const IMPORT_ROLES: Role[] = ['operations']
+export const PERMISSION_LABELS: Record<Permission, string> = {
+  import_trades: 'Import trades',
+  export_trades: 'Export trades',
+}
 
-export function canImportTrades(role: Role): boolean {
-  return IMPORT_ROLES.includes(role)
+export function can(user: User | null, permission: Permission): boolean {
+  return user !== null && user.permissions.includes(permission)
+}
+
+export function allowedActions(user: User): string {
+  const actions = ['View everything', ...user.permissions.map((held) => PERMISSION_LABELS[held])]
+  return actions.join(', ')
 }

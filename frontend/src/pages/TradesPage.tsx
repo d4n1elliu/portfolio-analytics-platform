@@ -18,7 +18,7 @@ import { IMPORT_HISTORY_SIZE, PAGE_SIZE } from '../config'
 import { useApiQuery } from '../hooks/useApiQuery'
 import { useAuth } from '../lib/auth'
 import { formatRange } from '../lib/format'
-import { canImportTrades } from '../lib/roles'
+import { can } from '../lib/roles'
 import { nextSort } from '../lib/sorting'
 import { MUTED_TEXT } from '../lib/styles'
 import { NEWEST_FIRST, NO_TRADE_FILTERS, hasTradeFilters } from '../lib/trades'
@@ -44,8 +44,9 @@ function TradesPage() {
   const { state: securities } = useApiQuery(listSecurities)
   const { state: auth } = useAuth()
 
-  const role = auth.status === 'signedIn' ? auth.user.role : null
-  const canImport = role !== null && canImportTrades(role)
+  const user = auth.status === 'signedIn' ? auth.user : null
+  const canImport = can(user, 'import_trades')
+  const canExport = can(user, 'export_trades')
   const tickers =
     securities.status === 'loaded' ? securities.data.map((security) => security.ticker) : []
   const page = trades.status === 'loaded' ? trades.data : null
@@ -69,7 +70,7 @@ function TradesPage() {
   return (
     <PageLayout title="Trades">
       {canImport && <TradeImport tickers={tickers} onImported={handleImported} />}
-      {role && !canImport && <TradeImportNotAllowed role={role} />}
+      {user && !canImport && <TradeImportNotAllowed role={user.role} />}
 
       <Card
         title="Trades"
@@ -82,11 +83,13 @@ function TradesPage() {
             tickers={tickers}
             onChange={(filters) => showFromFirstPage({ ...query, filters })}
           />
-          <DownloadButton
-            label="Export CSV"
-            fileName={EXPORT_FILE_NAME}
-            download={() => exportTrades(query)}
-          />
+          {canExport && (
+            <DownloadButton
+              label="Export CSV"
+              fileName={EXPORT_FILE_NAME}
+              download={() => exportTrades(query)}
+            />
+          )}
         </div>
 
         {trades.status === 'loading' && (

@@ -4,7 +4,7 @@ import Card from '../components/Card'
 import ChangePasswordForm from '../components/ChangePasswordForm'
 import PageLayout from '../components/PageLayout'
 import { useAuth } from '../lib/auth'
-import { ROLE_LABELS } from '../lib/roles'
+import { ROLE_LABELS, allowedActions } from '../lib/roles'
 
 function AccountPage() {
   const { state } = useAuth()
@@ -21,6 +21,8 @@ function AccountPage() {
           <dd>{user.email}</dd>
           <dt className="text-slate-500">Role</dt>
           <dd>{ROLE_LABELS[user.role]}</dd>
+          <dt className="text-slate-500">Can</dt>
+          <dd>{allowedActions(user)}</dd>
         </dl>
       </Card>
       <Card title="Change password">
