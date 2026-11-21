@@ -8,12 +8,7 @@ def test_every_role_has_its_permissions_listed():
     assert set(ROLE_PERMISSIONS) == set(Role)
 
 
-def test_each_role_can_do_more_than_the_one_below_it():
-    analyst = permissions_of(Role.ANALYST)
-    portfolio_manager = permissions_of(Role.PORTFOLIO_MANAGER)
-    operations = permissions_of(Role.OPERATIONS)
-
-    assert analyst == set()
-    assert portfolio_manager == {Permission.EXPORT_TRADES}
-    assert operations == {Permission.EXPORT_TRADES, Permission.IMPORT_TRADES}
-    assert analyst < portfolio_manager < operations
+def test_each_role_has_its_own_permissions():
+    assert permissions_of(Role.ANALYST) == {Permission.UPLOAD_RESEARCH}
+    assert permissions_of(Role.PORTFOLIO_MANAGER) == {Permission.EXPORT_TRADES}
+    assert permissions_of(Role.OPERATIONS) == set(Permission)
