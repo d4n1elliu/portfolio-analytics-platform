@@ -3,20 +3,24 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
 from sqlalchemy.orm import Session
 
-from app.ai.retrieval import RetrievedChunk, search
+from app.ai.retrieval import RetrievedChunk, SearchOptions, search
 
 if TYPE_CHECKING:
     from langchain_core.embeddings import Embeddings
     from langchain_core.language_models import BaseChatModel
 
     from app.ai.assistant import Assistant, TokenCount
+
+QUESTION = "question"
+KEYWORDS = "keywords"
+FOLLOW_UP = "follow-up"
 
 SUPPORTED = "SUPPORTED"
 UNSUPPORTED = "UNSUPPORTED"
@@ -36,6 +40,8 @@ class GoldenQuestion:
     question: str
     ticker: str
     phrase: str
+    kind: str = QUESTION
+    earlier: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -62,7 +68,14 @@ class FaithfulnessScore:
 
 
 def load_golden_questions(path: Path) -> list[GoldenQuestion]:
-    return [GoldenQuestion(**entry) for entry in json.loads(path.read_text(encoding="utf-8"))]
+    entries = json.loads(path.read_text(encoding="utf-8"))
+    return [
+        GoldenQuestion(**{**entry, "earlier": tuple(entry.get("earlier", ()))}) for entry in entries
+    ]
+
+
+def of_kind(questions: list[GoldenQuestion], kind: str) -> list[GoldenQuestion]:
+    return [golden for golden in questions if golden.kind == kind]
 
 
 def rank_of_expected(chunks: list[RetrievedChunk], golden: GoldenQuestion) -> int | None:
@@ -74,12 +87,36 @@ def rank_of_expected(chunks: list[RetrievedChunk], golden: GoldenQuestion) -> in
 
 
 def retrieval_ranks(
-    db: Session, embeddings: Embeddings, questions: list[GoldenQuestion], limit: int
+    db: Session,
+    embeddings: Embeddings,
+    questions: list[GoldenQuestion],
+    limit: int,
+    options: SearchOptions,
 ) -> list[int | None]:
     return [
-        rank_of_expected(search(db, embeddings, golden.question, limit=limit), golden)
+        rank_of_expected(
+            search(db, embeddings, golden.question, limit=limit, options=options), golden
+        )
         for golden in questions
     ]
+
+
+def rewritten(
+    chat_model: BaseChatModel, follow_ups: list[GoldenQuestion], tokens_used: TokenCount
+) -> list[GoldenQuestion]:
+    return [
+        replace(golden, question=_standing_alone(chat_model, golden, tokens_used))
+        for golden in follow_ups
+    ]
+
+
+def _standing_alone(
+    chat_model: BaseChatModel, follow_up: GoldenQuestion, tokens_used: TokenCount
+) -> str:
+    from app.ai.query_rewriting import follow_up_rewriter
+
+    rewrite = follow_up_rewriter(chat_model, list(follow_up.earlier), tokens_used)
+    return rewrite(follow_up.question)
 
 
 def score_retrieval(ranks: list[int | None]) -> RetrievalScore:

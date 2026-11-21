@@ -8,6 +8,7 @@ from langgraph.checkpoint.memory import InMemorySaver
 from ai_fakes import KeywordEmbeddings, scripted_chat_model, tool_call
 from app.ai.assistant import Assistant, TokenCount
 from app.ai.evals import GoldenQuestion, judged_answer, retrieval_ranks
+from app.ai.retrieval import SearchOptions
 from app.models import Role
 from factories import add_note, make_security, make_user
 
@@ -34,7 +35,9 @@ def assistant_saying(*scripted_answers) -> Assistant:
 
 
 def test_each_question_is_ranked_by_where_its_chunk_was_found(db, library):
-    assert retrieval_ranks(db, EMBEDDINGS, [PLASMA, IRON, MISSING], limit=2) == [1, 1, None]
+    ranks = retrieval_ranks(db, EMBEDDINGS, [PLASMA, IRON, MISSING], 2, SearchOptions())
+
+    assert ranks == [1, 1, None]
 
 
 def test_an_answer_is_judged_against_what_its_tools_returned(db, library):
