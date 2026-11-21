@@ -4,8 +4,12 @@ import type { ResearchUpload } from '../lib/research'
 import { postForm, request, requestOrNull } from './client'
 import type { ResearchDocument, ResearchDocumentDetail } from './types'
 
-export function listResearchDocuments(signal?: AbortSignal): Promise<ResearchDocument[]> {
-  return request<ResearchDocument[]>('/research/documents', { signal })
+export function listResearchDocuments(
+  ticker?: string,
+  signal?: AbortSignal,
+): Promise<ResearchDocument[]> {
+  const query = ticker ? `?${new URLSearchParams({ ticker })}` : ''
+  return request<ResearchDocument[]>(`/research/documents${query}`, { signal })
 }
 
 export function getResearchDocument(

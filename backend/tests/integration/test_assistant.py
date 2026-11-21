@@ -6,7 +6,7 @@ from datetime import UTC, date, datetime, timedelta
 import pytest
 from sqlalchemy import select
 
-from ai_fakes import scripted_chat_model, tool_call
+from ai_fakes import scripted_chat_model, streamed_events, tool_call
 from app.ai.providers import get_chat_model
 from app.ai.tools import MAX_ROWS, portfolio_tools
 from app.ai.usage import record_usage
@@ -45,11 +45,6 @@ def ask(db, user, portfolio, client_with_session, monkeypatch):
     return ask_with
 
 
-def events_of(response) -> list[dict]:
-    lines = [line for line in response.text.splitlines() if line.startswith("data: ")]
-    return [json.loads(line.removeprefix("data: ")) for line in lines]
-
-
 def call(db, name: str, **arguments):
     tools = {tool.name: tool for tool in portfolio_tools(db)}
     return json.loads(tools[name].invoke(arguments))
@@ -60,7 +55,7 @@ def test_an_answer_streams_its_tool_call_the_result_and_the_text(ask):
 
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/event-stream")
-    called, result, text, done = events_of(response)
+    called, result, text, done = streamed_events(response)
     assert called == {
         "type": "tool_call",
         "id": "call_list_holdings",
@@ -85,7 +80,7 @@ def test_the_tokens_of_every_step_are_recorded_for_the_user(ask, db, user):
 def test_a_failure_is_reported_in_the_stream_and_still_counts_as_a_request(ask, db):
     response = ask()
 
-    assert events_of(response) == [
+    assert streamed_events(response) == [
         {"type": "error", "message": "The assistant could not answer. Try again."}
     ]
     assert len(db.scalars(select(AiUsage)).all()) == 1

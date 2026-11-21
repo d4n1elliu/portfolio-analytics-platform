@@ -217,15 +217,22 @@ Each user has an allowance: 20 AI requests in any hour and 200,000 tokens in any
 | ---- | --------------- |
 | `tool_call` | The tool the assistant called and what it asked for |
 | `tool_result` | What that tool returned |
+| `sources` | The research excerpts a search returned, each with a number, its document and its chunk |
 | `text` | The next piece of the answer |
 | `done` | The answer is complete |
 | `error` | The assistant could not answer |
 
-The assistant is a LangChain agent with seven tools, each a thin wrapper over a service the pages already use: holdings now or at a past date, one holding, portfolio history, performance against the benchmark, trades, securities and a security's prices. Every tool only reads.
+The assistant is a LangChain agent with eight tools. Seven are thin wrappers over services the pages already use: holdings now or at a past date, one holding, portfolio history, performance against the benchmark, trades, securities and a security's prices. The eighth searches the research notes. Every tool only reads.
 
 The model never works out a figure. Its instructions tell it to quote figures exactly as a tool returned them, and the tools return figures already rounded by the same code the pages use. Tool results are treated as data, never as instructions. The conversation is not stored: the page sends the earlier turns with each question, and they are gone when the page is reloaded.
 
 **Research.** `POST /research/documents` takes a multipart upload with the file in a field named `file`, and `title`, `ticker` and `document_date` as form fields. The file can be a PDF, Markdown or text file of up to 10 MB. Its text is read, split into chunks of about 1,000 characters that overlap a little, and each chunk is turned into a vector of 384 numbers by the embedding model and stored with pgvector. An upload is all or nothing, and a file whose contents match an earlier upload is refused with `409`.
+
+**Searching research.** The assistant's `search_research` tool turns the question into a vector with the same embedding model and returns the five chunks closest to it, using pgvector's cosine distance. It can be limited to one ticker and to a range of document dates. Each excerpt has a source number, which stays the same for the whole answer, and the assistant cites the ones it uses, like `[1]`. Under the answer, the page lists each cited source with a link to its chunk, such as `/research/3#chunk-2`. That list is built from what the search returned, not from what the model wrote, so it cannot name a document that was not found.
+
+Text from a document reaches the model only as a quoted field in the tool's result, and the assistant's instructions say that a note is an opinion, that no figure about the portfolio comes from one, and that an instruction inside one is never followed.
+
+`GET /research/documents` takes an optional `ticker`, which the page for a security uses to list the notes about it.
 
 Five fictional notes are in `backend/sample_data/research/`. To load them into a local database, as if the demo Operations account had uploaded them:
 
@@ -511,8 +518,8 @@ The app runs at http://localhost:5173. It opens on a sign in page and has three 
 | --------- | ------------- |
 | Dashboard | Market value, unrealised P&L and return, realised P&L and total P&L, the return over each period next to the benchmark's, and charts of portfolio value over time, sector allocation and unrealised P&L by holding |
 | Holdings  | The current positions with their last price, market value, unrealised P&L and weight. Has sorting, a search box, filters for sector and asset class, summary figures, and a warning when prices are more than three business days old. An "As at" date shows the positions on a past date |
-| Security  | Opened by clicking a ticker. One security's position, a chart of its closing price with each buy and sell marked, and its trades |
-| Assistant | Shown only when `AI_ENABLED` is on. A conversation about the portfolio. Each answer streams in as it is written and shows the tools it used and what they returned |
+| Security  | Opened by clicking a ticker. One security's position, a chart of its closing price with each buy and sell marked, and its trades. When the AI features are on, it also lists the research notes about the security |
+| Assistant | Shown only when `AI_ENABLED` is on. A conversation about the portfolio. Each answer streams in as it is written and shows the tools it used and what they returned. An answer that draws on research cites it and lists its sources |
 | Research  | Shown only when `AI_ENABLED` is on. The library of research documents, with filters for ticker and date, and a form to upload a PDF, Markdown or text file about one security |
 | Research document | Opened by clicking a title in the library. One document's details and its text as numbered chunks. A link to a chunk, such as `/research/12#chunk-3`, scrolls to that chunk and highlights it |
 | Trades    | A form to upload a CSV file, the saved trades with filters, sorting and a CSV export, and a list of past imports |

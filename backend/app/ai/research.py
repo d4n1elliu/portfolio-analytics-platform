@@ -61,12 +61,14 @@ def add_document(
     return document
 
 
-def list_documents(db: Session) -> list[ResearchDocument]:
+def list_documents(db: Session, security: Security | None = None) -> list[ResearchDocument]:
     statement = (
         _with_details(select(ResearchDocument))
         .order_by(ResearchDocument.document_date.desc(), ResearchDocument.id.desc())
         .limit(MAX_DOCUMENTS_LISTED)
     )
+    if security is not None:
+        statement = statement.where(ResearchDocument.security_id == security.id)
     return list(db.scalars(statement))
 
 

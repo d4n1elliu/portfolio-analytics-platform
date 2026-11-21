@@ -5,13 +5,13 @@ from __future__ import annotations
 from datetime import date
 from typing import TYPE_CHECKING
 
-from fastapi import APIRouter, Depends, Form, HTTPException, status
+from fastapi import APIRouter, Depends, Form, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.ai import research
 from app.ai.providers import get_embeddings
 from app.database import get_db
-from app.models import User
+from app.models import Security, User
 from app.models.research import TITLE_LENGTH
 from app.routes.dependencies import (
     UploadedFile,
@@ -35,9 +35,14 @@ router = APIRouter(
 
 
 @router.get("/documents", response_model=list[ResearchDocumentRead])
-def list_documents(db: Session = Depends(get_db)):
+def list_documents(
+    ticker: str | None = Query(None, max_length=12, description="Only notes about this ticker."),
+    db: Session = Depends(get_db),
+):
     """List the research documents, newest first."""
-    return [ResearchDocumentRead.from_document(found) for found in research.list_documents(db)]
+    security = _known_security(db, ticker) if ticker else None
+    documents = research.list_documents(db, security)
+    return [ResearchDocumentRead.from_document(found) for found in documents]
 
 
 @router.get("/documents/{document_id}", response_model=ResearchDocumentDetailRead)
@@ -69,11 +74,7 @@ def upload_document(
 
     Needs the permission to upload research. A file that was uploaded before is refused.
     """
-    security = securities.find_by_ticker(db, ticker)
-    if security is None:
-        raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_CONTENT, f"No security has the ticker '{ticker}'."
-        )
+    security = _known_security(db, ticker)
     if document_date > market_today():
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -82,3 +83,12 @@ def upload_document(
     details = research.ResearchUpload(upload.file_name, upload.content, title, document_date)
     document = research.add_document(db, embeddings, details, security, user)
     return ResearchDocumentRead.from_document(document)
+
+
+def _known_security(db: Session, ticker: str) -> Security:
+    security = securities.find_by_ticker(db, ticker)
+    if security is None:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT, f"No security has the ticker '{ticker}'."
+        )
+    return security

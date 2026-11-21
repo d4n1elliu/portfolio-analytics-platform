@@ -1,6 +1,8 @@
 // The messages of a conversation: the user's on the right, the assistant's on the left with its tools.
 
 import type { ChatMessage } from '../api/types'
+import { citedSources } from '../lib/chat'
+import AnswerSources from './AnswerSources'
 import ToolCalls from './ToolCalls'
 
 const BUBBLE = 'w-fit max-w-[85%] space-y-2 rounded-lg px-4 py-3 text-sm whitespace-pre-wrap'
@@ -17,6 +19,7 @@ function ChatMessages({ messages }: { messages: ChatMessage[] }) {
         >
           <ToolCalls toolCalls={message.toolCalls} />
           {message.text !== '' && <p>{message.text}</p>}
+          <AnswerSources sources={citedSources(message)} />
         </li>
       ))}
     </ol>

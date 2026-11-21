@@ -1,6 +1,6 @@
 // How a conversation with the assistant is built up from the events its answer streams.
 
-import type { ChatEvent, ChatMessage, ChatRole, ChatTurn, ToolCall } from '../api/types'
+import type { ChatEvent, ChatMessage, ChatRole, ChatSource, ChatTurn, ToolCall } from '../api/types'
 
 export const SUGGESTED_QUESTIONS = [
   'What are my five largest holdings?',
@@ -12,7 +12,7 @@ const EVENT_PREFIX = 'data: '
 const EVENT_SEPARATOR = '\n\n'
 
 export function newMessage(role: ChatRole, text: string): ChatMessage {
-  return { id: crypto.randomUUID(), role, text, toolCalls: [] }
+  return { id: crypto.randomUUID(), role, text, toolCalls: [], sources: [] }
 }
 
 export function isSendable(text: string): boolean {
@@ -53,9 +53,21 @@ function answerAfter(answer: ChatMessage, event: ChatEvent): ChatMessage {
             : toolCall,
         ),
       }
+    case 'sources':
+      return { ...answer, sources: withNewSources(answer.sources, event.sources) }
     default:
       return answer
   }
+}
+
+export function citedSources(message: ChatMessage): ChatSource[] {
+  return message.sources.filter((source) => message.text.includes(`[${source.source}]`))
+}
+
+function withNewSources(known: ChatSource[], found: ChatSource[]): ChatSource[] {
+  const numbers = new Set(known.map((source) => source.source))
+  const added = found.filter((source) => !numbers.has(source.source))
+  return [...known, ...added].sort((a, b) => a.source - b.source)
 }
 
 function startedToolCall(event: Extract<ChatEvent, { type: 'tool_call' }>): ToolCall {

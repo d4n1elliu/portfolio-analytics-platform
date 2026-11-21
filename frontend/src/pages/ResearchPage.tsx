@@ -20,12 +20,16 @@ import type { ResearchUpload } from '../lib/research'
 import { can } from '../lib/roles'
 import { MUTED_TEXT } from '../lib/styles'
 
+function loadEveryDocument(signal: AbortSignal) {
+  return listResearchDocuments(undefined, signal)
+}
+
 function ResearchPage() {
   const [filters, setFilters] = useState(NO_RESEARCH_FILTERS)
   const today = useToday()
   const tickers = useTickers()
   const { state: auth } = useAuth()
-  const { state, reload } = useApiQuery(listResearchDocuments, { keepPreviousData: true })
+  const { state, reload } = useApiQuery(loadEveryDocument, { keepPreviousData: true })
 
   const user = auth.status === 'signedIn' ? auth.user : null
   const documents = state.status === 'loaded' ? state.data : null

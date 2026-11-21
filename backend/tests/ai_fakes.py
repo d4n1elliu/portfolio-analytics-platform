@@ -1,6 +1,7 @@
 """Fake AI models for the tests, so no test calls a real API."""
 
 import hashlib
+import json
 
 from langchain_core.embeddings import Embeddings
 from langchain_core.language_models.fake_chat_models import FakeMessagesListChatModel
@@ -38,3 +39,24 @@ class FakeEmbeddings(Embeddings):
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         return [self.embed_query(text) for text in texts]
+
+
+class KeywordEmbeddings(Embeddings):
+    def __init__(self, *keywords: str) -> None:
+        self.keywords = keywords
+
+    def embed_query(self, text: str) -> list[float]:
+        vector = [0.0] * EMBEDDING_DIMENSIONS
+        vector[-1] = 0.01
+        for axis, keyword in enumerate(self.keywords):
+            if keyword in text.lower():
+                vector[axis] = 1.0
+        return vector
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        return [self.embed_query(text) for text in texts]
+
+
+def streamed_events(response) -> list[dict]:
+    lines = [line for line in response.text.splitlines() if line.startswith("data: ")]
+    return [json.loads(line.removeprefix("data: ")) for line in lines]
