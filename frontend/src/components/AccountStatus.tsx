@@ -1,5 +1,9 @@
+import { Link } from 'react-router'
+
 import { useAuth } from '../lib/auth'
 import { ROLE_LABELS } from '../lib/roles'
+import { NAME_LINK } from '../lib/styles'
+import { ROUTES } from '../routes'
 import Button from './Button'
 
 function AccountStatus() {
@@ -10,7 +14,9 @@ function AccountStatus() {
   return (
     <div className="flex items-center gap-3">
       <div className="text-right text-sm leading-tight">
-        <p className="font-medium">{state.user.name}</p>
+        <Link to={ROUTES.account} className={NAME_LINK}>
+          {state.user.name}
+        </Link>
         <p className="text-xs text-slate-500">{ROLE_LABELS[state.user.role]}</p>
       </div>
       <Button variant="secondary" onClick={signOut}>
