@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { ApiError, request, setSessionExpiredHandler } from './client'
+import { ApiError, request, requestFile, setSessionExpiredHandler } from './client'
 
 function answerWith(status: number, body?: unknown, headers?: Record<string, string>) {
   const text = body === undefined ? null : JSON.stringify(body)
@@ -61,6 +61,26 @@ describe('request', () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(cancelled))
 
     await expect(request('/holdings')).rejects.toBe(cancelled)
+  })
+})
+
+describe('requestFile', () => {
+  it('returns the file the API answers with', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('trade_date,ticker\n')),
+    )
+
+    expect(await (await requestFile('/trades/export')).text()).toBe('trade_date,ticker\n')
+  })
+
+  it('throws the same errors as request', async () => {
+    answerWith(422, { detail: 'The start date must not be after the end date.' })
+
+    const error = await requestFile('/trades/export').catch((thrown: unknown) => thrown)
+
+    expect(error).toBeInstanceOf(ApiError)
+    expect((error as ApiError).message).toBe('The start date must not be after the end date.')
   })
 })
 

@@ -99,6 +99,9 @@ export interface User {
 
 export type TradeSide = 'BUY' | 'SELL'
 
+/** The columns the API can order trades by. */
+export type TradeSortKey = 'trade_date' | 'ticker' | 'side' | 'quantity' | 'price' | 'fees'
+
 export interface Trade {
   id: number
   /** Date only, as "YYYY-MM-DD". */
@@ -111,5 +114,16 @@ export interface Trade {
   quantity: string
   price: string
   fees: string
+  created_at: string
+}
+
+/** One imported file of trades. */
+export interface ImportBatch {
+  id: number
+  file_name: string
+  row_count: number
+  /** The name of the user who uploaded the file. */
+  imported_by: string
+  /** Date and time, with a time zone. */
   created_at: string
 }

@@ -53,11 +53,57 @@ def test_imported_trades_are_listed_newest_first(client):
     assert dates == sorted(dates, reverse=True)
 
 
+def test_the_same_file_cannot_be_imported_twice(client):
+    import_file(client, "trades_sample.csv")
+
+    response = import_file(client, "trades_sample.csv")
+
+    assert response.status_code == 409
+    assert response.json()["detail"].startswith(
+        "This file was already imported as 'trades_sample.csv' on "
+    )
+    assert response.json()["detail"].endswith("by Test operations. Nothing was saved.")
+    assert client.get("/trades").json()["total"] == SAMPLE_TRADES
+
+
+def test_an_import_is_recorded_with_who_made_it(client):
+    import_file(client, "trades_sample.csv")
+
+    imports = client.get("/trades/imports").json()
+
+    assert imports["total"] == 1
+    assert imports["items"][0]["file_name"] == "trades_sample.csv"
+    assert imports["items"][0]["row_count"] == SAMPLE_TRADES
+    assert imports["items"][0]["imported_by"] == "Test operations"
+
+
+def test_trades_can_be_filtered_sorted_and_exported(client):
+    import_file(client, "trades_sample.csv")
+    bhp_by_quantity = {"ticker": "bhp", "sort": "quantity", "order": "asc"}
+
+    page = client.get("/trades", params=bhp_by_quantity).json()
+    export = client.get("/trades/export", params=bhp_by_quantity)
+
+    assert page["total"] == 3
+    assert [trade["quantity"] for trade in page["items"]] == [
+        "200.000000",
+        "250.000000",
+        "400.000000",
+    ]
+    assert export.text.splitlines() == [
+        "trade_date,ticker,side,quantity,price,fees",
+        "2026-02-17,BHP,BUY,200.000000,43.100000,19.95",
+        "2026-05-05,BHP,SELL,250.000000,45.720000,29.95",
+        "2025-11-18,BHP,BUY,400.000000,41.850000,29.95",
+    ]
+
+
 def test_a_rejected_import_saves_nothing(client):
     response = import_file(client, "trades_invalid.csv")
 
     assert response.status_code == 422
     assert client.get("/trades").json()["total"] == 0
+    assert client.get("/trades/imports").json()["total"] == 0
 
 
 def test_holdings_are_calculated_and_valued_from_the_stored_rows(client, db):

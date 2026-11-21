@@ -7,11 +7,12 @@ from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
 from app.schemas.common import ImportRejected, ImportRowError
-from app.services.csv_parsing import ImportFileError, ImportRowsError
+from app.services.csv_parsing import ImportDuplicateError, ImportFileError, ImportRowsError
 
 # Describes the error responses in the API docs. Pass to a route's "responses".
 IMPORT_ERROR_RESPONSES = {
     400: {"description": "The file is not a readable CSV for this import."},
+    409: {"description": "The same file was imported before."},
     413: {"description": "The file is too large."},
     422: {"model": ImportRejected, "description": "One or more rows are invalid."},
 }
@@ -19,6 +20,10 @@ IMPORT_ERROR_RESPONSES = {
 
 def _file_error(request: Request, error: ImportFileError) -> JSONResponse:
     return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST, content={"detail": str(error)})
+
+
+def _duplicate_error(request: Request, error: ImportDuplicateError) -> JSONResponse:
+    return JSONResponse(status_code=status.HTTP_409_CONFLICT, content={"detail": str(error)})
 
 
 def _rows_error(request: Request, error: ImportRowsError) -> JSONResponse:
@@ -39,4 +44,5 @@ def _rows_error(request: Request, error: ImportRowsError) -> JSONResponse:
 
 def register_error_handlers(app: FastAPI) -> None:
     app.add_exception_handler(ImportFileError, _file_error)
+    app.add_exception_handler(ImportDuplicateError, _duplicate_error)
     app.add_exception_handler(ImportRowsError, _rows_error)

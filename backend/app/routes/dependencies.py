@@ -1,6 +1,7 @@
 """Reusable request handling for routes: paging, CSV uploads and the signed-in user."""
 
 from dataclasses import dataclass
+from enum import StrEnum
 
 from fastapi import Cookie, Depends, HTTPException, Query, UploadFile, status
 from sqlalchemy.orm import Session
@@ -8,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.config import DEFAULT_PAGE_SIZE, IMPORT_MAX_FILE_BYTES, MAX_PAGE_SIZE
 from app.database import get_db
 from app.models import Role, User
+from app.schemas.common import Page
 from app.services import users as users_service
 from app.services.tokens import InvalidTokenError, read_token
 
@@ -21,6 +23,17 @@ class PageParams:
     offset: int
 
 
+@dataclass(frozen=True)
+class CsvUpload:
+    file_name: str
+    content: bytes
+
+
+class SortOrder(StrEnum):
+    ASC = "asc"
+    DESC = "desc"
+
+
 def page_params(
     limit: int = Query(DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE, description="Items per page."),
     offset: int = Query(0, ge=0, description="Items to skip."),
@@ -29,12 +42,18 @@ def page_params(
     return PageParams(limit=limit, offset=offset)
 
 
-def read_csv_upload(file: UploadFile) -> bytes:
-    """Return the contents of an uploaded CSV. Use with Depends().
+def page_of(items: list, total: int, page: PageParams) -> Page:
+    """Build the response for one page of a list."""
+    return Page(items=items, total=total, limit=page.limit, offset=page.offset)
+
+
+def read_csv_upload(file: UploadFile) -> CsvUpload:
+    """Return the name and contents of an uploaded CSV. Use with Depends().
 
     Rejects a file that is not a .csv (400) or is too large (413).
     """
-    if not (file.filename or "").lower().endswith(CSV_EXTENSION):
+    file_name = file.filename or ""
+    if not file_name.lower().endswith(CSV_EXTENSION):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, f"The file must be a {CSV_EXTENSION} file."
         )
@@ -47,7 +66,7 @@ def read_csv_upload(file: UploadFile) -> bytes:
             status.HTTP_413_CONTENT_TOO_LARGE,
             f"The file is larger than {_format_size(IMPORT_MAX_FILE_BYTES)}.",
         )
-    return content
+    return CsvUpload(file_name, content)
 
 
 def get_current_user(

@@ -10,7 +10,7 @@ A full-stack web app for tracking portfolio holdings, performance and sector exp
 
 Five features are in place:
 
-- **Trades.** Trades can be imported from a CSV file and viewed in a table.
+- **Trades.** Trades can be imported from a CSV file, then filtered, sorted and exported. Every import is recorded, and the same file cannot be imported twice.
 - **Holdings.** The Holdings page shows the fund's current positions, calculated from those trades.
 - **Prices and valuation.** Daily closing prices are stored for each security and refreshed on weekdays. The Holdings page uses them to show what each position is worth, and the Dashboard page shows the portfolio's value, its unrealised profit, and charts of sector allocation and profit by holding.
 - **History and performance.** The Dashboard charts the portfolio's value on each past day and its time-weighted return over 1 month, 3 months, year to date, 1 year and since inception.
@@ -104,7 +104,7 @@ A request flows through the backend in one direction: a route calls a service, a
 
 ## Data model
 
-Four tables hold the data.
+Five tables hold the data.
 
 | Table        | One row is                       | Key columns                                                        |
 | ------------ | -------------------------------- | ------------------------------------------------------------------ |
@@ -112,8 +112,9 @@ Four tables hold the data.
 | `trades`     | One buy or sell of a security    | `security_id`, `trade_date`, `side`, `quantity`, `price`, `fees`   |
 | `prices`     | One day's closing price          | `security_id`, `price_date`, `close`                               |
 | `users`      | A person who can sign in         | `email` (unique), `name`, `password_hash`, `role`, `is_active`     |
+| `import_batches` | One imported file of trades  | `file_name`, `file_hash` (unique), `row_count`, `imported_by_id`   |
 
-A security has many trades and many prices. The database enforces the basic rules itself: `side` must be `BUY` or `SELL`, quantities and prices must be greater than zero, fees cannot be negative, and a security can have only one closing price per day.
+A security has many trades and many prices. A trade points to the import it came from, in `import_batch_id`. The database enforces the basic rules itself: `side` must be `BUY` or `SELL`, quantities and prices must be greater than zero, fees cannot be negative, and a security can have only one closing price per day.
 
 **Why there is no holdings table.** The current position in a security is calculated by adding up its trades (buys minus sells). Storing positions in a second table would mean keeping two copies of the same fact in sync, and any bug that updates one but not the other would leave them disagreeing. With the trade ledger as the single source of truth, a position can always be recalculated and can be worked out as at any past date.
 
@@ -139,11 +140,25 @@ A security has many trades and many prices. The database enforces the basic rule
 | `GET`  | `/portfolio/performance` | Returns the portfolio's return over 1 month, 3 months, year to date, 1 year and since inception |
 | `GET`  | `/securities`    | Lists every security, ordered by ticker                         |
 | `GET`  | `/trades`        | Lists trades, newest first, with the ticker and security name   |
+| `GET`  | `/trades/export` | Downloads the trades as a CSV file                              |
+| `GET`  | `/trades/imports` | Lists the files that have been imported, newest first          |
 | `POST` | `/trades/import` | Imports trades from a CSV file                                  |
 
 Every endpoint below `/auth/me` needs a sign in. See [Login and roles](#login-and-roles).
 
 `GET /trades` takes `limit` (1 to 500, default 50) and `offset` (default 0), and returns `{"items": [...], "total": 30, "limit": 50, "offset": 0}`. Decimal values are returned as strings, such as `"45.250000"`, so no precision is lost.
+
+It also takes filters and an order, and `total` counts the trades that match:
+
+| Parameter              | Meaning                                                                   |
+| ---------------------- | ------------------------------------------------------------------------- |
+| `ticker`               | Only this ticker. Case-insensitive                                        |
+| `side`                 | `BUY` or `SELL`                                                           |
+| `date_from`, `date_to` | Only trades between these dates, both included, as `YYYY-MM-DD`           |
+| `sort`                 | `trade_date` (default), `ticker`, `side`, `quantity`, `price` or `fees`   |
+| `order`                | `desc` (default) or `asc`                                                 |
+
+`GET /trades/export` takes the same filters and order and returns every matching trade as a CSV file with the columns the import reads. `GET /trades/imports` is paged like `/trades`, and each item has `file_name`, `row_count`, `imported_by` and `created_at`.
 
 `GET /holdings` returns one item per security that has trades, with `ticker`, `security_name`, `sector`, `asset_class`, `currency`, `quantity`, `average_cost`, `cost_basis`, `realised_pnl` and `oversold_quantity`, plus the valuation fields described under [Prices and valuation](#prices-and-valuation). Positions that have been fully sold are left out unless `include_closed=true` is added.
 
@@ -258,6 +273,7 @@ trade_date,ticker,side,quantity,price,fees
 | ------ | -------------------------------------------------------------------------------------------- |
 | `201`  | Every row was saved. The body is `{"imported": <count>}`                                     |
 | `400`  | The file is not a readable trades CSV: wrong extension, empty, missing a required column, or more than 5000 rows |
+| `409`  | The same file was imported before. Nothing was saved                                         |
 | `413`  | The file is larger than 1 MB                                                                 |
 | `422`  | One or more rows are invalid. Nothing was saved                                              |
 
@@ -277,7 +293,7 @@ Two example files are in `backend/sample_data/`: `trades_sample.csv` (30 valid t
 
 ### Known limitations
 
-- **Importing the same file twice creates duplicate trades.** The import has no way to tell a repeated upload from two genuine trades with the same details.
+- **Only an identical file is recognised as a repeat.** A repeated upload is refused when its contents match an earlier import exactly. The same trades saved in a file that differs at all, even by a space, are imported again.
 - **Sells are not checked against holdings on import.** A file can sell more of a security than was ever bought. The position is then reported as oversold instead of the import being rejected.
 - **Every trade is read on each `/holdings` request.** This is fine at the current size and would need revisiting for a much larger ledger.
 - **Prices are daily closing prices for ASX tickers only.** There are no intraday prices.
@@ -436,7 +452,7 @@ The app runs at http://localhost:5173. It opens on a sign in page and has three 
 | --------- | ------------- |
 | Dashboard | Market value, unrealised P&L and unrealised return, the return over each period, and charts of portfolio value over time, sector allocation and unrealised P&L by holding |
 | Holdings  | The current positions with their last price, market value, unrealised P&L and weight. Has sorting, a search box, filters for sector and asset class, summary figures, and a warning when prices are more than three business days old |
-| Trades    | A form to upload a CSV file, and the saved trades |
+| Trades    | A form to upload a CSV file, the saved trades with filters, sorting and a CSV export, and a list of past imports |
 
 ### Environment variables
 
