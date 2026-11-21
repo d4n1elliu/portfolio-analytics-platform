@@ -1,12 +1,10 @@
 # portfolio-analytics-platform
 
-[![CI](https://github.com/d4n1elliu/portfolio-analytics-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/d4n1elliu/portfolio-analytics-platform/actions/workflows/ci.yml)
-
 **Live site:** https://portfolio-analytics.daniel-liu.dev
 
 A full-stack web app for tracking portfolio holdings, performance and sector exposure, modelled on the kind of internal tool portfolio managers and analysts use at an investment fund.
 
-> **Personal project.** This is a learning project built around a fictional fund. It contains no real client data, no real holdings, and is not affiliated with any investment firm.
+> **Personal project.** This is a learning project built around a fictional fund. It contains no real client data, no real holdings and is not affiliated with any investment firm.
 
 ## Status
 
