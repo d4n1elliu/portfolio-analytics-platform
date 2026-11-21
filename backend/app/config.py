@@ -51,6 +51,10 @@ def _optional_int(name: str, default: int) -> int:
     return int(value) if value else default
 
 
+def _optional_flag(name: str) -> bool:
+    return os.getenv(name, "").strip().lower() in {"1", "true", "yes", "on"}
+
+
 def _optional_list(name: str, default: list[str]) -> list[str]:
     """Return a comma-separated environment variable as a list, or the default."""
     value = os.getenv(name, "").strip()
@@ -73,6 +77,8 @@ IMPORT_MAX_ROWS = _optional_int("IMPORT_MAX_ROWS", 5000)
 # price, or a full lookback ago when it has none.
 PRICE_REFRESH_OVERLAP_DAYS = _optional_int("PRICE_REFRESH_OVERLAP_DAYS", 5)
 PRICE_LOOKBACK_DAYS = _optional_int("PRICE_LOOKBACK_DAYS", 365)
+
+AI_ENABLED = _optional_flag("AI_ENABLED")
 
 PASSWORD_LOCKED_EMAILS = [email.lower() for email in _optional_list("PASSWORD_LOCKED_EMAILS", [])]
 

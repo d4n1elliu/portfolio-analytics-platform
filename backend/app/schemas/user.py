@@ -24,12 +24,14 @@ class UserRead(BaseModel):
     name: str
     role: str
     permissions: list[Permission]
+    ai_enabled: bool
 
     @classmethod
-    def from_user(cls, user: User) -> "UserRead":
+    def from_user(cls, user: User, ai_enabled: bool) -> "UserRead":
         return cls(
             email=user.email,
             name=user.name,
             role=user.role,
             permissions=sorted(permissions_of(user.role)),
+            ai_enabled=ai_enabled,
         )

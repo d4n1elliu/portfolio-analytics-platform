@@ -6,7 +6,7 @@ from math import ceil
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
 
-from app.config import COOKIE_SECURE, SESSION_MINUTES
+from app.config import AI_ENABLED, COOKIE_SECURE, SESSION_MINUTES
 from app.database import get_db
 from app.models import User, UserSession
 from app.routes.dependencies import (
@@ -66,7 +66,7 @@ def login(
         max_age=SESSION_MINUTES * 60,
         **COOKIE_SETTINGS,
     )
-    return UserRead.from_user(user)
+    return UserRead.from_user(user, AI_ENABLED)
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
@@ -105,7 +105,7 @@ def change_password(
 @router.get("/me", response_model=UserRead)
 def read_current_user(user: User = Depends(get_current_user)):
     """Return the signed-in user."""
-    return UserRead.from_user(user)
+    return UserRead.from_user(user, AI_ENABLED)
 
 
 def _too_many_failures(wait: timedelta) -> HTTPException:
