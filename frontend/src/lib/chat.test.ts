@@ -3,10 +3,22 @@
 import { describe, expect, it } from 'vitest'
 
 import type { ChatMessage } from '../api/types'
-import { applyEvent, describeInput, readEvents, toTurns } from './chat'
+import { applyEvent, citedSources, describeInput, readEvents, toTurns } from './chat'
 
-const QUESTION: ChatMessage = { id: '1', role: 'user', text: 'What do I hold?', toolCalls: [] }
-const EMPTY_ANSWER: ChatMessage = { id: '2', role: 'assistant', text: '', toolCalls: [] }
+const QUESTION: ChatMessage = {
+  id: '1',
+  role: 'user',
+  text: 'What do I hold?',
+  toolCalls: [],
+  sources: [],
+}
+const EMPTY_ANSWER: ChatMessage = {
+  id: '2',
+  role: 'assistant',
+  text: '',
+  toolCalls: [],
+  sources: [],
+}
 
 describe('readEvents', () => {
   it('reads each complete event and keeps the unfinished rest', () => {
@@ -67,6 +79,38 @@ describe('applyEvent', () => {
 
   it('changes nothing when there is no answer to add to', () => {
     expect(applyEvent([QUESTION], { type: 'text', text: 'Hello' })).toEqual([QUESTION])
+  })
+})
+
+describe('sources', () => {
+  const source = (number: number) => ({
+    source: number,
+    document_id: 3,
+    chunk: number,
+    title: 'CSL: plasma collections recover',
+    ticker: 'CSL',
+    document_date: '2026-08-20',
+  })
+
+  it('adds the sources an answer drew on, in number order and each only once', () => {
+    const first = applyEvent([QUESTION, EMPTY_ANSWER], {
+      type: 'sources',
+      sources: [source(2), source(1)],
+    })
+    const second = applyEvent(first, { type: 'sources', sources: [source(1), source(3)] })
+
+    expect(second[1].sources.map((found) => found.source)).toEqual([1, 2, 3])
+  })
+
+  it('lists only the sources the answer cites', () => {
+    const answer = {
+      ...EMPTY_ANSWER,
+      text: 'Volumes rose [2], and costs fell [3].',
+      sources: [source(1), source(2), source(3)],
+    }
+
+    expect(citedSources(answer).map((found) => found.source)).toEqual([2, 3])
+    expect(citedSources({ ...answer, text: 'Volumes rose.' })).toEqual([])
   })
 })
 

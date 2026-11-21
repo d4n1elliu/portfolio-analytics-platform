@@ -129,11 +129,21 @@ export interface ToolCall {
   status: ToolCallStatus
 }
 
+export interface ChatSource {
+  source: number
+  document_id: number
+  chunk: number
+  title: string
+  ticker: string
+  document_date: string
+}
+
 export interface ChatMessage {
   id: string
   role: ChatRole
   text: string
   toolCalls: ToolCall[]
+  sources: ChatSource[]
 }
 
 export interface ChatTurn {
@@ -145,6 +155,7 @@ export type ChatEvent =
   | { type: 'text'; text: string }
   | { type: 'tool_call'; id: string; name: string; input: Record<string, unknown> }
   | { type: 'tool_result'; id: string; output: string; failed: boolean }
+  | { type: 'sources'; sources: ChatSource[] }
   | { type: 'done' }
   | { type: 'error'; message: string }
 
