@@ -20,7 +20,6 @@ PRICE_DATE = date(2026, 11, 13)
 
 @pytest.fixture
 def client(db, save, client_with_session):
-    """A client signed in as Operations, on a database that holds the seeded securities."""
     seed_securities(db, SECURITIES)
     save(make_user(Role.OPERATIONS))
     client = client_with_session(db)
@@ -34,7 +33,6 @@ def import_file(client, name: str):
 
 
 def import_sample_and_price_bhp(client, db) -> None:
-    """Import the sample trades and give BHP, alone, one closing price of 46."""
     import_file(client, "trades_sample.csv")
     bhp_id = security_ids_by_ticker(db)["BHP"]
     insert_new_closes(db, bhp_id, [DailyClose(PRICE_DATE, Decimal("46"))])
@@ -111,7 +109,6 @@ def test_holdings_are_calculated_and_valued_from_the_stored_rows(client, db):
 
     holdings = {holding["ticker"]: holding for holding in client.get("/holdings").json()}
 
-    # The BHP figures worked through in the README.
     bhp = holdings["BHP"]
     assert bhp["quantity"] == "350.000000"
     assert bhp["cost_basis"] == "14822.44"

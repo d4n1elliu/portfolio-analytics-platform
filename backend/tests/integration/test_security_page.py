@@ -13,11 +13,9 @@ TUESDAY = date(2026, 11, 10)
 
 @pytest.fixture
 def client(db, save, client_with_session):
-    """A signed-in client. BHP is held and priced, CBA was sold, and CSL was never traded."""
     bhp, cba, _ = save(make_security("BHP"), make_security("CBA"), make_security("CSL"))
     save(buy(bhp, "100", "40", on=MONDAY), buy(cba, "10", "150", on=MONDAY))
     save(sell(cba, "10", "160", on=TUESDAY))
-    # Saved newest first, to show the order comes from the query.
     save(*closes(bhp, {TUESDAY: "42", MONDAY: "41"}))
     save(make_user(Role.ANALYST))
     client = client_with_session(db)

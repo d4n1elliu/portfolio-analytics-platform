@@ -21,8 +21,6 @@ class ImportBatch(CreatedAtMixin, Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     file_name: Mapped[str] = mapped_column(String(FILE_NAME_LENGTH))
-    # SHA-256 of the file's bytes, as 64 hex characters. Unique, so the same
-    # file cannot be imported twice.
     file_hash: Mapped[str] = mapped_column(String(64), unique=True)
     row_count: Mapped[int] = mapped_column(Integer)
     imported_by_id: Mapped[int] = mapped_column(ForeignKey("users.id"))

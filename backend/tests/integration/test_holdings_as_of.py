@@ -11,7 +11,6 @@ from factories import buy, closes, make_security, sell
 MONDAY = date(2026, 11, 9)
 TUESDAY = date(2026, 11, 10)
 WEDNESDAY = date(2026, 11, 11)
-# No price is stored for the weekend.
 NEXT_SUNDAY = date(2026, 11, 15)
 
 
@@ -34,7 +33,6 @@ def test_the_price_is_the_latest_one_on_or_before_the_date(db, save):
     on_sunday = latest_prices(db, up_to=NEXT_SUNDAY)
 
     assert on_tuesday["BHP"].close == Decimal("41")
-    # CBA had no price yet.
     assert "CBA" not in on_tuesday
     assert on_sunday["BHP"].price_date == WEDNESDAY
 
@@ -48,7 +46,6 @@ def test_holdings_at_a_past_date_ignore_what_happened_later(db, save):
     past = list_holdings(db, include_closed=False, as_of=TUESDAY)
     current = list_holdings(db, include_closed=False)
 
-    # On Tuesday BHP was still held and CBA had not been bought.
     assert [holding.security.ticker for holding in past] == ["BHP"]
     assert past[0].position.quantity == 100
     assert past[0].valuation.price_date == TUESDAY

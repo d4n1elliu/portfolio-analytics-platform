@@ -35,10 +35,8 @@ _SORT_COLUMNS = {
 class TradeQuery:
     """Which trades to return, and in what order. None means no filter."""
 
-    # Upper case, matched exactly.
     ticker: str | None = None
     side: TradeSide | None = None
-    # Both dates are included.
     date_from: date | None = None
     date_to: date | None = None
     sort: TradeSort = TradeSort.TRADE_DATE
@@ -75,7 +73,6 @@ def list_all_trades(db: Session, query: TradeQuery) -> list[Trade]:
 
 
 def _matching(query: TradeQuery) -> Select:
-    # One join both filters by ticker and loads each trade's security.
     statement = select(Trade).join(Trade.security).options(contains_eager(Trade.security))
     if query.ticker is not None:
         statement = statement.where(Security.ticker == query.ticker)
@@ -90,7 +87,6 @@ def _matching(query: TradeQuery) -> Select:
 
 def _ordered(statement: Select, query: TradeQuery) -> Select:
     column = _SORT_COLUMNS[query.sort]
-    # The id breaks ties, so the order is the same on every page.
     if query.descending:
         return statement.order_by(column.desc(), Trade.id.desc())
     return statement.order_by(column, Trade.id)

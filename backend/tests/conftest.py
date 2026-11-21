@@ -17,16 +17,9 @@ def _test_database_url() -> str:
     ).strip()
 
 
-# The tests in tests/integration run queries against the test database. It
-# replaces DATABASE_URL here, before the app is imported, so no test can reach
-# the database the app itself uses.
 os.environ[TEST_DATABASE_VARIABLE] = _test_database_url()
 if os.environ[TEST_DATABASE_VARIABLE]:
     os.environ["DATABASE_URL"] = os.environ[TEST_DATABASE_VARIABLE]
-# Without a test database, app.config still requires DATABASE_URL. A
-# placeholder lets the other tests run without a .env file. Nothing connects
-# to it: creating the engine does not open a connection. A value already set
-# in the shell is kept, and an empty one counts as unset.
 elif not os.environ.get("DATABASE_URL", "").strip():
     os.environ["DATABASE_URL"] = "postgresql://test:test@localhost:5432/test"
 

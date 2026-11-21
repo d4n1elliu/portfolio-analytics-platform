@@ -57,7 +57,6 @@ class Trade(CreatedAtMixin, Base):
     # Brokerage and other costs for the whole trade.
     fees: Mapped[Decimal] = mapped_column(CASH_AMOUNT, default=Decimal("0"), server_default="0")
 
-    # The file the trade came from. None for a trade saved before imports were recorded.
     import_batch_id: Mapped[int | None] = mapped_column(ForeignKey("import_batches.id"), index=True)
 
     security: Mapped[Security] = relationship(back_populates="trades")

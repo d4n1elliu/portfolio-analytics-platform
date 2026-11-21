@@ -13,7 +13,6 @@ DAY = date(2026, 11, 13)
 
 
 def changed(row, change: dict):
-    """Return the row with the given columns set, to break one rule."""
     for column, value in change.items():
         setattr(row, column, value)
     return row
