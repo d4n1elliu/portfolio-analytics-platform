@@ -3,7 +3,6 @@ import Card from './Card'
 import CsvImportForm from './CsvImportForm'
 
 interface TradeImportProps {
-  /** The tickers a file may use. Empty until they have loaded. */
   tickers: string[]
   onImported: () => void
 }

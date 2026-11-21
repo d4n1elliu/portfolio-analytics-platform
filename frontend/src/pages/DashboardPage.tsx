@@ -27,7 +27,6 @@ import {
 import type { SectorShare, ValuedHolding } from '../lib/valuation'
 import { ROUTES } from '../routes'
 
-/** Closed positions are fetched too, because the profit made by selling them still counts. */
 function loadAllHoldings(signal: AbortSignal) {
   return listHoldings({ includeClosed: true }, signal)
 }
@@ -45,7 +44,6 @@ function DashboardPage() {
 }
 
 function Valuation({ allHoldings }: { allHoldings: Holding[] }) {
-  // The open positions that have a price. The charts and the market value use only these.
   const holdings = valuedHoldings(allHoldings)
   const unpricedCount = countUnpriced(allHoldings)
   const summary = summariseValuation(holdings)

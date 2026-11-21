@@ -1,3 +1,5 @@
+// The filter bar of the trades table: ticker, side and a date range.
+
 import type { TradeSide } from '../api/types'
 import { NO_TRADE_FILTERS, TRADE_SIDES, hasTradeFilters } from '../lib/trades'
 import type { TradeFilters as Filters } from '../lib/trades'
@@ -26,7 +28,6 @@ function TradeFilters({ filters, tickers, onChange }: TradeFiltersProps) {
         allLabel="Buys and sells"
         options={TRADE_SIDES}
         value={filters.side}
-        // The list only holds the two sides and '' for both.
         onChange={(side) => onChange({ ...filters, side: side as TradeSide | '' })}
       />
       <DateInput

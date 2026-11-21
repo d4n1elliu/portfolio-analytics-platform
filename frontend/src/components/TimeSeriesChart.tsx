@@ -9,10 +9,8 @@ const LINE_WIDTH = 2
 const HOVER_DOT_SIZE = 8
 const LEGEND_HEIGHT = 40
 const MARKER_SIZE = 12
-// How far a marker sits from the line, so it does not cover it.
 const MARKER_GAP = 12
 
-// One list for every chart without markers, so the chart is not redrawn on each render.
 const NO_MARKERS: TimeSeriesMarker[] = []
 
 export interface TimeSeriesLine {
@@ -22,14 +20,11 @@ export interface TimeSeriesLine {
   dashed?: boolean
 }
 
-/** A triangle drawn at one point of the first line, such as a trade on a price chart. */
 export interface TimeSeriesMarker {
   date: string
   value: number
-  /** Shown when the marker is hovered. */
   label: string
   colour: string
-  /** Draws the triangle above the line pointing down, instead of below it pointing up. */
   pointsDown?: boolean
 }
 
@@ -118,7 +113,6 @@ function markPoints(markers: TimeSeriesMarker[]): MarkPointComponentOption {
     symbol: 'triangle',
     symbolSize: MARKER_SIZE,
     label: { show: false },
-    // {b} is the name of the hovered marker.
     tooltip: { trigger: 'item', formatter: '{b}' },
     data: markers.map((marker) => ({
       name: marker.label,

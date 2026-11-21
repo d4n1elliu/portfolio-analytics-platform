@@ -1,3 +1,5 @@
+// Tests for the date, money, number and text formats.
+
 import { describe, expect, it } from 'vitest'
 
 import {
@@ -47,7 +49,6 @@ describe('formatCurrency', () => {
   })
 
   it('names a currency that is not the local one', () => {
-    // The space is a non-breaking one, so the code and the amount stay on one line.
     expect(formatCurrency(10, 'USD')).toBe('USD\u00a010.00')
   })
 

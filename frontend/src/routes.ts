@@ -16,7 +16,6 @@ export const PAGES = [
 
 export const HOME = ROUTES.dashboard
 
-/** The address of the page for one security. */
 export function securityPath(ticker: string): string {
   return ROUTES.security.replace(':ticker', encodeURIComponent(ticker))
 }

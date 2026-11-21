@@ -3,7 +3,6 @@
 import { DEFAULT_CURRENCY, LOCALE } from '../config'
 import { parseDate } from './dates'
 
-/** Decimals shown for a unit price or cost, which can be quoted in fractions of a cent. */
 export const UNIT_PRICE_DECIMALS = 4
 
 /** Shown in place of a value that is missing. */
@@ -44,7 +43,6 @@ export function formatDate(isoDate: string): string {
   return Number.isNaN(date.getTime()) ? isoDate : dateFormatter.format(date)
 }
 
-/** Format a moment in time in the reader's time zone, such as "16 Mar 2026, 3:05 pm". */
 export function formatDateTime(isoDateTime: string): string {
   const moment = new Date(isoDateTime)
   return Number.isNaN(moment.getTime()) ? isoDateTime : dateTimeFormatter.format(moment)

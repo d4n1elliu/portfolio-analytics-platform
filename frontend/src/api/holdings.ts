@@ -3,7 +3,6 @@ import type { Holding } from './types'
 
 interface HoldingsParams {
   includeClosed: boolean
-  /** Date only, as "YYYY-MM-DD", for the positions at the end of that date. Leave out for today. */
   asOf?: string
 }
 
@@ -16,7 +15,6 @@ export function listHoldings(params: HoldingsParams, signal?: AbortSignal): Prom
 
 const NOT_FOUND = 404
 
-/** Fetch the current position in one security, or null if no security has the ticker. */
 export async function getHolding(ticker: string, signal?: AbortSignal): Promise<Holding | null> {
   try {
     return await request<Holding>(`/holdings/${encodeURIComponent(ticker)}`, { signal })

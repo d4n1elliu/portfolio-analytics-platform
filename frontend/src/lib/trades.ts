@@ -1,12 +1,11 @@
+// The filters and default order of the trades table.
+
 import type { TradeSide, TradeSortKey } from '../api/types'
 import type { SortBy } from './sorting'
 
 export interface TradeFilters {
-  /** A ticker to show, or '' for all. */
   ticker: string
-  /** A side to show, or '' for both. */
   side: TradeSide | ''
-  /** Date only, as "YYYY-MM-DD", or '' for no limit. Both dates are included. */
   dateFrom: string
   dateTo: string
 }

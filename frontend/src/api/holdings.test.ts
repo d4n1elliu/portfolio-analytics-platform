@@ -1,8 +1,9 @@
+// Tests for the holdings API calls.
+
 import { describe, expect, it, vi } from 'vitest'
 
 import { getHolding, listHoldings } from './holdings'
 
-/** The path and query of the one request that was made. */
 function requestedPath(): string {
   const url = new URL(vi.mocked(fetch).mock.calls[0][0] as string)
   return url.pathname + url.search

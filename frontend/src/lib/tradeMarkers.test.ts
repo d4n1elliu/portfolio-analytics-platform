@@ -1,9 +1,10 @@
+// Tests for placing trades on a price chart.
+
 import { describe, expect, it } from 'vitest'
 
 import type { SecurityPrice, Trade, TradeSide } from '../api/types'
 import { tradeMarkers } from './tradeMarkers'
 
-// Friday and the Monday after. No price is stored for the weekend.
 const PRICES: SecurityPrice[] = [
   { date: '2026-11-13', close: '41.000000' },
   { date: '2026-11-16', close: '42.500000' },

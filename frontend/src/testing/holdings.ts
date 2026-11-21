@@ -1,6 +1,7 @@
+// Builders for the holdings used in tests.
+
 import type { Holding } from '../api/types'
 
-/** An open, priced holding for tests. Pass only the fields a test is about. */
 export function makeHolding(fields: Partial<Holding> = {}): Holding {
   return {
     ticker: 'BHP',
@@ -23,7 +24,6 @@ export function makeHolding(fields: Partial<Holding> = {}): Holding {
   }
 }
 
-/** A holding with no stored price, so its valuation fields are empty. */
 export function makeUnpricedHolding(fields: Partial<Holding> = {}): Holding {
   return makeHolding({
     last_price: null,

@@ -1,3 +1,5 @@
+// Tests for the return series shown on the performance chart.
+
 import { describe, expect, it } from 'vitest'
 
 import type { GrowthPoint } from '../api/types'

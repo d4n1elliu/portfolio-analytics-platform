@@ -6,7 +6,6 @@ import type { ImportBatch, ImportResult, Page, Trade, TradeSortKey } from './typ
 /** Columns of the trades CSV, in the order the backend documents them. */
 export const TRADE_CSV_COLUMNS = ['trade_date', 'ticker', 'side', 'quantity', 'price', 'fees']
 
-/** Which trades to ask for, and in what order. */
 export interface TradeQuery {
   filters: TradeFilters
   sort: SortBy<TradeSortKey>
@@ -17,7 +16,6 @@ interface PageParams {
   offset: number
 }
 
-/** The query string for a trade query. A filter that is not set is left out. */
 export function tradeQueryString(query: TradeQuery, page?: PageParams): string {
   const { filters, sort } = query
   const params = {
@@ -34,7 +32,6 @@ export function tradeQueryString(query: TradeQuery, page?: PageParams): string {
   return new URLSearchParams(set).toString()
 }
 
-/** Fetch one page of the trades that match. */
 export function listTrades(
   query: TradeQuery,
   page: PageParams,
@@ -43,7 +40,6 @@ export function listTrades(
   return request<Page<Trade>>(`/trades?${tradeQueryString(query, page)}`, { signal })
 }
 
-/** Fetch every trade that matches as a CSV file. */
 export function exportTrades(query: TradeQuery): Promise<Blob> {
   return requestFile(`/trades/export?${tradeQueryString(query)}`)
 }
@@ -53,7 +49,6 @@ export function importTrades(file: File): Promise<ImportResult> {
   return uploadFile<ImportResult>('/trades/import', file)
 }
 
-/** Fetch the latest imports, newest first. */
 export function listImports(limit: number, signal?: AbortSignal): Promise<Page<ImportBatch>> {
   return request<Page<ImportBatch>>(`/trades/imports?limit=${limit}`, { signal })
 }

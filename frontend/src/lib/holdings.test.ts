@@ -1,3 +1,5 @@
+// Tests for filtering, selecting and adding up holdings.
+
 import { describe, expect, it } from 'vitest'
 
 import { makeHolding } from '../testing/holdings'

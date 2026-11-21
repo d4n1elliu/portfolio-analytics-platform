@@ -1,3 +1,5 @@
+// Tests for the trade query string and the trade filters.
+
 import { describe, expect, it } from 'vitest'
 
 import { NEWEST_FIRST, NO_TRADE_FILTERS, hasTradeFilters } from '../lib/trades'

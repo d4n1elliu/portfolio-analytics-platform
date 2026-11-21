@@ -1,3 +1,5 @@
+// Tests for nextSort.
+
 import { describe, expect, it } from 'vitest'
 
 import { nextSort } from './sorting'

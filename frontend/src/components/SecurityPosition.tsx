@@ -1,3 +1,5 @@
+// The position in one security, as a row of tiles.
+
 import type { ReactNode } from 'react'
 
 import type { Holding } from '../api/types'
@@ -11,7 +13,6 @@ import {
 import Profit from './Profit'
 import StatTiles from './StatTiles'
 
-/** The position in one security, as a row of tiles. */
 function SecurityPosition({ holding }: { holding: Holding }) {
   const { currency } = holding
   const unitPrice = (value: string) => formatCurrency(value, currency, UNIT_PRICE_DECIMALS)

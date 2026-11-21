@@ -5,7 +5,6 @@ export const CHART_COLOURS = {
   primary: '#2a78d6',
   /** A loss. Blue and red stay distinct for colour-blind readers. */
   negative: '#e34948',
-  /** A buy marked on a price chart. A sell uses the colour of a loss. */
   buy: '#047857',
   /** A line to compare against, such as what the portfolio cost. */
   reference: '#64748b',

@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+// Tests for DataTable, sorting its own rows or showing rows sorted outside it.
+
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 

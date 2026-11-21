@@ -10,7 +10,6 @@ const SIDE_COLOURS: Record<TradeSide, string> = {
   SELL: 'bg-red-50 text-red-700',
 }
 
-/** Every column the API can order by has a sortKey. */
 const COLUMNS: (Column<Trade> & { sortKey?: TradeSortKey })[] = [
   {
     header: 'Date',
@@ -54,13 +53,11 @@ const COLUMNS: (Column<Trade> & { sortKey?: TradeSortKey })[] = [
 ]
 
 interface TradeTableProps {
-  /** One page of trades, already in the order of `sort`. */
   trades: Trade[]
   sort: SortBy<TradeSortKey>
   onSort: (sortKey: TradeSortKey) => void
 }
 
-/** The trades table: a DataTable with the columns for a trade, sorted by the API. */
 function TradeTable({ trades, sort, onSort }: TradeTableProps) {
   return (
     <DataTable
@@ -68,7 +65,6 @@ function TradeTable({ trades, sort, onSort }: TradeTableProps) {
       rows={trades}
       getRowKey={(trade) => trade.id}
       sort={sort}
-      // The table only passes back a sortKey from COLUMNS.
       onSort={(sortKey) => onSort(sortKey as TradeSortKey)}
     />
   )
