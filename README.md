@@ -418,7 +418,6 @@ Real `.env` files are git-ignored and must never be committed. The `.env.example
 | ----------------------- | --------------------- | ---------------------------------------------------- |
 | `backend/.env.example`  | `DATABASE_URL`        | Neon PostgreSQL connection string (required)         |
 | `backend/.env.example`  | `JWT_SECRET`          | Secret for signing session tokens. Needed to sign in |
-| `backend/.env.example`  | `MARKET_DATA_API_KEY` | Market data provider API key (not used yet)          |
 | `backend/.env.example`  | `CORS_ORIGINS`        | Optional. Comma-separated addresses allowed to call the API. Defaults to `http://localhost:5173` |
 | `backend/.env.example`  | `MARKET_TIMEZONE`     | Optional. Time zone that decides "today" for trade dates. Defaults to `Australia/Sydney` |
 | `backend/.env.example`  | `SESSION_MINUTES`     | Optional. How long a sign in lasts. Defaults to 480  |
