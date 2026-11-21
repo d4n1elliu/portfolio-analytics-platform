@@ -178,11 +178,11 @@ The interactive docs at http://localhost:8000/docs list every endpoint and let y
 
 Every page needs a sign in. There is no sign-up: accounts are created by a seed script.
 
-| Role              | Can view everything | Can export trades | Can import trades |
-| ----------------- | ------------------- | ----------------- | ----------------- |
-| Operations        | Yes                 | Yes               | Yes               |
-| Portfolio Manager | Yes                 | Yes               | No                |
-| Analyst           | Yes                 | No                | No                |
+| Role              | Can view everything | Can export trades | Can import trades | Can upload research |
+| ----------------- | ------------------- | ----------------- | ----------------- | ------------------- |
+| Operations        | Yes                 | Yes               | Yes               | Yes                 |
+| Portfolio Manager | Yes                 | Yes               | No                | No                  |
+| Analyst           | Yes                 | No                | No                | Yes                 |
 
 The table lives in one place, `backend/app/services/permissions.py`. The API checks it, and `/auth/login` and `/auth/me` return the signed-in user's `permissions`, such as `["export_trades"]`, so the pages show only what the user can do. They also return `ai_enabled`, which decides whether the AI pages appear. A request the role does not allow is answered with `403`.
 
@@ -470,6 +470,7 @@ The app runs at http://localhost:5173. It opens on a sign in page and has three 
 | Holdings  | The current positions with their last price, market value, unrealised P&L and weight. Has sorting, a search box, filters for sector and asset class, summary figures, and a warning when prices are more than three business days old. An "As at" date shows the positions on a past date |
 | Security  | Opened by clicking a ticker. One security's position, a chart of its closing price with each buy and sell marked, and its trades |
 | Assistant | Shown only when `AI_ENABLED` is on. A conversation about the portfolio, with the tools each answer used. The page is in place but not yet connected to a model, so it cannot answer |
+| Research  | Shown only when `AI_ENABLED` is on. The library of research documents, with filters for ticker and date, and a form to upload a PDF, Markdown or text file for a ticker. The page is in place but uploads are not yet connected, so nothing is saved |
 | Trades    | A form to upload a CSV file, the saved trades with filters, sorting and a CSV export, and a list of past imports |
 
 ### Environment variables
