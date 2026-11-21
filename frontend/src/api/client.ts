@@ -34,8 +34,8 @@ export function setSessionExpiredHandler(handler: (() => void) | null): void {
   onSessionExpired = handler
 }
 
-/** Send a request to the API and return the parsed JSON response. */
-export async function request<T>(path: string, init?: RequestInit): Promise<T> {
+/** Send a request to the API. Throws ApiError unless it answers with a success status. */
+async function send(path: string, init?: RequestInit): Promise<Response> {
   let response: Response
   try {
     // Sends the session cookie, which the browser leaves out by default when
@@ -46,16 +46,28 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
     throw new ApiError('Could not reach the API. Check that the backend is running.', 0)
   }
 
-  // An error response may have no JSON body.
-  const body: unknown = await response.json().catch(() => null)
   // A 401 from a data endpoint means the session ended while the page was open.
   // The sign in endpoints answer 401 for their own reasons.
   if (response.status === NOT_SIGNED_IN && !path.startsWith(AUTH_PATHS)) onSessionExpired?.()
   if (!response.ok) {
+    // An error response may have no JSON body.
+    const body: unknown = await response.json().catch(() => null)
     const retryAfter = Number(response.headers.get('Retry-After')) || null
     throw new ApiError(errorMessage(body, response.status), response.status, body, retryAfter)
   }
-  return body as T
+  return response
+}
+
+/** Send a request to the API and return the parsed JSON response. */
+export async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await send(path, init)
+  // A response such as 204 has no JSON body.
+  return (await response.json().catch(() => null)) as T
+}
+
+/** Send a request to the API and return the file it answers with. */
+export async function requestFile(path: string, init?: RequestInit): Promise<Blob> {
+  return (await send(path, init)).blob()
 }
 
 export function postJson<T>(path: string, body?: unknown): Promise<T> {

@@ -1,12 +1,14 @@
-import { listSecurities } from '../api/securities'
 import { TRADE_CSV_COLUMNS, importTrades } from '../api/trades'
-import { useApiQuery } from '../hooks/useApiQuery'
 import Card from './Card'
 import CsvImportForm from './CsvImportForm'
 
-function TradeImport({ onImported }: { onImported: () => void }) {
-  const { state: securities } = useApiQuery(listSecurities)
+interface TradeImportProps {
+  /** The tickers a file may use. Empty until they have loaded. */
+  tickers: string[]
+  onImported: () => void
+}
 
+function TradeImport({ tickers, onImported }: TradeImportProps) {
   return (
     <Card title="Import trades">
       <CsvImportForm upload={importTrades} singular="trade" plural="trades" onImported={onImported}>
@@ -18,9 +20,7 @@ function TradeImport({ onImported }: { onImported: () => void }) {
             </code>
             .
           </p>
-          {securities.status === 'loaded' && (
-            <p>Known tickers: {securities.data.map((security) => security.ticker).join(', ')}.</p>
-          )}
+          {tickers.length > 0 && <p>Known tickers: {tickers.join(', ')}.</p>}
         </div>
       </CsvImportForm>
     </Card>

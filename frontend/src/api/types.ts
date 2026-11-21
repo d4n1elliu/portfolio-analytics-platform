@@ -99,6 +99,9 @@ export interface User {
 
 export type TradeSide = 'BUY' | 'SELL'
 
+/** The columns the API can order trades by. */
+export type TradeSortKey = 'trade_date' | 'ticker' | 'side' | 'quantity' | 'price' | 'fees'
+
 export interface Trade {
   id: number
   /** Date only, as "YYYY-MM-DD". */
