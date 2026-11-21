@@ -2,14 +2,20 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { streamChat } from '../api/chat'
+import { getConversation, streamChat } from '../api/chat'
 import { isAbortError, messageFrom } from '../api/client'
 import type { ChatEvent, ChatMessage } from '../api/types'
-import { applyEvent, isSendable, newMessage, toTurns } from '../lib/chat'
+import { applyEvent, isSendable, messagesFromTurns, newMessage } from '../lib/chat'
 
 const COULD_NOT_ANSWER = 'The assistant could not answer. Try again.'
+const COULD_NOT_OPEN = 'The conversation could not be opened.'
 
-export function useChat() {
+interface UseChatOptions {
+  onConversationUsed: () => void
+}
+
+export function useChat({ onConversationUsed }: UseChatOptions) {
+  const [conversationId, setConversationId] = useState<string | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [answering, setAnswering] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -17,39 +23,61 @@ export function useChat() {
 
   useEffect(() => () => request.current?.abort(), [])
 
+  const show = useCallback((id: string | null, shown: ChatMessage[]) => {
+    request.current?.abort()
+    request.current = null
+    setConversationId(id)
+    setMessages(shown)
+    setAnswering(false)
+    setError(null)
+  }, [])
+
+  const startOver = useCallback(() => show(null, []), [show])
+
+  const open = useCallback(
+    async (id: string) => {
+      show(id, [])
+      try {
+        const conversation = await getConversation(id)
+        setMessages(messagesFromTurns(conversation.turns))
+      } catch (thrown) {
+        setError(messageFrom(thrown, COULD_NOT_OPEN))
+      }
+    },
+    [show],
+  )
+
   const send = useCallback(
     async (text: string) => {
       if (!isSendable(text) || answering) return
-      const asked = [...messages, newMessage('user', text.trim())]
+      const question = text.trim()
       const controller = new AbortController()
       request.current = controller
-      setMessages([...asked, newMessage('assistant', '')])
+      setMessages((current) => [
+        ...current,
+        newMessage('user', question),
+        newMessage('assistant', ''),
+      ])
       setAnswering(true)
       setError(null)
 
       function handle(event: ChatEvent) {
         if (event.type === 'error') setError(event.message)
+        else if (event.type === 'conversation') setConversationId(event.id)
         else setMessages((current) => applyEvent(current, event))
       }
 
       try {
-        await streamChat(toTurns(asked), handle, controller.signal)
+        await streamChat(question, conversationId, handle, controller.signal)
       } catch (thrown) {
         if (!isAbortError(thrown)) setError(messageFrom(thrown, COULD_NOT_ANSWER))
       } finally {
         if (request.current === controller) setAnswering(false)
+        onConversationUsed()
       }
     },
-    [messages, answering],
+    [answering, conversationId, onConversationUsed],
   )
 
-  const startOver = useCallback(() => {
-    request.current?.abort()
-    request.current = null
-    setMessages([])
-    setAnswering(false)
-    setError(null)
-  }, [])
-
-  return { messages, answering, error, send, startOver }
+  return { conversationId, messages, answering, error, send, open, startOver }
 }

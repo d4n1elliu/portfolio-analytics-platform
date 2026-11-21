@@ -11,6 +11,7 @@ from alembic import context
 from sqlalchemy import create_engine, pool
 
 import app.models  # noqa: F401  (imported only so the models are registered)
+from app.ai.memory import CHECKPOINT_TABLES
 from app.config import DATABASE_URL
 from app.database import CONNECT_TIMEOUT_SECONDS, Base
 
@@ -25,6 +26,12 @@ if config.config_file_name is not None:
 # appears here once its file has been imported. The "import app.models" line
 # above does that for every model listed in app/models/__init__.py.
 target_metadata = Base.metadata
+
+
+def is_ours(name: str | None, type_: str, parent_names: dict) -> bool:
+    """Leave LangGraph's own tables alone. It creates and changes them itself."""
+    table = name if type_ == "table" else parent_names.get("table_name")
+    return table not in CHECKPOINT_TABLES
 
 
 def run_migrations_offline() -> None:
@@ -53,7 +60,11 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata)
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+            include_name=is_ours,
+        )
 
         with context.begin_transaction():
             context.run_migrations()

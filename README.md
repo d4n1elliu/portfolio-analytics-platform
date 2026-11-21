@@ -144,6 +144,9 @@ A security has many trades and many prices. A trade points to the import it came
 | `POST` | `/auth/password` | Changes the signed-in user's password                           |
 | `GET`  | `/ai/usage`      | Returns the signed-in user's AI requests and tokens, and their limits |
 | `POST` | `/ai/chat`       | Asks the assistant a question and streams its answer            |
+| `GET`  | `/ai/conversations` | Lists the signed-in user's conversations, most recently used first |
+| `GET`  | `/ai/conversations/{id}` | Returns one conversation with its questions and answers |
+| `DELETE` | `/ai/conversations/{id}` | Deletes one conversation and its messages          |
 | `GET`  | `/research/documents` | Lists the research documents, newest first              |
 | `POST` | `/research/documents` | Uploads a research file about one security              |
 | `GET`  | `/research/documents/{id}` | Returns one document with its chunks               |
@@ -211,7 +214,7 @@ The chat model and the embedding model are named in settings as `provider:model`
 
 Each user has an allowance: 20 AI requests in any hour and 200,000 tokens in any day, by default. Every request is recorded in `ai_usage` with the tokens it used, so the count survives a restart. A request over either limit is answered with `429`. `GET /ai/usage` returns what has been used, and the Account page shows it.
 
-**The assistant.** `POST /ai/chat` takes the conversation so far, as `{"messages": [{"role": "user", "text": "..."}]}`, and streams the answer as server-sent events. Each event is a JSON object with a `type`:
+**The assistant.** `POST /ai/chat` takes one question, as `{"question": "...", "conversation_id": "..."}`, and streams the answer as server-sent events. Each event is a JSON object with a `type`:
 
 | Type | What it carries |
 | ---- | --------------- |
@@ -221,6 +224,12 @@ Each user has an allowance: 20 AI requests in any hour and 200,000 tokens in any
 | `text` | The next piece of the answer |
 | `done` | The answer is complete |
 | `error` | The assistant could not answer |
+
+**Conversation memory.** Each conversation is stored in PostgreSQL, so it survives a restart and can be reopened from the Assistant page. The first event of every answer is `conversation`, carrying the id to send with the next question. Leave `conversation_id` out to start a new conversation.
+
+The storage is in two parts. The `conversations` table, created by a migration, records who owns each conversation, its title (the first question) and when it was last used. The messages themselves, including tool calls, tool results and sources, are kept by LangGraph's PostgreSQL checkpointer in four tables of its own (`checkpoints`, `checkpoint_blobs`, `checkpoint_writes` and `checkpoint_migrations`). LangGraph creates and upgrades those tables itself when the app starts with `AI_ENABLED` on, so Alembic is told to ignore them.
+
+A conversation belongs to one user. Reading, carrying on or deleting another user's conversation answers `404`. Deleting a conversation removes its messages too. The whole conversation is kept, but only the most recent 40 messages are sent to the model, starting from a question, so a long conversation cannot grow the cost of every answer without limit.
 
 The assistant is a LangChain agent with eight tools. Seven are thin wrappers over services the pages already use: holdings now or at a past date, one holding, portfolio history, performance against the benchmark, trades, securities and a security's prices. The eighth searches the research notes. Every tool only reads.
 
@@ -519,7 +528,7 @@ The app runs at http://localhost:5173. It opens on a sign in page and has three 
 | Dashboard | Market value, unrealised P&L and return, realised P&L and total P&L, the return over each period next to the benchmark's, and charts of portfolio value over time, sector allocation and unrealised P&L by holding |
 | Holdings  | The current positions with their last price, market value, unrealised P&L and weight. Has sorting, a search box, filters for sector and asset class, summary figures, and a warning when prices are more than three business days old. An "As at" date shows the positions on a past date |
 | Security  | Opened by clicking a ticker. One security's position, a chart of its closing price with each buy and sell marked, and its trades. When the AI features are on, it also lists the research notes about the security |
-| Assistant | Shown only when `AI_ENABLED` is on. A conversation about the portfolio. Each answer streams in as it is written and shows the tools it used and what they returned. An answer that draws on research cites it and lists its sources |
+| Assistant | Shown only when `AI_ENABLED` is on. The user's stored conversations about the portfolio, which can be reopened, carried on or deleted. Each answer streams in as it is written and shows the tools it used and what they returned. An answer that draws on research cites it and lists its sources |
 | Research  | Shown only when `AI_ENABLED` is on. The library of research documents, with filters for ticker and date, and a form to upload a PDF, Markdown or text file about one security |
 | Research document | Opened by clicking a title in the library. One document's details and its text as numbered chunks. A link to a chunk, such as `/research/12#chunk-3`, scrolls to that chunk and highlights it |
 | Trades    | A form to upload a CSV file, the saved trades with filters, sorting and a CSV export, and a list of past imports |

@@ -9,6 +9,7 @@ Other code can then import everything from one place:
 """
 
 from app.models.ai_usage import AiUsage
+from app.models.conversation import Conversation
 from app.models.import_batch import ImportBatch
 from app.models.price import Price
 from app.models.research import ResearchChunk, ResearchDocument
@@ -19,6 +20,7 @@ from app.models.user_session import UserSession
 
 __all__ = [
     "AiUsage",
+    "Conversation",
     "ImportBatch",
     "Price",
     "ResearchChunk",

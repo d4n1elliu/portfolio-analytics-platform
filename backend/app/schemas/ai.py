@@ -1,11 +1,10 @@
 """Request and response shapes for the AI features."""
 
-from typing import Literal
+from datetime import datetime
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field
 
-MAX_TURNS = 40
-MAX_TURN_LENGTH = 4000
+MAX_QUESTION_LENGTH = 4000
 
 
 class AiUsageRead(BaseModel):
@@ -15,16 +14,18 @@ class AiUsageRead(BaseModel):
     tokens_limit: int
 
 
-class ChatTurnRequest(BaseModel):
-    role: Literal["user", "assistant"]
-    text: str = Field(min_length=1, max_length=MAX_TURN_LENGTH)
-
-
 class ChatRequest(BaseModel):
-    messages: list[ChatTurnRequest] = Field(min_length=1, max_length=MAX_TURNS)
+    question: str = Field(min_length=1, max_length=MAX_QUESTION_LENGTH)
+    conversation_id: str | None = Field(None, max_length=36)
 
-    @model_validator(mode="after")
-    def ends_with_a_question(self) -> "ChatRequest":
-        if self.messages[-1].role != "user":
-            raise ValueError("The last message must be from the user.")
-        return self
+
+class ConversationRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    title: str
+    updated_at: datetime
+
+
+class ConversationDetailRead(ConversationRead):
+    turns: list[dict]

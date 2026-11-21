@@ -4,16 +4,24 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { streamChat } from '../api/chat'
+import { getConversation, streamChat } from '../api/chat'
 import type { ChatEvent } from '../api/types'
 import { useChat } from './useChat'
 
 vi.mock('../api/chat')
 
+const STARTED: ChatEvent = { type: 'conversation', id: 'c1', title: 'What do I hold?' }
+
 function answerWith(...events: ChatEvent[]) {
-  vi.mocked(streamChat).mockImplementation(async (_turns, onEvent) => {
+  vi.mocked(streamChat).mockImplementation(async (_question, _conversationId, onEvent) => {
     events.forEach(onEvent)
   })
+}
+
+function renderChat() {
+  const onConversationUsed = vi.fn()
+  const { result } = renderHook(() => useChat({ onConversationUsed }))
+  return { result, onConversationUsed }
 }
 
 function shown(messages: { role: string; text: string }[]) {
@@ -22,12 +30,13 @@ function shown(messages: { role: string; text: string }[]) {
 
 beforeEach(() => {
   vi.mocked(streamChat).mockReset()
+  vi.mocked(getConversation).mockReset()
 })
 
 describe('useChat', () => {
   it('adds the question and fills in the answer from the events', async () => {
-    answerWith({ type: 'text', text: 'You hold ' }, { type: 'text', text: '350 BHP.' })
-    const { result } = renderHook(() => useChat())
+    answerWith(STARTED, { type: 'text', text: 'You hold ' }, { type: 'text', text: '350 BHP.' })
+    const { result, onConversationUsed } = renderChat()
 
     await act(() => result.current.send('  What do I hold?  '))
 
@@ -36,26 +45,46 @@ describe('useChat', () => {
       { role: 'assistant', text: 'You hold 350 BHP.' },
     ])
     expect(result.current.answering).toBe(false)
-    expect(result.current.error).toBeNull()
+    expect(result.current.conversationId).toBe('c1')
+    expect(onConversationUsed).toHaveBeenCalledOnce()
   })
 
-  it('sends the earlier turns with each new question', async () => {
-    answerWith({ type: 'text', text: 'You hold 350 BHP.' })
-    const { result } = renderHook(() => useChat())
+  it('starts a conversation, then carries it on with only the new question', async () => {
+    answerWith(STARTED, { type: 'text', text: 'You hold 350 BHP.' })
+    const { result } = renderChat()
     await act(() => result.current.send('What do I hold?'))
 
     await act(() => result.current.send('And CBA?'))
 
-    expect(vi.mocked(streamChat).mock.calls[1][0]).toEqual([
+    const [first, second] = vi.mocked(streamChat).mock.calls
+    expect(first.slice(0, 2)).toEqual(['What do I hold?', null])
+    expect(second.slice(0, 2)).toEqual(['And CBA?', 'c1'])
+  })
+
+  it('opens a stored conversation with its answers rebuilt from their events', async () => {
+    vi.mocked(getConversation).mockResolvedValue({
+      id: 'c9',
+      title: 'What do I hold?',
+      updated_at: '2026-11-21T03:00:00Z',
+      turns: [
+        { role: 'user', text: 'What do I hold?' },
+        { role: 'assistant', events: [{ type: 'text', text: 'You hold 350 BHP.' }] },
+      ],
+    })
+    const { result } = renderChat()
+
+    await act(() => result.current.open('c9'))
+
+    expect(result.current.conversationId).toBe('c9')
+    expect(shown(result.current.messages)).toEqual([
       { role: 'user', text: 'What do I hold?' },
       { role: 'assistant', text: 'You hold 350 BHP.' },
-      { role: 'user', text: 'And CBA?' },
     ])
   })
 
   it('shows the error an answer ends with', async () => {
     answerWith({ type: 'error', message: 'The assistant could not answer. Try again.' })
-    const { result } = renderHook(() => useChat())
+    const { result } = renderChat()
 
     await act(() => result.current.send('What do I hold?'))
 
@@ -64,7 +93,7 @@ describe('useChat', () => {
 
   it('shows the reason when the request itself is refused', async () => {
     vi.mocked(streamChat).mockRejectedValue(new Error('You have reached the limit.'))
-    const { result } = renderHook(() => useChat())
+    const { result } = renderChat()
 
     await act(() => result.current.send('What do I hold?'))
 
@@ -73,7 +102,7 @@ describe('useChat', () => {
   })
 
   it('ignores a question that is only spaces', async () => {
-    const { result } = renderHook(() => useChat())
+    const { result } = renderChat()
 
     await act(() => result.current.send('   '))
 
@@ -83,11 +112,11 @@ describe('useChat', () => {
 
   it('cancels the answer and clears the conversation when started over', async () => {
     let signal: AbortSignal | undefined
-    vi.mocked(streamChat).mockImplementation((_turns, _onEvent, given) => {
+    vi.mocked(streamChat).mockImplementation((_question, _conversationId, _onEvent, given) => {
       signal = given
       return new Promise(() => {})
     })
-    const { result } = renderHook(() => useChat())
+    const { result } = renderChat()
     act(() => void result.current.send('What do I hold?'))
     await waitFor(() => expect(result.current.answering).toBe(true))
 
@@ -95,6 +124,7 @@ describe('useChat', () => {
 
     expect(signal?.aborted).toBe(true)
     expect(result.current.messages).toEqual([])
+    expect(result.current.conversationId).toBeNull()
     expect(result.current.answering).toBe(false)
   })
 })

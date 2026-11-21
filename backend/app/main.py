@@ -5,6 +5,8 @@ Run from the backend/ directory with:
 """
 
 import logging
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,7 +15,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from app.config import CORS_ORIGINS
+from app.config import AI_ENABLED, CORS_ORIGINS
 from app.database import get_db
 from app.request_log import LOG_FORMAT, log_request
 from app.routes import ai, auth, holdings, portfolio, research, securities, trades
@@ -23,7 +25,20 @@ from app.routes.errors import register_error_handlers
 logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Portfolio Analytics API")
+
+@asynccontextmanager
+async def prepare_ai(app: FastAPI) -> AsyncIterator[None]:
+    if AI_ENABLED:
+        from app.ai.memory import create_checkpoint_tables
+
+        try:
+            create_checkpoint_tables()
+        except Exception:
+            logger.exception("Could not prepare the tables that hold conversations")
+    yield
+
+
+app = FastAPI(title="Portfolio Analytics API", lifespan=prepare_ai)
 
 # CORS: browsers block a web page from calling an API on a different address
 # unless the API lists that address as allowed.
