@@ -1,5 +1,6 @@
 import type { HoldingFilters as Filters } from '../lib/holdings'
 import Checkbox from './Checkbox'
+import DateInput from './DateInput'
 import SearchInput from './SearchInput'
 import Select from './Select'
 
@@ -10,6 +11,11 @@ interface HoldingsFiltersProps {
   showClosed: boolean
   /** The tick box is disabled when this is 0. */
   closedCount: number
+  /** The date the positions are shown for, as "YYYY-MM-DD", or '' for today. */
+  asOf: string
+  /** The latest date that can be picked. */
+  today: string
+  onAsOfChange: (asOf: string) => void
   onFiltersChange: (filters: Filters) => void
   onShowClosedChange: (showClosed: boolean) => void
 }
@@ -20,6 +26,9 @@ function HoldingsFilters({
   assetClasses,
   showClosed,
   closedCount,
+  asOf,
+  today,
+  onAsOfChange,
   onFiltersChange,
   onShowClosedChange,
 }: HoldingsFiltersProps) {
@@ -52,6 +61,7 @@ function HoldingsFilters({
         disabled={closedCount === 0}
         title={closedCount === 0 ? 'No closed positions yet' : undefined}
       />
+      <DateInput label="As at" value={asOf} max={today} onChange={onAsOfChange} />
     </div>
   )
 }
