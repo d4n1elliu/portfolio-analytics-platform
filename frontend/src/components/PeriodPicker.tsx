@@ -13,19 +13,20 @@ const NOT_SELECTED = 'border-slate-200 bg-white hover:bg-slate-50 disabled:hover
 
 interface PeriodPickerProps {
   periods: PeriodReturn[]
+  benchmark: string | null
   selected: PerformancePeriod
   onSelect: (period: PerformancePeriod) => void
 }
 
 /** One button per period, each showing its return. A period with no return cannot be chosen. */
-function PeriodPicker({ periods, selected, onSelect }: PeriodPickerProps) {
+function PeriodPicker({ periods, benchmark, selected, onSelect }: PeriodPickerProps) {
   return (
     <div
       role="group"
       aria-label="Period"
       className="grid grid-cols-[repeat(auto-fit,minmax(8rem,1fr))] gap-2"
     >
-      {periods.map(({ period, portfolio_return }) => (
+      {periods.map(({ period, portfolio_return, benchmark_return }) => (
         <button
           key={period}
           type="button"
@@ -42,6 +43,11 @@ function PeriodPicker({ periods, selected, onSelect }: PeriodPickerProps) {
           ) : (
             <span className={`${RETURN_TEXT} ${profitColour(portfolio_return)}`}>
               {formatSignedPercent(Number(portfolio_return))}
+            </span>
+          )}
+          {benchmark !== null && benchmark_return !== null && (
+            <span className="block text-xs tabular-nums text-slate-500">
+              {benchmark} {formatSignedPercent(Number(benchmark_return))}
             </span>
           )}
         </button>

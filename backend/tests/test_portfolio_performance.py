@@ -8,6 +8,8 @@ import pytest
 from app.services.portfolio_history import build_portfolio_history
 from app.services.portfolio_performance import (
     PERIODS,
+    Benchmark,
+    benchmark_growth,
     build_growth,
     build_performance,
     months_before,
@@ -21,6 +23,8 @@ DAY_3 = date(2026, 11, 11)
 DAY_4 = date(2026, 11, 12)
 DAY_5 = date(2026, 11, 13)
 DAY_6 = date(2026, 11, 16)
+
+NO_BENCHMARK = {"benchmark_return": None}
 
 
 def growth_of(trades, prices) -> list[Decimal]:
@@ -224,18 +228,24 @@ def test_endpoint_returns_the_periods_and_the_growth(client_with_data):
     assert response.status_code == 200
     assert response.json() == {
         "as_of": "2026-11-12",
+        "benchmark": None,
         "periods": [
-            {"period": "1m", "portfolio_return": None, "start_date": None},
-            {"period": "3m", "portfolio_return": None, "start_date": None},
-            {"period": "ytd", "portfolio_return": None, "start_date": None},
-            {"period": "1y", "portfolio_return": None, "start_date": None},
-            {"period": "inception", "portfolio_return": "0.210000", "start_date": "2026-11-09"},
+            {"period": "1m", "portfolio_return": None, "start_date": None, **NO_BENCHMARK},
+            {"period": "3m", "portfolio_return": None, "start_date": None, **NO_BENCHMARK},
+            {"period": "ytd", "portfolio_return": None, "start_date": None, **NO_BENCHMARK},
+            {"period": "1y", "portfolio_return": None, "start_date": None, **NO_BENCHMARK},
+            {
+                "period": "inception",
+                "portfolio_return": "0.210000",
+                "start_date": "2026-11-09",
+                **NO_BENCHMARK,
+            },
         ],
         "growth": [
-            {"date": "2026-11-09", "portfolio": "1.000000"},
-            {"date": "2026-11-10", "portfolio": "1.100000"},
-            {"date": "2026-11-11", "portfolio": "1.100000"},
-            {"date": "2026-11-12", "portfolio": "1.210000"},
+            {"date": "2026-11-09", "portfolio": "1.000000", "benchmark": None},
+            {"date": "2026-11-10", "portfolio": "1.100000", "benchmark": None},
+            {"date": "2026-11-11", "portfolio": "1.100000", "benchmark": None},
+            {"date": "2026-11-12", "portfolio": "1.210000", "benchmark": None},
         ],
     }
 
@@ -247,11 +257,14 @@ def test_endpoint_rounds_to_six_decimal_places(client_with_data):
     response = client_with_data(trades, closes(bhp, {DAY_1: "10"})).get("/portfolio/performance")
 
     # 1,000 / 1,025 = 0.975609756...
-    assert response.json()["growth"] == [{"date": "2026-11-09", "portfolio": "0.975610"}]
+    assert response.json()["growth"] == [
+        {"date": "2026-11-09", "portfolio": "0.975610", "benchmark": None}
+    ]
     assert response.json()["periods"][-1] == {
         "period": "inception",
         "portfolio_return": "-0.024390",
         "start_date": "2026-11-09",
+        **NO_BENCHMARK,
     }
 
 
@@ -264,3 +277,61 @@ def test_endpoint_with_no_trades_has_no_returns(client_with_data):
     assert response.json()["as_of"] is None
     assert response.json()["growth"] == []
     assert {period["portfolio_return"] for period in response.json()["periods"]} == {None}
+
+
+# --- Benchmark ---
+
+
+def benchmark(by_date: dict[date, str]) -> Benchmark:
+    return Benchmark("VAS", {day: Decimal(close) for day, close in by_date.items()})
+
+
+def test_benchmark_growth_starts_at_one_on_the_first_date():
+    growth = benchmark_growth([DAY_1, DAY_2], benchmark({DAY_1: "100", DAY_2: "105"}).closes)
+
+    assert growth == [Decimal("1"), Decimal("1.05")]
+
+
+def test_benchmark_uses_the_latest_earlier_close_on_a_date_with_none():
+    closes_by_date = benchmark({DAY_1: "100", DAY_3: "110"}).closes
+
+    assert benchmark_growth([DAY_2, DAY_3], closes_by_date) == [Decimal("1"), Decimal("1.1")]
+
+
+def test_benchmark_has_no_growth_before_its_first_close():
+    closes_by_date = benchmark({DAY_2: "100", DAY_3: "120"}).closes
+
+    assert benchmark_growth([DAY_1, DAY_2, DAY_3], closes_by_date) == [
+        None,
+        Decimal("1"),
+        Decimal("1.2"),
+    ]
+
+
+def test_each_period_has_the_benchmark_return_over_the_same_dates():
+    bhp = make_security("BHP")
+    history = build_portfolio_history(
+        [buy(bhp, "100", "10", on=DAY_1)], closes(bhp, {DAY_1: "10", DAY_2: "11", DAY_3: "12"})
+    )
+
+    performance = build_performance(history, benchmark({DAY_1: "100", DAY_2: "102", DAY_3: "105"}))
+
+    inception = performance.periods[-1]
+    assert performance.benchmark == "VAS"
+    assert inception.portfolio_return == Decimal("0.2")
+    assert inception.benchmark_return == Decimal("0.05")
+    assert [point.benchmark for point in performance.growth] == [
+        Decimal("1"),
+        Decimal("1.02"),
+        Decimal("1.05"),
+    ]
+
+
+def test_a_benchmark_with_no_prices_is_not_named():
+    bhp = make_security("BHP")
+    history = build_portfolio_history([buy(bhp, "100", "10", on=DAY_1)], closes(bhp, {DAY_1: "10"}))
+
+    performance = build_performance(history, benchmark({}))
+
+    assert performance.benchmark is None
+    assert performance.periods[-1].benchmark_return is None

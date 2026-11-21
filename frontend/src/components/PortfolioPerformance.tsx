@@ -5,12 +5,13 @@ import type { PerformancePeriod, PortfolioPerformance as Performance } from '../
 import { useApiQuery } from '../hooks/useApiQuery'
 import { CHART_COLOURS } from '../lib/chartStyle'
 import { formatDate, formatSignedPercent } from '../lib/format'
-import { PERIOD_LABELS, returnSeries } from '../lib/performance'
+import { PERIOD_LABELS, excessReturn, returnSeries } from '../lib/performance'
 import { MUTED_TEXT } from '../lib/styles'
 import Card from './Card'
 import LoadState from './LoadState'
 import PeriodPicker from './PeriodPicker'
 import TimeSeriesChart from './TimeSeriesChart'
+import type { TimeSeriesLine } from './TimeSeriesChart'
 
 function PortfolioPerformance() {
   const { state, reload } = useApiQuery(getPortfolioPerformance)
@@ -37,18 +38,29 @@ function asAt(performance: Performance | null): string {
 
 function Returns({ performance }: { performance: Performance }) {
   const [selected, setSelected] = useState<PerformancePeriod>('inception')
-  const { dates, lines } = useMemo(() => {
+  const { benchmark } = performance
+  const { dates, lines, excess } = useMemo(() => {
     const period = performance.periods.find((candidate) => candidate.period === selected)
     const series = returnSeries(performance.growth, period)
+    const portfolio = { name: 'Portfolio', values: series.returns, colour: CHART_COLOURS.primary }
+    const compared = benchmark !== null && series.benchmarkReturns.length > 0
     return {
       dates: series.dates,
-      lines: [{ name: 'Portfolio', values: series.returns, colour: CHART_COLOURS.primary }],
+      lines: compared
+        ? [portfolio, benchmarkLine(benchmark, series.benchmarkReturns)]
+        : [portfolio],
+      excess: excessReturn(period),
     }
-  }, [performance, selected])
+  }, [performance, benchmark, selected])
 
   return (
     <div className="space-y-4">
-      <PeriodPicker periods={performance.periods} selected={selected} onSelect={setSelected} />
+      <PeriodPicker
+        periods={performance.periods}
+        benchmark={benchmark}
+        selected={selected}
+        onSelect={setSelected}
+      />
       <TimeSeriesChart
         label={`Portfolio return, ${PERIOD_LABELS[selected].toLowerCase()}`}
         dates={dates}
@@ -59,9 +71,17 @@ function Returns({ performance }: { performance: Performance }) {
       <p className={MUTED_TEXT}>
         Time-weighted return: buying and selling do not count as gains or losses. Dividends are not
         included.
+        {benchmark !== null && ` The benchmark is the price of ${benchmark} over the same dates.`}
+        {benchmark !== null &&
+          excess !== null &&
+          ` Over this period the portfolio returned ${formatSignedPercent(excess)} against it.`}
       </p>
     </div>
   )
+}
+
+function benchmarkLine(ticker: string, values: number[]): TimeSeriesLine {
+  return { name: `${ticker} (benchmark)`, values, colour: CHART_COLOURS.reference, dashed: true }
 }
 
 export default PortfolioPerformance

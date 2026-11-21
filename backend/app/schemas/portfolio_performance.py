@@ -16,12 +16,14 @@ class PeriodReturnRead(BaseModel):
     portfolio_return: Decimal | None
     # The date the return is measured from. None when there is no return.
     start_date: datetime.date | None
+    benchmark_return: Decimal | None
 
 
 class GrowthPointRead(BaseModel):
     date: datetime.date
     # What 1 invested at the start is worth at the end of this date.
     portfolio: Decimal
+    benchmark: Decimal | None
 
 
 class PerformanceRead(BaseModel):
@@ -33,6 +35,7 @@ class PerformanceRead(BaseModel):
 
     # The latest priced date, or None when there is no history.
     as_of: datetime.date | None
+    benchmark: str | None
     periods: list[PeriodReturnRead]
     growth: list[GrowthPointRead]
 
@@ -40,17 +43,21 @@ class PerformanceRead(BaseModel):
     def from_performance(cls, performance: Performance) -> "PerformanceRead":
         return cls(
             as_of=performance.as_of,
+            benchmark=performance.benchmark,
             periods=[
                 PeriodReturnRead(
                     period=period.period,
                     portfolio_return=round_optional(period.portfolio_return, FRACTION_PLACES),
                     start_date=period.start,
+                    benchmark_return=round_optional(period.benchmark_return, FRACTION_PLACES),
                 )
                 for period in performance.periods
             ],
             growth=[
                 GrowthPointRead(
-                    date=point.as_of, portfolio=round_decimal(point.growth, FRACTION_PLACES)
+                    date=point.as_of,
+                    portfolio=round_decimal(point.growth, FRACTION_PLACES),
+                    benchmark=round_optional(point.benchmark, FRACTION_PLACES),
                 )
                 for point in performance.growth
             ],
