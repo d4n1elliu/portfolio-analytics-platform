@@ -67,6 +67,14 @@ def make_user(role: Role = Role.ANALYST, user_id: int = 1, is_active: bool = Tru
     )
 
 
+def sign_in(client, role: Role) -> None:
+    """Sign in through the login endpoint as the user make_user builds for the role."""
+    response = client.post(
+        "/auth/login", json={"email": f"{role.value}@example.com", "password": USER_PASSWORD}
+    )
+    assert response.status_code == 200
+
+
 def closes(security: Security, by_date: dict[date, str]) -> list[Price]:
     """Closing prices for one security, from a date-to-price mapping."""
     return [
