@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 
 from app.ai.conversations import mark_used
 from app.ai.memory import stored_messages, thread
+from app.ai.retrieval import Reranker, no_reranker
 from app.ai.tools import portfolio_tools, research_tools
 from app.ai.usage import record_usage
 from app.models import Conversation, User
@@ -62,6 +63,7 @@ class Assistant:
     chat_model: BaseChatModel
     load_embeddings: Callable[[], Embeddings]
     memory: BaseCheckpointSaver
+    load_reranker: Callable[[], Reranker | None] = no_reranker
 
 
 def answer_events(
@@ -90,7 +92,10 @@ def stream_answer(
 ) -> Iterator[dict]:
     agent = create_agent(
         assistant.chat_model,
-        [*portfolio_tools(db), *research_tools(db, assistant.load_embeddings)],
+        [
+            *portfolio_tools(db),
+            *research_tools(db, assistant.load_embeddings, assistant.load_reranker),
+        ],
         system_prompt=SYSTEM_PROMPT.format(today=market_today()),
         middleware=[send_recent_messages_only],
         checkpointer=assistant.memory,

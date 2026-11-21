@@ -6,7 +6,17 @@ from datetime import date
 from typing import TYPE_CHECKING
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import Date, ForeignKey, Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy import (
+    Computed,
+    Date,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
+from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -19,6 +29,7 @@ if TYPE_CHECKING:
 FILE_NAME_LENGTH = 255
 TITLE_LENGTH = 200
 EMBEDDING_DIMENSIONS = 384
+TEXT_SEARCH_LANGUAGE = "english"
 
 
 class ResearchDocument(CreatedAtMixin, Base):
@@ -52,6 +63,7 @@ class ResearchChunk(Base):
             postgresql_using="hnsw",
             postgresql_ops={"embedding": "vector_cosine_ops"},
         ),
+        Index("ix_research_chunks_search_vector", "search_vector", postgresql_using="gin"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -59,6 +71,11 @@ class ResearchChunk(Base):
     position: Mapped[int] = mapped_column(Integer)
     text: Mapped[str] = mapped_column(Text)
     embedding: Mapped[list[float]] = mapped_column(Vector(EMBEDDING_DIMENSIONS))
+    search_vector: Mapped[str] = mapped_column(
+        TSVECTOR,
+        Computed(f"to_tsvector('{TEXT_SEARCH_LANGUAGE}', text)", persisted=True),
+        deferred=True,
+    )
 
     document: Mapped[ResearchDocument] = relationship(back_populates="chunks")
 

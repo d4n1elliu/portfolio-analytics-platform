@@ -5,9 +5,15 @@ from datetime import date
 
 import pytest
 
-from ai_fakes import KeywordEmbeddings, scripted_chat_model, streamed_events, tool_call
-from app.ai.providers import embeddings_loader, get_chat_model
-from app.ai.retrieval import ResearchFilters, search
+from ai_fakes import (
+    KeywordEmbeddings,
+    KeywordReranker,
+    scripted_chat_model,
+    streamed_events,
+    tool_call,
+)
+from app.ai.providers import embeddings_loader, get_chat_model, reranker_loader
+from app.ai.retrieval import ResearchFilters, SearchOptions, search
 from app.ai.tools import research_tools
 from app.main import app
 from app.models import Role
@@ -64,6 +70,26 @@ def test_no_more_chunks_than_asked_for_are_returned(db, library):
     assert search(db, EMBEDDINGS, "iron", ResearchFilters(ticker="XYZ")) == []
 
 
+def test_a_word_from_the_note_finds_it_when_the_meaning_does_not(db, library):
+    by_meaning = search(db, EMBEDDINGS, "shipments", options=SearchOptions(match_words=False))
+    with_words = search(db, EMBEDDINGS, "shipments")
+
+    assert titles(by_meaning)[0] == "CSL plasma"
+    assert titles(with_words)[0] == "BHP iron ore"
+
+
+def test_matching_words_still_respects_the_ticker(db, library):
+    found = search(db, EMBEDDINGS, "shipments", ResearchFilters(ticker="CSL"))
+
+    assert titles(found) == ["CSL plasma"]
+
+
+def test_a_reranker_decides_the_final_order(db, library):
+    options = SearchOptions(reranker=KeywordReranker("margin"))
+
+    assert titles(search(db, EMBEDDINGS, "plasma", options=options))[0] == "BHP margins"
+
+
 def test_the_search_tool_numbers_its_sources_and_keeps_the_numbers(db, library):
     (search_research,) = research_tools(db, lambda: EMBEDDINGS)
 
@@ -114,6 +140,7 @@ def test_an_answer_that_uses_research_streams_its_sources(
 ):
     monkeypatch.setattr("app.routes.dependencies.AI_ENABLED", True)
     app.dependency_overrides[embeddings_loader] = lambda: lambda: EMBEDDINGS
+    app.dependency_overrides[reranker_loader] = lambda: lambda: KeywordReranker("plasma")
     app.dependency_overrides[get_chat_model] = lambda: scripted_chat_model(
         tool_call("search_research", question="plasma", ticker="CSL"),
         "Research says plasma collection volumes rose [1].",
