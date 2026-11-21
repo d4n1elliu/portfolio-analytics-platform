@@ -1,0 +1,127 @@
+[
+  {
+    "question": "Why did iron ore volumes improve compared with last year?",
+    "ticker": "BHP",
+    "phrase": "rail upgrade is finished"
+  },
+  {
+    "question": "Why did BHP receive less than the benchmark price for its ore?",
+    "ticker": "BHP",
+    "phrase": "higher share of lower-grade product"
+  },
+  {
+    "question": "What is planned for copper production over the coming years?",
+    "ticker": "BHP",
+    "phrase": "lift copper output over the next five years"
+  },
+  {
+    "question": "What happened to mining unit costs last quarter?",
+    "ticker": "BHP",
+    "phrase": "Unit costs in iron ore were flat"
+  },
+  {
+    "question": "How could the exchange rate hurt the miner's earnings?",
+    "ticker": "BHP",
+    "phrase": "A stronger Australian dollar would lower reported earnings"
+  },
+  {
+    "question": "What caused the bank's lending margin to shrink?",
+    "ticker": "CBA",
+    "phrase": "Competition for home loans was the main cause"
+  },
+  {
+    "question": "Are bad loans becoming a problem at Commonwealth Bank?",
+    "ticker": "CBA",
+    "phrase": "Arrears rose slightly but remain low"
+  },
+  {
+    "question": "Is the bank's dividend at risk?",
+    "ticker": "CBA",
+    "phrase": "We see the dividend as safe"
+  },
+  {
+    "question": "How expensive is CBA compared with other banks?",
+    "ticker": "CBA",
+    "phrase": "higher multiple of earnings than any other large Australian bank"
+  },
+  {
+    "question": "What rating do the analysts give Commonwealth Bank?",
+    "ticker": "CBA",
+    "phrase": "We rate CBA as a hold"
+  },
+  {
+    "question": "How are the new donation machines helping plasma centres?",
+    "ticker": "CSL",
+    "phrase": "shorten each donation"
+  },
+  {
+    "question": "How long before cheaper plasma collection shows up in profit margins?",
+    "ticker": "CSL",
+    "phrase": "about nine months later"
+  },
+  {
+    "question": "Why are flu vaccine sales falling?",
+    "ticker": "CSL",
+    "phrase": "vaccination rates in the United States declined"
+  },
+  {
+    "question": "What could threaten demand for immunoglobulins?",
+    "ticker": "CSL",
+    "phrase": "new treatment could reduce demand for immunoglobulins"
+  },
+  {
+    "question": "What is the recommendation on CSL?",
+    "ticker": "CSL",
+    "phrase": "We rate CSL as a buy"
+  },
+  {
+    "question": "Which sectors dominate the Australian share index?",
+    "ticker": "VAS",
+    "phrase": "Banks and miners make up more than half of the index"
+  },
+  {
+    "question": "How concentrated is the index in its biggest companies?",
+    "ticker": "VAS",
+    "phrase": "ten largest companies are close to half of the index"
+  },
+  {
+    "question": "How much does the index fund charge?",
+    "ticker": "VAS",
+    "phrase": "management fee is among the lowest"
+  },
+  {
+    "question": "Which small sector performed worst in the September quarter?",
+    "ticker": "VAS",
+    "phrase": "Consumer staples was the weakest"
+  },
+  {
+    "question": "Can holding the benchmark fund improve relative performance?",
+    "ticker": "VAS",
+    "phrase": "can never add or subtract from relative performance"
+  },
+  {
+    "question": "Are shoppers buying more own-brand groceries?",
+    "ticker": "WOW",
+    "phrase": "More customers are choosing own-brand products"
+  },
+  {
+    "question": "Is online grocery delivery profitable?",
+    "ticker": "WOW",
+    "phrase": "Delivery remains less profitable than store sales"
+  },
+  {
+    "question": "What is the regulator doing about supermarket pricing?",
+    "ticker": "WOW",
+    "phrase": "review of supermarket pricing is continuing"
+  },
+  {
+    "question": "How is Big W performing?",
+    "ticker": "WOW",
+    "phrase": "Big W made a small loss"
+  },
+  {
+    "question": "Why did the supermarket's gross margin fall?",
+    "ticker": "WOW",
+    "phrase": "lowered prices on several hundred everyday items"
+  }
+]

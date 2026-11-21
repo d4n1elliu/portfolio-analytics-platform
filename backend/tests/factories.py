@@ -7,6 +7,7 @@ from decimal import Decimal
 from pypdf import PdfWriter
 from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject
 
+from app.ai import research
 from app.models import Price, Role, Security, Trade, TradeSide, User
 from app.services.passwords import hash_password
 
@@ -105,3 +106,8 @@ def make_pdf(text: str) -> bytes:
     output = io.BytesIO()
     writer.write(output)
     return output.getvalue()
+
+
+def add_note(db, embeddings, security: Security, uploader: User, title: str, text: str, on: date):
+    upload = research.ResearchUpload(f"{title}.txt", text.encode(), title, on)
+    return research.add_document(db, embeddings, upload, security, uploader)
