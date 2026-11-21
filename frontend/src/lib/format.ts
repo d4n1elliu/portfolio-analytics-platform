@@ -3,6 +3,9 @@
 import { DEFAULT_CURRENCY, LOCALE } from '../config'
 import { parseDate } from './dates'
 
+/** Decimals shown for a unit price or cost, which can be quoted in fractions of a cent. */
+export const UNIT_PRICE_DECIMALS = 4
+
 /** Shown in place of a value that is missing. */
 export const NO_VALUE = '—'
 

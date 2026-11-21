@@ -34,6 +34,17 @@ def list_holdings(db: Session, include_closed: bool, as_of: date | None = None) 
     return build_holdings(trades, include_closed, latest_prices(db, up_to=as_of))
 
 
+def find_holding(db: Session, security: Security) -> Holding:
+    """Return the position in one security, with its share of the whole portfolio.
+
+    A security that has never been traded has a position of zero.
+    """
+    for holding in list_holdings(db, include_closed=True):
+        if holding.security.id == security.id:
+            return holding
+    return Holding(security, calculate_position([]))
+
+
 def build_holdings(
     trades: Iterable[Trade],
     include_closed: bool,

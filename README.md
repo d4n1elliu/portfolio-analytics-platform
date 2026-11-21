@@ -11,7 +11,7 @@ A full-stack web app for tracking portfolio holdings, performance and sector exp
 Five features are in place:
 
 - **Trades.** Trades can be imported from a CSV file, then filtered, sorted and exported. Every import is recorded, and the same file cannot be imported twice.
-- **Holdings.** The Holdings page shows the fund's positions, calculated from those trades, either now or as at any past date.
+- **Holdings.** The Holdings page shows the fund's positions, calculated from those trades, either now or as at any past date. Each security has its own page with its position, price chart and trades.
 - **Prices and valuation.** Daily closing prices are stored for each security and refreshed on weekdays. The Holdings page uses them to show what each position is worth, and the Dashboard page shows the portfolio's value, its unrealised profit, and charts of sector allocation and profit by holding.
 - **History and performance.** The Dashboard charts the portfolio's value on each past day and its time-weighted return over 1 month, 3 months, year to date, 1 year and since inception.
 - **Login and roles.** Every page needs a sign in, and each account has a role that decides what it can do.
@@ -136,9 +136,11 @@ A security has many trades and many prices. A trade points to the import it came
 | `POST` | `/auth/logout`   | Signs out                                                       |
 | `GET`  | `/auth/me`       | Returns the signed-in user                                      |
 | `GET`  | `/holdings`      | Lists the current position in each security, ordered by ticker  |
+| `GET`  | `/holdings/{ticker}` | Returns the current position in one security                |
 | `GET`  | `/portfolio/history` | Lists the value of the portfolio on each priced date, oldest first |
 | `GET`  | `/portfolio/performance` | Returns the portfolio's return over 1 month, 3 months, year to date, 1 year and since inception |
 | `GET`  | `/securities`    | Lists every security, ordered by ticker                         |
+| `GET`  | `/securities/{ticker}/prices` | Lists the closing prices of one security, oldest first |
 | `GET`  | `/trades`        | Lists trades, newest first, with the ticker and security name   |
 | `GET`  | `/trades/export` | Downloads the trades as a CSV file                              |
 | `GET`  | `/trades/imports` | Lists the files that have been imported, newest first          |
@@ -163,6 +165,8 @@ It also takes filters and an order, and `total` counts the trades that match:
 `GET /holdings` returns one item per security that has trades, with `ticker`, `security_name`, `sector`, `asset_class`, `currency`, `quantity`, `average_cost`, `cost_basis`, `realised_pnl` and `oversold_quantity`, plus the valuation fields described under [Prices and valuation](#prices-and-valuation). Positions that have been fully sold are left out unless `include_closed=true` is added.
 
 Add `as_of=YYYY-MM-DD` to get the positions at the end of a past date. Only the trades made by then are counted, and each position is valued at its latest closing price on or before that date, so a weekend uses Friday's close. A date in the future is refused with `422`.
+
+`GET /holdings/{ticker}` returns one item of the same shape, with its `weight` in the whole portfolio. A security that has never been traded has a quantity of zero, and a ticker no security has is answered with `404`. `GET /securities/{ticker}/prices` returns `[{"date": "2026-11-13", "close": "58.860000"}, ...]`.
 
 The interactive docs at http://localhost:8000/docs list every endpoint and let you try them.
 
@@ -448,12 +452,13 @@ cp .env.example .env
 npm run dev
 ```
 
-The app runs at http://localhost:5173. It opens on a sign in page and has three pages after that. The backend must be running.
+The app runs at http://localhost:5173. It opens on a sign in page and has three main pages after that, plus a page for each security. The backend must be running.
 
 | Page      | What it shows |
 | --------- | ------------- |
 | Dashboard | Market value, unrealised P&L and unrealised return, the return over each period, and charts of portfolio value over time, sector allocation and unrealised P&L by holding |
 | Holdings  | The current positions with their last price, market value, unrealised P&L and weight. Has sorting, a search box, filters for sector and asset class, summary figures, and a warning when prices are more than three business days old. An "As at" date shows the positions on a past date |
+| Security  | Opened by clicking a ticker. One security's position, a chart of its closing price with each buy and sell marked, and its trades |
 | Trades    | A form to upload a CSV file, the saved trades with filters, sorting and a CSV export, and a list of past imports |
 
 ### Environment variables

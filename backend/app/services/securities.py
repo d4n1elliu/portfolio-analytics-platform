@@ -11,6 +11,11 @@ def list_securities(db: Session) -> list[Security]:
     return list(db.scalars(select(Security).order_by(Security.ticker)))
 
 
+def find_by_ticker(db: Session, ticker: str) -> Security | None:
+    """Return the security with this ticker, ignoring capital letters and outer spaces."""
+    return db.scalar(select(Security).where(Security.ticker == ticker.strip().upper()))
+
+
 def security_ids_by_ticker(db: Session) -> dict[str, int]:
     """Return every ticker with its security id, using a single query."""
     return dict(db.execute(select(Security.ticker, Security.id)).all())

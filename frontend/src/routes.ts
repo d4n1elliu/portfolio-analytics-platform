@@ -4,6 +4,7 @@ export const ROUTES = {
   dashboard: '/dashboard',
   holdings: '/holdings',
   login: '/login',
+  security: '/securities/:ticker',
   trades: '/trades',
 } as const
 
@@ -14,6 +15,11 @@ export const PAGES = [
 ]
 
 export const HOME = ROUTES.dashboard
+
+/** The address of the page for one security. */
+export function securityPath(ticker: string): string {
+  return ROUTES.security.replace(':ticker', encodeURIComponent(ticker))
+}
 
 export interface LoginState {
   from: string

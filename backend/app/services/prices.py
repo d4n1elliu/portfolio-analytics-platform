@@ -45,6 +45,12 @@ def list_prices_of_traded_securities(db: Session) -> list[Price]:
     return list(db.scalars(statement))
 
 
+def list_prices_of_security(db: Session, security_id: int) -> list[Price]:
+    """Return every price of one security, oldest first."""
+    statement = select(Price).where(Price.security_id == security_id).order_by(Price.price_date)
+    return list(db.scalars(statement))
+
+
 def latest_price_dates(db: Session) -> dict[int, date]:
     """Return the date of each security's most recent price, by security id."""
     statement = select(Price.security_id, func.max(Price.price_date)).group_by(Price.security_id)
