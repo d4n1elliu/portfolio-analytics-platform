@@ -9,6 +9,7 @@ export const ROLE_LABELS: Record<Role, string> = {
 export const PERMISSION_LABELS: Record<Permission, string> = {
   import_trades: 'Import trades',
   export_trades: 'Export trades',
+  upload_research: 'Upload research',
 }
 
 export function can(user: User | null, permission: Permission): boolean {
