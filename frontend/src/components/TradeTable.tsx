@@ -1,14 +1,13 @@
 import type { Trade, TradeSide, TradeSortKey } from '../api/types'
 import { UNIT_PRICE_DECIMALS, formatCurrency, formatDate, formatQuantity } from '../lib/format'
+import Badge from './Badge'
+import type { BadgeTone } from './Badge'
 import DataTable from './DataTable'
 import type { Column } from './DataTable'
 import TickerLink from './TickerLink'
 import type { SortBy } from '../lib/sorting'
 
-const SIDE_COLOURS: Record<TradeSide, string> = {
-  BUY: 'bg-emerald-50 text-emerald-700',
-  SELL: 'bg-red-50 text-red-700',
-}
+const SIDE_TONES: Record<TradeSide, BadgeTone> = { BUY: 'positive', SELL: 'negative' }
 
 const COLUMNS: (Column<Trade> & { sortKey?: TradeSortKey })[] = [
   {
@@ -26,11 +25,7 @@ const COLUMNS: (Column<Trade> & { sortKey?: TradeSortKey })[] = [
   {
     header: 'Side',
     sortKey: 'side',
-    render: (trade) => (
-      <span className={`rounded px-2 py-0.5 text-xs font-medium ${SIDE_COLOURS[trade.side]}`}>
-        {trade.side}
-      </span>
-    ),
+    render: (trade) => <Badge tone={SIDE_TONES[trade.side]}>{trade.side}</Badge>,
   },
   {
     header: 'Quantity',
