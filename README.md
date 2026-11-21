@@ -21,7 +21,7 @@ Five features are in place:
 | Layer    | Technology                                                    |
 | -------- | ------------------------------------------------------------- |
 | Frontend | React, TypeScript, Vite, Tailwind CSS v4, ECharts, Vitest     |
-| Backend  | Python, FastAPI, uvicorn, python-dotenv, pytest, yfinance, argon2-cffi, PyJWT, LangChain |
+| Backend  | Python, FastAPI, uvicorn, python-dotenv, pytest, yfinance, argon2-cffi, PyJWT, LangChain, pgvector, FastEmbed |
 | Database | PostgreSQL on Neon, SQLAlchemy 2, Alembic, psycopg 3          |
 | Hosting  | Docker, Caddy, GitHub Actions, GitHub Container Registry      |
 
@@ -107,7 +107,7 @@ A request flows through the backend in one direction: a route calls a service, a
 
 ## Data model
 
-Seven tables hold the data.
+Nine tables hold the data.
 
 | Table        | One row is                       | Key columns                                                        |
 | ------------ | -------------------------------- | ------------------------------------------------------------------ |
@@ -118,6 +118,8 @@ Seven tables hold the data.
 | `import_batches` | One imported file of trades  | `file_name`, `file_hash` (unique), `row_count`, `imported_by_id`   |
 | `user_sessions` | One sign in                   | `user_id`, `expires_at`, `ended_at`                                |
 | `ai_usage`    | One AI request                 | `user_id`, `input_tokens`, `output_tokens`                         |
+| `research_documents` | One uploaded research file | `security_id`, `title`, `file_hash` (unique), `document_date`, `uploaded_by_id` |
+| `research_chunks` | One piece of a document's text | `document_id`, `position`, `text`, `embedding` (384 numbers)      |
 
 A security has many trades and many prices. A trade points to the import it came from, in `import_batch_id`. The database enforces the basic rules itself: `side` must be `BUY` or `SELL`, quantities and prices must be greater than zero, fees cannot be negative, and a security can have only one closing price per day.
 
@@ -142,6 +144,9 @@ A security has many trades and many prices. A trade points to the import it came
 | `POST` | `/auth/password` | Changes the signed-in user's password                           |
 | `GET`  | `/ai/usage`      | Returns the signed-in user's AI requests and tokens, and their limits |
 | `POST` | `/ai/chat`       | Asks the assistant a question and streams its answer            |
+| `GET`  | `/research/documents` | Lists the research documents, newest first              |
+| `POST` | `/research/documents` | Uploads a research file about one security              |
+| `GET`  | `/research/documents/{id}` | Returns one document with its chunks               |
 | `GET`  | `/auth/me`       | Returns the signed-in user                                      |
 | `GET`  | `/holdings`      | Lists the current position in each security, ordered by ticker  |
 | `GET`  | `/holdings/{ticker}` | Returns the current position in one security                |
@@ -202,7 +207,7 @@ Not included: sign-up, resetting a forgotten password, email verification and ma
 
 The AI features are off unless `AI_ENABLED` is `true`. While they are off, the AI pages are hidden, every endpoint under `/ai` answers `404`, and no AI package is loaded, so the app runs without any API key.
 
-The chat model and the embedding model are named in settings as `provider:model` and built by LangChain, so another provider can be used by changing a setting and installing its package. The keys are read from the environment by each provider's own package.
+The chat model and the embedding model are named in settings as `provider:model` and built by LangChain, so another provider can be used by changing a setting and installing its package. The keys are read from the environment by each provider's own package. The default embedding model, `fastembed:BAAI/bge-small-en-v1.5`, runs on the server itself and needs no key: FastEmbed downloads it, about 64 MB, the first time it is used.
 
 Each user has an allowance: 20 AI requests in any hour and 200,000 tokens in any day, by default. Every request is recorded in `ai_usage` with the tokens it used, so the count survives a restart. A request over either limit is answered with `429`. `GET /ai/usage` returns what has been used, and the Account page shows it.
 
@@ -219,6 +224,16 @@ Each user has an allowance: 20 AI requests in any hour and 200,000 tokens in any
 The assistant is a LangChain agent with seven tools, each a thin wrapper over a service the pages already use: holdings now or at a past date, one holding, portfolio history, performance against the benchmark, trades, securities and a security's prices. Every tool only reads.
 
 The model never works out a figure. Its instructions tell it to quote figures exactly as a tool returned them, and the tools return figures already rounded by the same code the pages use. Tool results are treated as data, never as instructions. The conversation is not stored: the page sends the earlier turns with each question, and they are gone when the page is reloaded.
+
+**Research.** `POST /research/documents` takes a multipart upload with the file in a field named `file`, and `title`, `ticker` and `document_date` as form fields. The file can be a PDF, Markdown or text file of up to 10 MB. Its text is read, split into chunks of about 1,000 characters that overlap a little, and each chunk is turned into a vector of 384 numbers by the embedding model and stored with pgvector. An upload is all or nothing, and a file whose contents match an earlier upload is refused with `409`.
+
+Five fictional notes are in `backend/sample_data/research/`. To load them into a local database, as if the demo Operations account had uploaded them:
+
+```bash
+python -m scripts.seed_research
+```
+
+Changing to an embedding model with a different vector size needs a migration that changes the `embedding` column, and every document embedded again.
 
 No test calls a real model. The test setup refuses to build one, and the tests use a fake chat model that gives scripted answers and a fake embedding model.
 
@@ -498,8 +513,8 @@ The app runs at http://localhost:5173. It opens on a sign in page and has three 
 | Holdings  | The current positions with their last price, market value, unrealised P&L and weight. Has sorting, a search box, filters for sector and asset class, summary figures, and a warning when prices are more than three business days old. An "As at" date shows the positions on a past date |
 | Security  | Opened by clicking a ticker. One security's position, a chart of its closing price with each buy and sell marked, and its trades |
 | Assistant | Shown only when `AI_ENABLED` is on. A conversation about the portfolio. Each answer streams in as it is written and shows the tools it used and what they returned |
-| Research  | Shown only when `AI_ENABLED` is on. The library of research documents, with filters for ticker and date, and a form to upload a PDF, Markdown or text file for a ticker. The page is in place but uploads are not yet connected, so nothing is saved |
-| Research document | Opened by clicking a title in the library. One document's details and its text as numbered chunks. A link to a chunk, such as `/research/12#chunk-3`, scrolls to that chunk and highlights it. No documents are stored yet, so every address says the document could not be found |
+| Research  | Shown only when `AI_ENABLED` is on. The library of research documents, with filters for ticker and date, and a form to upload a PDF, Markdown or text file about one security |
+| Research document | Opened by clicking a title in the library. One document's details and its text as numbered chunks. A link to a chunk, such as `/research/12#chunk-3`, scrolls to that chunk and highlights it |
 | Trades    | A form to upload a CSV file, the saved trades with filters, sorting and a CSV export, and a list of past imports |
 
 ### Environment variables
@@ -516,8 +531,9 @@ Real `.env` files are git-ignored and must never be committed. The `.env.example
 | `backend/.env.example`  | `SESSION_MINUTES`     | Optional. How long a sign in lasts. Defaults to 480  |
 | `backend/.env.example`  | `BENCHMARK_TICKER`    | Optional. The security the portfolio's return is compared with. Defaults to `VAS` |
 | `backend/.env.example`  | `AI_ENABLED`          | Optional. Set to `true` to turn on the AI pages and endpoints. Defaults to off |
-| `backend/.env.example`  | `AI_CHAT_MODEL`, `AI_EMBEDDING_MODEL` | Optional. The models to use, each as `provider:model`. Default to `anthropic:claude-opus-5-5` and `openai:text-embedding-3-small` |
-| `backend/.env.example`  | `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` | The keys for those providers. Needed only when the AI features are on |
+| `backend/.env.example`  | `AI_CHAT_MODEL`, `AI_EMBEDDING_MODEL` | Optional. The models to use, each as `provider:model`. Default to `anthropic:claude-opus-5-5` and `fastembed:BAAI/bge-small-en-v1.5` |
+| `backend/.env.example`  | `ANTHROPIC_API_KEY` | The key for the chat model. Needed only when the AI features are on. An embedding model from a provider needs that provider's key too, such as `OPENAI_API_KEY` |
+| `backend/.env.example`  | `RESEARCH_MAX_FILE_BYTES` | Optional. The largest research file that can be uploaded. Defaults to 10 MB |
 | `backend/.env.example`  | `AI_REQUESTS_PER_HOUR`, `AI_DAILY_TOKEN_CAP` | Optional. Each user's AI allowance. Default to 20 requests an hour and 200,000 tokens a day |
 | `backend/.env.example`  | `PASSWORD_LOCKED_EMAILS` | Optional. Comma-separated accounts whose password cannot be changed, such as shared demo accounts. Defaults to none |
 | `backend/.env.example`  | `IMPORT_MAX_FILE_BYTES`, `IMPORT_MAX_ROWS` | Optional. CSV upload limits. Default to 1 MB and 5000 rows |
