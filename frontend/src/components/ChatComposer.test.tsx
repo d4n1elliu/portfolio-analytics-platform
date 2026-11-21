@@ -6,10 +6,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import ChatComposer from './ChatComposer'
 
-function renderComposer(text: string) {
+function renderComposer(text: string, busy = false) {
   const onSend = vi.fn()
   const onChange = vi.fn()
-  render(<ChatComposer text={text} onChange={onChange} onSend={onSend} />)
+  render(<ChatComposer text={text} onChange={onChange} onSend={onSend} busy={busy} />)
   return { onSend, onChange, box: screen.getByLabelText('Your question') }
 }
 
@@ -48,5 +48,14 @@ describe('ChatComposer', () => {
 
     expect(onSend).not.toHaveBeenCalled()
     expect(screen.getByRole('button', { name: 'Send' })).toHaveProperty('disabled', true)
+  })
+
+  it('cannot send while an answer is still being written', () => {
+    const { onSend, box } = renderComposer('What do I hold?', true)
+
+    fireEvent.keyDown(box, { key: 'Enter' })
+
+    expect(onSend).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: 'Answering…' })).toHaveProperty('disabled', true)
   })
 })
