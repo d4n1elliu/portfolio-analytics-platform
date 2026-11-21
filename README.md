@@ -10,11 +10,12 @@ A full-stack web app for tracking portfolio holdings, performance and sector exp
 
 ## Status
 
-Four features are in place:
+Five features are in place:
 
 - **Trades.** Trades can be imported from a CSV file and viewed in a table.
 - **Holdings.** The Holdings page shows the fund's current positions, calculated from those trades.
-- **Prices and valuation.** Daily closing prices are stored for each security and refreshed on weekdays. The Holdings page uses them to show what each position is worth, and the Dashboard page shows the portfolio's value, its unrealised profit, and three charts.
+- **Prices and valuation.** Daily closing prices are stored for each security and refreshed on weekdays. The Holdings page uses them to show what each position is worth, and the Dashboard page shows the portfolio's value, its unrealised profit, and charts of sector allocation and profit by holding.
+- **History and performance.** The Dashboard charts the portfolio's value on each past day and its time-weighted return over 1 month, 3 months, year to date, 1 year and since inception.
 - **Login and roles.** Every page needs a sign in, and each account has a role that decides what it can do.
 
 ## Tech stack
@@ -35,6 +36,7 @@ portfolio-analytics-platform/
 ├── .nvmrc                    Node version for local use and CI
 ├── .python-version           Python version for local use and CI
 ├── docker-compose.prod.yml   Production setup that runs both containers
+├── LICENSE
 ├── README.md
 │
 ├── .github/
@@ -44,6 +46,7 @@ portfolio-analytics-platform/
 │       └── refresh-prices.yml  Fetches closing prices on weekdays
 │
 ├── frontend/
+│   ├── public/               Files served as they are, such as the favicon
 │   ├── src/
 │   │   ├── api/              Typed calls to the backend such as holdings
 │   │   ├── components/       Shared components such as DataTable and Chart
@@ -381,7 +384,7 @@ Run the backend tests from `backend/` with the virtual environment active:
 pytest
 ```
 
-The tests cover the CSV rules, positions, valuation, price refresh and portfolio history. They do not use a database or the network, so they run without a `.env` file.
+The tests cover the CSV rules, positions, valuation, price refresh, portfolio history and performance, and login and roles. They do not use a database or the network, so they run without a `.env` file.
 
 ### Linting
 
@@ -418,7 +421,6 @@ Real `.env` files are git-ignored and must never be committed. The `.env.example
 | ----------------------- | --------------------- | ---------------------------------------------------- |
 | `backend/.env.example`  | `DATABASE_URL`        | Neon PostgreSQL connection string (required)         |
 | `backend/.env.example`  | `JWT_SECRET`          | Secret for signing session tokens. Needed to sign in |
-| `backend/.env.example`  | `MARKET_DATA_API_KEY` | Market data provider API key (not used yet)          |
 | `backend/.env.example`  | `CORS_ORIGINS`        | Optional. Comma-separated addresses allowed to call the API. Defaults to `http://localhost:5173` |
 | `backend/.env.example`  | `MARKET_TIMEZONE`     | Optional. Time zone that decides "today" for trade dates. Defaults to `Australia/Sydney` |
 | `backend/.env.example`  | `SESSION_MINUTES`     | Optional. How long a sign in lasts. Defaults to 480  |
@@ -487,3 +489,7 @@ docker compose -f docker-compose.prod.yml --env-file .env.prod run --rm backend 
 ```
 
 Create the demo accounts the same way, with `python -m scripts.seed_users`. `JWT_SECRET` must be set in `.env.prod`, or nobody can sign in.
+
+## License
+
+Released under the [MIT License](LICENSE).
