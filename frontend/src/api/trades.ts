@@ -1,7 +1,7 @@
 import type { SortBy } from '../lib/sorting'
 import type { TradeFilters } from '../lib/trades'
 import { request, requestFile, uploadFile } from './client'
-import type { ImportResult, Page, Trade, TradeSortKey } from './types'
+import type { ImportBatch, ImportResult, Page, Trade, TradeSortKey } from './types'
 
 /** Columns of the trades CSV, in the order the backend documents them. */
 export const TRADE_CSV_COLUMNS = ['trade_date', 'ticker', 'side', 'quantity', 'price', 'fees']
@@ -51,4 +51,9 @@ export function exportTrades(query: TradeQuery): Promise<Blob> {
 /** Upload a CSV of trades. Either every row is saved or none are. */
 export function importTrades(file: File): Promise<ImportResult> {
   return uploadFile<ImportResult>('/trades/import', file)
+}
+
+/** Fetch the latest imports, newest first. */
+export function listImports(limit: number, signal?: AbortSignal): Promise<Page<ImportBatch>> {
+  return request<Page<ImportBatch>>(`/trades/imports?limit=${limit}`, { signal })
 }

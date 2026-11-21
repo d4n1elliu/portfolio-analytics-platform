@@ -12,3 +12,6 @@ export const DEFAULT_CURRENCY = 'AUD'
 
 /** Rows shown per page in tables. */
 export const PAGE_SIZE = 25
+
+/** How many of the latest imports the Trades page lists. */
+export const IMPORT_HISTORY_SIZE = 10

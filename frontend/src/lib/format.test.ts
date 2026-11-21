@@ -5,6 +5,7 @@ import {
   formatCount,
   formatCurrency,
   formatDate,
+  formatDateTime,
   formatPercent,
   formatProfit,
   formatQuantity,
@@ -20,6 +21,18 @@ describe('formatDate', () => {
 
   it('returns text that is not a date unchanged', () => {
     expect(formatDate('soon')).toBe('soon')
+  })
+})
+
+describe('formatDateTime', () => {
+  it("writes a moment in the reader's own time zone", () => {
+    const moment = new Date(2026, 2, 16, 15, 5)
+
+    expect(formatDateTime(moment.toISOString())).toBe('16 Mar 2026, 3:05 pm')
+  })
+
+  it('returns text that is not a moment unchanged', () => {
+    expect(formatDateTime('soon')).toBe('soon')
   })
 })
 

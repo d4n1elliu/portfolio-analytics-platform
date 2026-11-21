@@ -12,6 +12,14 @@ const dateFormatter = new Intl.DateTimeFormat(LOCALE, {
   year: 'numeric',
 })
 
+const dateTimeFormatter = new Intl.DateTimeFormat(LOCALE, {
+  day: '2-digit',
+  month: 'short',
+  year: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+})
+
 const PERCENT_OPTIONS = {
   style: 'percent',
   minimumFractionDigits: 1,
@@ -31,6 +39,12 @@ const quantityFormatter = new Intl.NumberFormat(LOCALE, { maximumFractionDigits:
 export function formatDate(isoDate: string): string {
   const date = parseDate(isoDate)
   return Number.isNaN(date.getTime()) ? isoDate : dateFormatter.format(date)
+}
+
+/** Format a moment in time in the reader's time zone, such as "16 Mar 2026, 3:05 pm". */
+export function formatDateTime(isoDateTime: string): string {
+  const moment = new Date(isoDateTime)
+  return Number.isNaN(moment.getTime()) ? isoDateTime : dateTimeFormatter.format(moment)
 }
 
 /**

@@ -1,11 +1,12 @@
 import { useCallback, useState } from 'react'
 
 import { listSecurities } from '../api/securities'
-import { exportTrades, listTrades } from '../api/trades'
+import { exportTrades, listImports, listTrades } from '../api/trades'
 import type { TradeQuery } from '../api/trades'
 import type { TradeSortKey } from '../api/types'
 import Card from '../components/Card'
 import DownloadButton from '../components/DownloadButton'
+import ImportHistory from '../components/ImportHistory'
 import LoadError from '../components/LoadError'
 import PageLayout from '../components/PageLayout'
 import Pagination from '../components/Pagination'
@@ -13,7 +14,7 @@ import TradeFilters from '../components/TradeFilters'
 import TradeImport from '../components/TradeImport'
 import TradeImportNotAllowed from '../components/TradeImportNotAllowed'
 import TradeTable from '../components/TradeTable'
-import { PAGE_SIZE } from '../config'
+import { IMPORT_HISTORY_SIZE, PAGE_SIZE } from '../config'
 import { useApiQuery } from '../hooks/useApiQuery'
 import { useAuth } from '../lib/auth'
 import { formatRange } from '../lib/format'
@@ -23,6 +24,10 @@ import { MUTED_TEXT } from '../lib/styles'
 import { NEWEST_FIRST, NO_TRADE_FILTERS, hasTradeFilters } from '../lib/trades'
 
 const EXPORT_FILE_NAME = 'trades.csv'
+
+function loadLatestImports(signal: AbortSignal) {
+  return listImports(IMPORT_HISTORY_SIZE, signal)
+}
 
 function TradesPage() {
   const [query, setQuery] = useState<TradeQuery>({ filters: NO_TRADE_FILTERS, sort: NEWEST_FIRST })
@@ -35,6 +40,7 @@ function TradesPage() {
   const { state: trades, reload: reloadTrades } = useApiQuery(loadTrades, {
     keepPreviousData: true,
   })
+  const { state: imports, reload: reloadImports } = useApiQuery(loadLatestImports)
   const { state: securities } = useApiQuery(listSecurities)
   const { state: auth } = useAuth()
 
@@ -59,6 +65,7 @@ function TradesPage() {
     // New trades can fall anywhere in the order, so return to the first page.
     setOffset(0)
     reloadTrades()
+    reloadImports()
   }
 
   return (
@@ -114,6 +121,8 @@ function TradesPage() {
           </>
         )}
       </Card>
+
+      <ImportHistory state={imports} onRetry={reloadImports} />
     </PageLayout>
   )
 }
