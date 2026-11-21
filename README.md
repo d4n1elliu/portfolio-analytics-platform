@@ -162,7 +162,7 @@ It also takes filters and an order, and `total` counts the trades that match:
 | `sort`                 | `trade_date` (default), `ticker`, `side`, `quantity`, `price` or `fees`   |
 | `order`                | `desc` (default) or `asc`                                                 |
 
-`GET /trades/export` takes the same filters and order and returns every matching trade as a CSV file with the columns the import reads. `GET /trades/imports` is paged like `/trades`, and each item has `file_name`, `row_count`, `imported_by` and `created_at`.
+`GET /trades/export` takes the same filters and order and returns every matching trade as a CSV file with the columns the import reads. It needs the permission to export trades. `GET /trades/imports` is paged like `/trades`, and each item has `file_name`, `row_count`, `imported_by` and `created_at`.
 
 `GET /holdings` returns one item per security that has trades, with `ticker`, `security_name`, `sector`, `asset_class`, `currency`, `quantity`, `average_cost`, `cost_basis`, `realised_pnl` and `oversold_quantity`, plus the valuation fields described under [Prices and valuation](#prices-and-valuation). Positions that have been fully sold are left out unless `include_closed=true` is added.
 
@@ -176,11 +176,13 @@ The interactive docs at http://localhost:8000/docs list every endpoint and let y
 
 Every page needs a sign in. There is no sign-up: accounts are created by a seed script.
 
-| Role              | Can view everything | Can import trades |
-| ----------------- | ------------------- | ----------------- |
-| Operations        | Yes                 | Yes               |
-| Portfolio Manager | Yes                 | No                |
-| Analyst           | Yes                 | No                |
+| Role              | Can view everything | Can export trades | Can import trades |
+| ----------------- | ------------------- | ----------------- | ----------------- |
+| Operations        | Yes                 | Yes               | Yes               |
+| Portfolio Manager | Yes                 | Yes               | No                |
+| Analyst           | Yes                 | No                | No                |
+
+The table lives in one place, `backend/app/services/permissions.py`. The API checks it, and `/auth/login` and `/auth/me` return the signed-in user's `permissions`, such as `["export_trades"]`, so the pages show only what the user can do. A request the role does not allow is answered with `403`.
 
 Signing in starts a session that lasts 8 hours and sets a cookie that names it. The session is checked on every request, so signing out ends it at once: a copy of the cookie stops working. After 10 failed attempts, sign-ins from that address are blocked for up to 15 minutes.
 
