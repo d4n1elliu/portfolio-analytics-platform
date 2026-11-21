@@ -1,6 +1,6 @@
 import type { Holding } from '../api/types'
 import { formatDate } from './format'
-import { commonCurrency, sumMoney } from './holdings'
+import { sumMoney } from './holdings'
 
 /** A holding that has a stored price, so its valuation fields are filled in. */
 export interface ValuedHolding extends Holding {
@@ -13,8 +13,6 @@ export interface ValuationSummary {
   unrealisedPnl: number
   /** Unrealised P&L as a fraction of the cost basis, or null when the cost is zero. */
   unrealisedReturn: number | null
-  /** The currency of the totals, or null if the holdings use more than one. */
-  currency: string | null
 }
 
 export interface ProfitSummary {
@@ -45,7 +43,6 @@ export function summariseValuation(holdings: ValuedHolding[]): ValuationSummary 
     marketValue: sumMoney(holdings.map((holding) => holding.market_value)),
     unrealisedPnl,
     unrealisedReturn: costBasis === 0 ? null : unrealisedPnl / costBasis,
-    currency: commonCurrency(holdings),
   }
 }
 

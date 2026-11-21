@@ -1,10 +1,16 @@
 import { NO_VALUE, formatCurrency, formatPercent } from '../lib/format'
 import { profitColour } from '../lib/profit'
-import type { ValuationSummary as Summary } from '../lib/valuation'
+import type { ProfitSummary, ValuationSummary as Summary } from '../lib/valuation'
 import Profit from './Profit'
 import StatTiles from './StatTiles'
 
-function ValuationSummary({ summary, currency }: { summary: Summary; currency: string }) {
+interface ValuationSummaryProps {
+  summary: Summary
+  profit: ProfitSummary
+  currency: string
+}
+
+function ValuationSummary({ summary, profit, currency }: ValuationSummaryProps) {
   const colour = profitColour(summary.unrealisedPnl)
 
   return (
@@ -23,6 +29,14 @@ function ValuationSummary({ summary, currency }: { summary: Summary; currency: s
             ) : (
               <span className={colour}>{formatPercent(summary.unrealisedReturn)}</span>
             ),
+        },
+        {
+          label: 'Realised P&L',
+          value: <Profit amount={profit.realisedPnl} currency={currency} />,
+        },
+        {
+          label: 'Total P&L',
+          value: <Profit amount={profit.totalPnl} currency={currency} />,
         },
       ]}
     />

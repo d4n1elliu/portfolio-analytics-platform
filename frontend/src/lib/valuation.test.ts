@@ -30,7 +30,6 @@ describe('summariseValuation', () => {
       marketValue: 5400,
       unrealisedPnl: 400,
       unrealisedReturn: 0.08,
-      currency: 'AUD',
     })
   })
 

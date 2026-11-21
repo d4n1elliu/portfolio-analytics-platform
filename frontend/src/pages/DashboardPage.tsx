@@ -14,37 +14,42 @@ import ValuationSummary from '../components/ValuationSummary'
 import { useApiQuery } from '../hooks/useApiQuery'
 import { formatCount, formatCurrency, formatPercent, formatProfit } from '../lib/format'
 import { MUTED_TEXT, TEXT_LINK } from '../lib/styles'
+import { commonCurrency } from '../lib/holdings'
 import {
+  countUnpriced,
   latestPriceDate,
   pricesAsAt,
   sectorAllocation,
+  summariseProfit,
   summariseValuation,
   valuedHoldings,
 } from '../lib/valuation'
 import type { SectorShare, ValuedHolding } from '../lib/valuation'
 import { ROUTES } from '../routes'
 
-function loadOpenHoldings(signal: AbortSignal) {
-  return listHoldings({ includeClosed: false }, signal)
+/** Closed positions are fetched too, because the profit made by selling them still counts. */
+function loadAllHoldings(signal: AbortSignal) {
+  return listHoldings({ includeClosed: true }, signal)
 }
 
 function DashboardPage() {
-  const { state, reload } = useApiQuery(loadOpenHoldings)
+  const { state, reload } = useApiQuery(loadAllHoldings)
 
   return (
     <PageLayout title="Dashboard">
       {state.status === 'loading' && <p className={MUTED_TEXT}>Loading dashboard…</p>}
       {state.status === 'error' && <LoadError message={state.message} onRetry={reload} />}
-      {state.status === 'loaded' && <Valuation openHoldings={state.data} />}
+      {state.status === 'loaded' && <Valuation allHoldings={state.data} />}
     </PageLayout>
   )
 }
 
-function Valuation({ openHoldings }: { openHoldings: Holding[] }) {
-  const holdings = valuedHoldings(openHoldings)
-  const unpricedCount = openHoldings.length - holdings.length
+function Valuation({ allHoldings }: { allHoldings: Holding[] }) {
+  // The open positions that have a price. The charts and the market value use only these.
+  const holdings = valuedHoldings(allHoldings)
+  const unpricedCount = countUnpriced(allHoldings)
   const summary = summariseValuation(holdings)
-  const currency = summary.currency
+  const currency = commonCurrency(allHoldings)
 
   if (holdings.length === 0) {
     return (
@@ -76,7 +81,11 @@ function Valuation({ openHoldings }: { openHoldings: Holding[] }) {
         </Alert>
       )}
 
-      <ValuationSummary summary={summary} currency={currency} />
+      <ValuationSummary
+        summary={summary}
+        profit={summariseProfit(allHoldings)}
+        currency={currency}
+      />
 
       <PortfolioPerformance />
 
