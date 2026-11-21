@@ -4,6 +4,7 @@ import AuthProvider from './components/AuthProvider'
 import HomeRedirect from './components/HomeRedirect'
 import RequireAuth from './components/RequireAuth'
 import SessionGate from './components/SessionGate'
+import AccountPage from './pages/AccountPage'
 import DashboardPage from './pages/DashboardPage'
 import HoldingsPage from './pages/HoldingsPage'
 import LoginPage from './pages/LoginPage'
@@ -23,6 +24,7 @@ function App() {
               <Route path={ROUTES.holdings} element={<HoldingsPage />} />
               <Route path={ROUTES.trades} element={<TradesPage />} />
               <Route path={ROUTES.security} element={<SecurityPage />} />
+              <Route path={ROUTES.account} element={<AccountPage />} />
             </Route>
             <Route path="*" element={<HomeRedirect />} />
           </Routes>

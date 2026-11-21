@@ -9,6 +9,11 @@ class LoginRequest(BaseModel):
     password: str = Field(max_length=1024)
 
 
+class PasswordChange(BaseModel):
+    current_password: str = Field(max_length=1024)
+    new_password: str = Field(max_length=1024)
+
+
 class UserRead(BaseModel):
     """The signed-in user. The password hash is never returned."""
 

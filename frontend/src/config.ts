@@ -16,3 +16,5 @@ export const PAGE_SIZE = 25
 export const IMPORT_HISTORY_SIZE = 10
 
 export const SECURITY_TRADES_LIMIT = 500
+
+export const MIN_PASSWORD_LENGTH = 12

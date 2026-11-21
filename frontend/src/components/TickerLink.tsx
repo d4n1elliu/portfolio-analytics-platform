@@ -2,15 +2,12 @@
 
 import { Link } from 'react-router'
 
-import { FOCUS_OUTLINE } from '../lib/styles'
+import { NAME_LINK } from '../lib/styles'
 import { securityPath } from '../routes'
 
 function TickerLink({ ticker }: { ticker: string }) {
   return (
-    <Link
-      to={securityPath(ticker)}
-      className={`rounded font-medium hover:underline ${FOCUS_OUTLINE}`}
-    >
+    <Link to={securityPath(ticker)} className={NAME_LINK}>
       {ticker}
     </Link>
   )

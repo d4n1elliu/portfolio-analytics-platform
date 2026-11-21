@@ -13,5 +13,6 @@ from app.models.price import Price
 from app.models.security import Security
 from app.models.trade import Trade, TradeSide
 from app.models.user import Role, User
+from app.models.user_session import UserSession
 
-__all__ = ["ImportBatch", "Price", "Role", "Security", "Trade", "TradeSide", "User"]
+__all__ = ["ImportBatch", "Price", "Role", "Security", "Trade", "TradeSide", "User", "UserSession"]

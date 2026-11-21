@@ -1,6 +1,7 @@
 // The address of each page, so links and routes use the same values.
 
 export const ROUTES = {
+  account: '/account',
   dashboard: '/dashboard',
   holdings: '/holdings',
   login: '/login',

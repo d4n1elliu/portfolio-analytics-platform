@@ -22,9 +22,7 @@ from sqlalchemy.orm import Session
 from app.database import SessionLocal
 from app.models import Role, User
 from app.services.inserts import insert_missing
-from app.services.passwords import hash_password
-
-MIN_PASSWORD_LENGTH = 12
+from app.services.passwords import MIN_PASSWORD_LENGTH, hash_password
 
 DEMO_ACCOUNTS = [
     {"email": "operations@example.com", "name": "Demo Operations", "role": Role.OPERATIONS},

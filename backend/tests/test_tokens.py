@@ -11,26 +11,29 @@ from app.services.tokens import ALGORITHM, InvalidTokenError, create_token, read
 NOW = datetime.now(UTC)
 
 
-def test_token_gives_back_the_user_id():
-    assert read_token(create_token(42, NOW)) == 42
+SESSION_ID = "a-session-id"
+
+
+def test_token_gives_back_the_session_id():
+    assert read_token(create_token(SESSION_ID, NOW)) == SESSION_ID
 
 
 def test_expired_token_is_rejected():
-    token = create_token(42, NOW - timedelta(minutes=61), minutes=60)
+    token = create_token(SESSION_ID, NOW - timedelta(minutes=61), minutes=60)
 
     with pytest.raises(InvalidTokenError):
         read_token(token)
 
 
 def test_token_is_accepted_until_it_expires():
-    token = create_token(42, NOW - timedelta(minutes=59), minutes=60)
+    token = create_token(SESSION_ID, NOW - timedelta(minutes=59), minutes=60)
 
-    assert read_token(token) == 42
+    assert read_token(token) == SESSION_ID
 
 
-def test_token_changed_to_another_user_is_rejected():
-    header, _, signature = create_token(42, NOW).split(".")
-    _, other_claims, _ = create_token(7, NOW).split(".")
+def test_token_changed_to_another_session_is_rejected():
+    header, _, signature = create_token(SESSION_ID, NOW).split(".")
+    _, other_claims, _ = create_token("another-session-id", NOW).split(".")
 
     with pytest.raises(InvalidTokenError):
         read_token(f"{header}.{other_claims}.{signature}")
@@ -59,7 +62,7 @@ def test_token_with_no_expiry_is_rejected():
         read_token(token)
 
 
-def test_token_with_no_user_is_rejected():
+def test_token_with_no_session_is_rejected():
     claims = {"exp": NOW + timedelta(minutes=60)}
     token = jwt.encode(claims, jwt_secret(), ALGORITHM)
 

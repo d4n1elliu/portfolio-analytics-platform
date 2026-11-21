@@ -7,7 +7,8 @@ import pytest
 from app.models import Role
 from app.routes.dependencies import SESSION_COOKIE
 from app.services.login_limiter import MAX_FAILURES
-from app.services.tokens import create_token
+from app.services.passwords import MIN_PASSWORD_LENGTH, verify_password
+from app.services.tokens import create_token, read_token
 from app.services.users import check_credentials
 from factories import USER_PASSWORD, make_user
 
@@ -21,6 +22,14 @@ def sign_in(client, email="analyst@example.com", password=USER_PASSWORD):
 
 def session_cookie_header(response) -> str:
     return response.headers["set-cookie"].lower()
+
+
+def session_id_of(client) -> str:
+    return read_token(client.cookies[SESSION_COOKIE])
+
+
+def change_password(client, current=USER_PASSWORD, new="a new test password"):
+    return client.post("/auth/password", json={"current_password": current, "new_password": new})
 
 
 # --- Checking a password ---
@@ -164,31 +173,36 @@ def test_no_session_is_rejected(client_with_users):
 
 
 def test_expired_session_is_rejected(client_with_users):
-    client = client_with_users(make_user(user_id=1))
+    client = client_with_users(make_user())
+    sign_in(client)
     long_ago = datetime.now(UTC) - timedelta(days=1)
-    client.cookies.set(SESSION_COOKIE, create_token(1, long_ago))
+    client.cookies.set(SESSION_COOKIE, create_token(session_id_of(client), long_ago))
 
     assert client.get("/auth/me").status_code == 401
 
 
 def test_tampered_session_is_rejected(client_with_users):
-    client = client_with_users(make_user(user_id=1))
-    token = create_token(1, datetime.now(UTC))
+    client = client_with_users(make_user())
+    sign_in(client)
+    token = client.cookies[SESSION_COOKIE]
     client.cookies.set(SESSION_COOKIE, token[:-2] + ("aa" if token[-2:] != "aa" else "bb"))
 
     assert client.get("/auth/me").status_code == 401
 
 
-def test_session_of_a_user_who_no_longer_exists_is_rejected(client_with_users):
-    client = client_with_users(make_user(user_id=1))
-    client.cookies.set(SESSION_COOKIE, create_token(99, datetime.now(UTC)))
+def test_session_that_was_never_started_is_rejected(client_with_users):
+    client = client_with_users(make_user())
+    client.cookies.set(SESSION_COOKIE, create_token("no-such-session", datetime.now(UTC)))
 
     assert client.get("/auth/me").status_code == 401
 
 
 def test_session_of_a_user_made_inactive_is_rejected(client_with_users):
-    client = client_with_users(make_user(user_id=1, is_active=False))
-    client.cookies.set(SESSION_COOKIE, create_token(1, datetime.now(UTC)))
+    user = make_user()
+    client = client_with_users(user)
+    sign_in(client)
+
+    user.is_active = False
 
     assert client.get("/auth/me").status_code == 401
 
@@ -207,5 +221,62 @@ def test_sign_out_clears_the_session(client_with_users):
     assert client.get("/auth/me").status_code == 401
 
 
+def test_a_copied_cookie_stops_working_after_sign_out(client_with_users):
+    client = client_with_users(make_user())
+    sign_in(client)
+    copied = client.cookies[SESSION_COOKIE]
+    client.post("/auth/logout")
+
+    client.cookies.set(SESSION_COOKIE, copied)
+
+    assert client.get("/auth/me").status_code == 401
+
+
 def test_sign_out_works_when_not_signed_in(client_with_users):
     assert client_with_users(make_user()).post("/auth/logout").status_code == 204
+
+
+# --- POST /auth/password ---
+
+
+def test_changing_the_password_needs_a_sign_in(client_with_users):
+    response = change_password(client_with_users(make_user()))
+
+    assert response.status_code == 401
+    assert response.json() == NOT_SIGNED_IN
+
+
+def test_the_password_is_changed_and_the_session_kept(client_with_users):
+    user = make_user()
+    client = client_with_users(user)
+    sign_in(client)
+
+    response = change_password(client)
+
+    assert response.status_code == 204
+    assert verify_password("a new test password", user.password_hash)
+    assert client.get("/auth/me").status_code == 200
+
+
+def test_a_wrong_current_password_changes_nothing(client_with_users):
+    user = make_user()
+    client = client_with_users(user)
+    sign_in(client)
+
+    response = change_password(client, current="not the password")
+
+    assert response.status_code == 400
+    assert response.json() == {"detail": "The current password is incorrect."}
+    assert verify_password(USER_PASSWORD, user.password_hash)
+
+
+def test_a_new_password_that_is_too_short_is_refused(client_with_users):
+    user = make_user()
+    client = client_with_users(user)
+    sign_in(client)
+
+    response = change_password(client, new="x" * (MIN_PASSWORD_LENGTH - 1))
+
+    assert response.status_code == 422
+    assert response.json() == {"detail": "The new password must be at least 12 characters."}
+    assert verify_password(USER_PASSWORD, user.password_hash)

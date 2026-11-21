@@ -14,10 +14,6 @@ def find_by_email(db: Session, email: str) -> User | None:
     return db.scalar(select(User).where(User.email == email.strip().lower()))
 
 
-def find_by_id(db: Session, user_id: int) -> User | None:
-    return db.scalar(select(User).where(User.id == user_id))
-
-
 def check_credentials(user: User | None, password: str) -> User | None:
     """Return the user if the password is right and the account is active.
 
@@ -36,3 +32,8 @@ def check_credentials(user: User | None, password: str) -> User | None:
 @cache
 def _placeholder_hash() -> str:
     return hash_password("a password that no account has")
+
+
+def set_password(db: Session, user: User, password: str) -> None:
+    user.password_hash = hash_password(password)
+    db.commit()

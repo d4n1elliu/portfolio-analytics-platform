@@ -8,11 +8,18 @@ from sqlalchemy.orm import Session
 
 from app.config import COOKIE_SECURE, SESSION_MINUTES
 from app.database import get_db
-from app.models import User
-from app.routes.dependencies import SESSION_COOKIE, get_current_user
-from app.schemas.user import LoginRequest, UserRead
+from app.models import User, UserSession
+from app.routes.dependencies import (
+    SESSION_COOKIE,
+    find_current_session,
+    get_current_session,
+    get_current_user,
+)
+from app.schemas.user import LoginRequest, PasswordChange, UserRead
+from app.services import user_sessions as user_sessions_service
 from app.services import users as users_service
 from app.services.login_limiter import LoginLimiter
+from app.services.passwords import password_problem
 from app.services.tokens import create_token
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -52,16 +59,43 @@ def login(
         # One message for every failure, so it does not show which emails exist.
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Incorrect email or password.")
 
+    session = user_sessions_service.start_session(db, user, now)
     response.set_cookie(
-        SESSION_COOKIE, create_token(user.id, now), max_age=SESSION_MINUTES * 60, **COOKIE_SETTINGS
+        SESSION_COOKIE,
+        create_token(session.id, now),
+        max_age=SESSION_MINUTES * 60,
+        **COOKIE_SETTINGS,
     )
     return user
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
-def logout(response: Response):
-    """Sign out by clearing the session cookie."""
+def logout(
+    response: Response,
+    session: UserSession | None = Depends(find_current_session),
+    db: Session = Depends(get_db),
+):
+    """Sign out by ending the session and clearing its cookie."""
+    if session is not None:
+        user_sessions_service.end_session(db, session, datetime.now(UTC))
     response.delete_cookie(SESSION_COOKIE, **COOKIE_SETTINGS)
+
+
+@router.post("/password", status_code=status.HTTP_204_NO_CONTENT)
+def change_password(
+    change: PasswordChange,
+    session: UserSession = Depends(get_current_session),
+    db: Session = Depends(get_db),
+):
+    """Set a new password, and sign the user out everywhere else."""
+    if users_service.check_credentials(session.user, change.current_password) is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "The current password is incorrect.")
+    problem = password_problem(change.new_password)
+    if problem is not None:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, problem)
+
+    users_service.set_password(db, session.user, change.new_password)
+    user_sessions_service.end_other_sessions(db, session, datetime.now(UTC))
 
 
 @router.get("/me", response_model=UserRead)

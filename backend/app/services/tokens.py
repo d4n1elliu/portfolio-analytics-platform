@@ -13,14 +13,14 @@ class InvalidTokenError(Exception):
     """Raised when a token is expired, changed, or was not signed by this app."""
 
 
-def create_token(user_id: int, now: datetime, minutes: int = SESSION_MINUTES) -> str:
-    """Return a token for the user that stops working after the given minutes."""
-    claims = {"sub": str(user_id), "exp": now + timedelta(minutes=minutes)}
+def create_token(session_id: str, now: datetime, minutes: int = SESSION_MINUTES) -> str:
+    """Return a token for the session that stops working after the given minutes."""
+    claims = {"sub": session_id, "exp": now + timedelta(minutes=minutes)}
     return jwt.encode(claims, jwt_secret(), algorithm=ALGORITHM)
 
 
-def read_token(token: str) -> int:
-    """Return the user id inside a token. Raises InvalidTokenError if it cannot be trusted."""
+def read_token(token: str) -> str:
+    """Return the session id inside a token. Raises InvalidTokenError if it cannot be trusted."""
     try:
         claims = jwt.decode(
             token,
@@ -29,6 +29,6 @@ def read_token(token: str) -> int:
             algorithms=[ALGORITHM],
             options={"require": ["sub", "exp"]},
         )
-        return int(claims["sub"])
-    except (jwt.InvalidTokenError, ValueError) as error:
+        return claims["sub"]
+    except jwt.InvalidTokenError as error:
         raise InvalidTokenError("The token is not valid.") from error
