@@ -4,7 +4,14 @@ import { describe, expect, it } from 'vitest'
 
 import type { ResearchDocument } from '../api/types'
 import { RESEARCH_MAX_FILE_BYTES } from '../config'
-import { NO_RESEARCH_FILTERS, filterDocuments, hasResearchFilters, uploadProblem } from './research'
+import {
+  NO_RESEARCH_FILTERS,
+  chunkAnchor,
+  chunkPositionIn,
+  filterDocuments,
+  hasResearchFilters,
+  uploadProblem,
+} from './research'
 import type { ResearchUpload } from './research'
 
 const TODAY = '2026-11-21'
@@ -86,4 +93,22 @@ describe('uploadProblem', () => {
   ])('refuses %o', (fields, problem) => {
     expect(uploadProblem(upload(fields), TODAY)).toBe(problem)
   })
+})
+
+describe('chunk anchors', () => {
+  it('names the anchor of a chunk by its position', () => {
+    expect(chunkAnchor(3)).toBe('chunk-3')
+  })
+
+  it('reads the position back from the address of a page', () => {
+    expect(chunkPositionIn('#chunk-3')).toBe(3)
+    expect(chunkPositionIn('chunk-12')).toBe(12)
+  })
+
+  it.each(['', '#', '#chunk-', '#chunk-0', '#chunk-1.5', '#chunk-abc', '#other-3'])(
+    'finds no chunk in %o',
+    (hash) => {
+      expect(chunkPositionIn(hash)).toBeNull()
+    },
+  )
 })

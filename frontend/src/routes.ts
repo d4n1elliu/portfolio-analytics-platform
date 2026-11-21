@@ -1,5 +1,7 @@
 // The address of each page, so links and routes use the same values.
 
+import { chunkAnchor } from './lib/research'
+
 export const ROUTES = {
   account: '/account',
   assistant: '/assistant',
@@ -7,6 +9,7 @@ export const ROUTES = {
   holdings: '/holdings',
   login: '/login',
   research: '/research',
+  researchDocument: '/research/:id',
   security: '/securities/:ticker',
   trades: '/trades',
 } as const
@@ -33,6 +36,11 @@ export const HOME = ROUTES.dashboard
 
 export function securityPath(ticker: string): string {
   return ROUTES.security.replace(':ticker', encodeURIComponent(ticker))
+}
+
+export function researchDocumentPath(id: number, chunkPosition?: number): string {
+  const path = ROUTES.researchDocument.replace(':id', String(id))
+  return chunkPosition === undefined ? path : `${path}#${chunkAnchor(chunkPosition)}`
 }
 
 export interface LoginState {

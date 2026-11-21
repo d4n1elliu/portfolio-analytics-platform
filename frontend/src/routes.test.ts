@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from 'vitest'
 
-import { ROUTES, pagesFor, returnPage, securityPath } from './routes'
+import { ROUTES, pagesFor, researchDocumentPath, returnPage, securityPath } from './routes'
 
 describe('returnPage', () => {
   it('accepts a page of this app', () => {
@@ -34,5 +34,12 @@ describe('pagesFor', () => {
 
   it('lists the AI pages once they are on', () => {
     expect(labels(true)).toEqual(['Dashboard', 'Holdings', 'Trades', 'Assistant', 'Research'])
+  })
+})
+
+describe('researchDocumentPath', () => {
+  it('is the address of a document, or of one chunk in it', () => {
+    expect(researchDocumentPath(12)).toBe('/research/12')
+    expect(researchDocumentPath(12, 3)).toBe('/research/12#chunk-3')
   })
 })

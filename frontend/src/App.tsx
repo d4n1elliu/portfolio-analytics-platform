@@ -10,6 +10,7 @@ import AssistantPage from './pages/AssistantPage'
 import DashboardPage from './pages/DashboardPage'
 import HoldingsPage from './pages/HoldingsPage'
 import LoginPage from './pages/LoginPage'
+import ResearchDocumentPage from './pages/ResearchDocumentPage'
 import ResearchPage from './pages/ResearchPage'
 import SecurityPage from './pages/SecurityPage'
 import TradesPage from './pages/TradesPage'
@@ -31,6 +32,7 @@ function App() {
               <Route element={<RequireAi />}>
                 <Route path={ROUTES.assistant} element={<AssistantPage />} />
                 <Route path={ROUTES.research} element={<ResearchPage />} />
+                <Route path={ROUTES.researchDocument} element={<ResearchDocumentPage />} />
               </Route>
             </Route>
             <Route path="*" element={<HomeRedirect />} />

@@ -58,3 +58,16 @@ export function uploadProblem(upload: ResearchUpload, today: string): string | n
 function hasAllowedType(fileName: string): boolean {
   return RESEARCH_FILE_TYPES.some((type) => fileName.toLowerCase().endsWith(type))
 }
+
+const CHUNK_ANCHOR_PREFIX = 'chunk-'
+
+export function chunkAnchor(position: number): string {
+  return `${CHUNK_ANCHOR_PREFIX}${position}`
+}
+
+export function chunkPositionIn(hash: string): number | null {
+  const anchor = hash.replace(/^#/, '')
+  if (!anchor.startsWith(CHUNK_ANCHOR_PREFIX)) return null
+  const position = Number(anchor.slice(CHUNK_ANCHOR_PREFIX.length))
+  return Number.isInteger(position) && position > 0 ? position : null
+}
