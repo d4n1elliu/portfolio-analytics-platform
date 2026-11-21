@@ -14,7 +14,7 @@ Five features are in place:
 - **Holdings.** The Holdings page shows the fund's positions, calculated from those trades, either now or as at any past date. Each security has its own page with its position, price chart and trades.
 - **Prices and valuation.** Daily closing prices are stored for each security and refreshed on weekdays. The Holdings page uses them to show what each position is worth, and the Dashboard page shows the portfolio's value, its unrealised, realised and total profit, and charts of sector allocation and profit by holding.
 - **History and performance.** The Dashboard charts the portfolio's value on each past day and its time-weighted return over 1 month, 3 months, year to date, 1 year and since inception, next to a benchmark.
-- **Login and roles.** Every page needs a sign in, and each account has a role that decides what it can do.
+- **Login and roles.** Every page needs a sign in, and each account has a role that decides what it can do. Signing out ends the session, and users can change their own password.
 
 ## Tech stack
 
@@ -104,7 +104,7 @@ A request flows through the backend in one direction: a route calls a service, a
 
 ## Data model
 
-Five tables hold the data.
+Six tables hold the data.
 
 | Table        | One row is                       | Key columns                                                        |
 | ------------ | -------------------------------- | ------------------------------------------------------------------ |
@@ -113,6 +113,7 @@ Five tables hold the data.
 | `prices`     | One day's closing price          | `security_id`, `price_date`, `close`                               |
 | `users`      | A person who can sign in         | `email` (unique), `name`, `password_hash`, `role`, `is_active`     |
 | `import_batches` | One imported file of trades  | `file_name`, `file_hash` (unique), `row_count`, `imported_by_id`   |
+| `user_sessions` | One sign in                   | `user_id`, `expires_at`, `ended_at`                                |
 
 A security has many trades and many prices. A trade points to the import it came from, in `import_batch_id`. The database enforces the basic rules itself: `side` must be `BUY` or `SELL`, quantities and prices must be greater than zero, fees cannot be negative, and a security can have only one closing price per day.
 
@@ -134,6 +135,7 @@ A security has many trades and many prices. A trade points to the import it came
 | `GET`  | `/health/db`     | Confirms the API can reach the database                         |
 | `POST` | `/auth/login`    | Signs in with an email and password                             |
 | `POST` | `/auth/logout`   | Signs out                                                       |
+| `POST` | `/auth/password` | Changes the signed-in user's password                           |
 | `GET`  | `/auth/me`       | Returns the signed-in user                                      |
 | `GET`  | `/holdings`      | Lists the current position in each security, ordered by ticker  |
 | `GET`  | `/holdings/{ticker}` | Returns the current position in one security                |
@@ -180,11 +182,13 @@ Every page needs a sign in. There is no sign-up: accounts are created by a seed 
 | Portfolio Manager | Yes                 | No                |
 | Analyst           | Yes                 | No                |
 
-Signing in sets a cookie that lasts 8 hours. After 10 failed attempts, sign-ins from that address are blocked for up to 15 minutes.
+Signing in starts a session that lasts 8 hours and sets a cookie that names it. The session is checked on every request, so signing out ends it at once: a copy of the cookie stops working. After 10 failed attempts, sign-ins from that address are blocked for up to 15 minutes.
+
+A signed-in user can change their password on the Account page, opened by clicking their name. The new password must be at least 12 characters, and changing it signs the user out everywhere else.
 
 The seed script creates one demo account per role: `operations@example.com`, `pm@example.com` and `analyst@example.com`. Their passwords are chosen when the script is run and are not stored in this repository.
 
-Not included: sign-up, password reset, email verification and account management.
+Not included: sign-up, resetting a forgotten password, email verification and managing other users' accounts.
 
 ### Holdings and average cost
 
@@ -308,7 +312,6 @@ Two example files are in `backend/sample_data/`: `trades_sample.csv` (30 valid t
 - **Dividends are not counted.** Profit is the change in price only.
 - **The benchmark is an ETF the fund can also hold.** VAS stands in for the ASX 300 index because its prices are already stored. It is compared on price alone, like the portfolio.
 - **Currencies are not converted.** The Dashboard shows a warning instead of totals if positions use more than one currency.
-- **Signing out does not cancel the session.** A copied session cookie would work until it expires.
 - **The stale price warning does not know public holidays.** It counts Monday to Friday as business days, so it can appear a day early after a long weekend.
 
 ## Local setup
@@ -455,7 +458,7 @@ cp .env.example .env
 npm run dev
 ```
 
-The app runs at http://localhost:5173. It opens on a sign in page and has three main pages after that, plus a page for each security. The backend must be running.
+The app runs at http://localhost:5173. It opens on a sign in page and has three main pages after that, plus a page for each security and an Account page. The backend must be running.
 
 | Page      | What it shows |
 | --------- | ------------- |
