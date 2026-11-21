@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes } from 'react'
+import type { ComponentPropsWithRef } from 'react'
 
 import { COLOUR_TRANSITION } from '../lib/styles'
 
@@ -10,7 +10,7 @@ const VARIANTS = {
     'border border-slate-300 bg-white hover:bg-slate-50 disabled:text-slate-400 disabled:hover:bg-white',
 }
 
-interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+interface ButtonProps extends ComponentPropsWithRef<'button'> {
   variant?: keyof typeof VARIANTS
 }
 

@@ -1,15 +1,10 @@
-// The user's past conversations with the assistant. One can be opened, deleted or started.
+// The user's past conversations with the assistant, and a button to start a new one.
 
 import type { Conversation } from '../api/types'
 import type { QueryState } from '../hooks/useApiQuery'
-import { formatDateTime } from '../lib/format'
-import { COLOUR_TRANSITION, FOCUS_OUTLINE } from '../lib/styles'
 import Button from './Button'
+import ConversationRow from './ConversationRow'
 import LoadState from './LoadState'
-
-const ROW = `min-w-0 flex-1 rounded-md px-3 py-2 text-left text-sm ${COLOUR_TRANSITION} ${FOCUS_OUTLINE}`
-const OPEN = 'bg-slate-900 text-white'
-const NOT_OPEN = 'hover:bg-slate-100'
 
 interface ConversationListProps {
   state: QueryState<Conversation[]>
@@ -38,27 +33,13 @@ function ConversationList(props: ConversationListProps) {
         {(loaded) => (
           <ul className="space-y-1">
             {loaded.map((conversation) => (
-              <li key={conversation.id} className="flex items-start gap-1">
-                <button
-                  type="button"
-                  aria-current={conversation.id === openId ? 'true' : undefined}
-                  onClick={() => onOpen(conversation.id)}
-                  className={`${ROW} ${conversation.id === openId ? OPEN : NOT_OPEN}`}
-                >
-                  <span className="block truncate font-medium">{conversation.title}</span>
-                  <span className="block text-xs opacity-70">
-                    {formatDateTime(conversation.updated_at)}
-                  </span>
-                </button>
-                <Button
-                  variant="secondary"
-                  className="shrink-0"
-                  aria-label={`Delete the conversation ${conversation.title}`}
-                  onClick={() => onDelete(conversation.id)}
-                >
-                  Delete
-                </Button>
-              </li>
+              <ConversationRow
+                key={conversation.id}
+                conversation={conversation}
+                open={conversation.id === openId}
+                onOpen={() => onOpen(conversation.id)}
+                onDelete={() => onDelete(conversation.id)}
+              />
             ))}
           </ul>
         )}
