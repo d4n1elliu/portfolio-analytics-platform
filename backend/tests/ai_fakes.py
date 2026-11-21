@@ -3,16 +3,31 @@
 import hashlib
 
 from langchain_core.embeddings import Embeddings
-from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
+from langchain_core.language_models.fake_chat_models import FakeMessagesListChatModel
 from langchain_core.messages import AIMessage
 
 EMBEDDING_SIZE = 8
 TOKENS_PER_ANSWER = {"input_tokens": 10, "output_tokens": 5, "total_tokens": 15}
 
 
-def scripted_chat_model(*answers: str) -> GenericFakeChatModel:
-    messages = [AIMessage(content=answer, usage_metadata=TOKENS_PER_ANSWER) for answer in answers]
-    return GenericFakeChatModel(messages=iter(messages))
+class ScriptedChatModel(FakeMessagesListChatModel):
+    def bind_tools(self, tools, **kwargs):
+        return self
+
+
+def scripted_chat_model(*answers: str | AIMessage) -> ScriptedChatModel:
+    return ScriptedChatModel(responses=[_message(answer) for answer in answers])
+
+
+def tool_call(name: str, **arguments) -> AIMessage:
+    call = {"name": name, "args": arguments, "id": f"call_{name}"}
+    return AIMessage(content="", tool_calls=[call], usage_metadata=TOKENS_PER_ANSWER)
+
+
+def _message(answer: str | AIMessage) -> AIMessage:
+    if isinstance(answer, AIMessage):
+        return answer
+    return AIMessage(content=answer, usage_metadata=TOKENS_PER_ANSWER)
 
 
 class FakeEmbeddings(Embeddings):
