@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest'
 
 import { makeHolding, makeUnpricedHolding } from '../testing/holdings'
 import {
+  countUnpriced,
   latestPriceDate,
   pricesAsAt,
   sectorAllocation,
+  summariseProfit,
   summariseValuation,
   valuedHoldings,
 } from './valuation'
@@ -36,6 +38,33 @@ describe('summariseValuation', () => {
     const holdings = valuedHoldings([makeHolding({ cost_basis: '0.00' })])
 
     expect(summariseValuation(holdings).unrealisedReturn).toBeNull()
+  })
+})
+
+describe('summariseProfit', () => {
+  it('counts the profit made on a closed position', () => {
+    const open = makeHolding({ unrealised_pnl: '500.00', realised_pnl: '812.59' })
+    const closed = makeUnpricedHolding({ quantity: '0.000000', realised_pnl: '-112.59' })
+
+    expect(summariseProfit([open, closed])).toEqual({ realisedPnl: 700, totalPnl: 1200 })
+  })
+
+  it('adds no unrealised profit for a holding with no price', () => {
+    const unpriced = makeUnpricedHolding({ realised_pnl: '10.10' })
+
+    expect(summariseProfit([unpriced])).toEqual({ realisedPnl: 10.1, totalPnl: 10.1 })
+  })
+})
+
+describe('countUnpriced', () => {
+  it('counts open positions with no price, not closed ones', () => {
+    const holdings = [
+      makeHolding(),
+      makeUnpricedHolding({ ticker: 'CBA' }),
+      makeUnpricedHolding({ ticker: 'CSL', quantity: '0.000000' }),
+    ]
+
+    expect(countUnpriced(holdings)).toBe(1)
   })
 })
 

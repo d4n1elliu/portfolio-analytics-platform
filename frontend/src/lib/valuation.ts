@@ -17,6 +17,13 @@ export interface ValuationSummary {
   currency: string | null
 }
 
+export interface ProfitSummary {
+  /** Profit already made by selling, including on positions that are now closed. */
+  realisedPnl: number
+  /** Realised and unrealised profit together. */
+  totalPnl: number
+}
+
 export interface SectorShare {
   sector: string
   marketValue: number
@@ -40,6 +47,19 @@ export function summariseValuation(holdings: ValuedHolding[]): ValuationSummary 
     unrealisedReturn: costBasis === 0 ? null : unrealisedPnl / costBasis,
     currency: commonCurrency(holdings),
   }
+}
+
+/** Add up the profit of every holding, open or closed. A holding with no price adds no unrealised profit. */
+export function summariseProfit(holdings: Holding[]): ProfitSummary {
+  const realised = holdings.map((holding) => holding.realised_pnl)
+  const unrealised = valuedHoldings(holdings).map((holding) => holding.unrealised_pnl)
+  return { realisedPnl: sumMoney(realised), totalPnl: sumMoney([...realised, ...unrealised]) }
+}
+
+/** How many open positions have no stored price, so cannot be valued. */
+export function countUnpriced(holdings: Holding[]): number {
+  return holdings.filter((holding) => Number(holding.quantity) > 0 && holding.market_value === null)
+    .length
 }
 
 /** "Prices as at 13 Nov 2026", or nothing when there is no price date. */
