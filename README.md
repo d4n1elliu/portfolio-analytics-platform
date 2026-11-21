@@ -10,11 +10,12 @@ A full-stack web app for tracking portfolio holdings, performance and sector exp
 
 ## Status
 
-Four features are in place:
+Five features are in place:
 
 - **Trades.** Trades can be imported from a CSV file and viewed in a table.
 - **Holdings.** The Holdings page shows the fund's current positions, calculated from those trades.
-- **Prices and valuation.** Daily closing prices are stored for each security and refreshed on weekdays. The Holdings page uses them to show what each position is worth, and the Dashboard page shows the portfolio's value, its unrealised profit, and three charts.
+- **Prices and valuation.** Daily closing prices are stored for each security and refreshed on weekdays. The Holdings page uses them to show what each position is worth, and the Dashboard page shows the portfolio's value, its unrealised profit, and charts of sector allocation and profit by holding.
+- **History and performance.** The Dashboard charts the portfolio's value on each past day and its time-weighted return over 1 month, 3 months, year to date, 1 year and since inception.
 - **Login and roles.** Every page needs a sign in, and each account has a role that decides what it can do.
 
 ## Tech stack
@@ -383,7 +384,7 @@ Run the backend tests from `backend/` with the virtual environment active:
 pytest
 ```
 
-The tests cover the CSV rules, positions, valuation, price refresh and portfolio history. They do not use a database or the network, so they run without a `.env` file.
+The tests cover the CSV rules, positions, valuation, price refresh, portfolio history and performance, and login and roles. They do not use a database or the network, so they run without a `.env` file.
 
 ### Linting
 
