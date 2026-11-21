@@ -95,6 +95,33 @@ def _client(session: FakeSession, signed_in_as=None):
     return TestClient(app)
 
 
+@pytest.fixture(autouse=True)
+def no_real_ai_models(monkeypatch):
+    from app.ai import providers
+
+    def refuse(name, *args, **kwargs):
+        raise AssertionError(f"A test tried to build the real model {name}. Use a fake one.")
+
+    monkeypatch.setattr(providers, "init_chat_model", refuse)
+    monkeypatch.setattr(providers, "init_embeddings", refuse)
+    providers.get_chat_model.cache_clear()
+    providers.get_embeddings.cache_clear()
+
+
+@pytest.fixture
+def fake_chat_model():
+    from ai_fakes import scripted_chat_model
+
+    return scripted_chat_model
+
+
+@pytest.fixture
+def fake_embeddings():
+    from ai_fakes import FakeEmbeddings
+
+    return FakeEmbeddings()
+
+
 @pytest.fixture
 def _restore_app():
     """Undo the changes _client makes to the app, after the test."""

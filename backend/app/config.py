@@ -79,6 +79,10 @@ PRICE_REFRESH_OVERLAP_DAYS = _optional_int("PRICE_REFRESH_OVERLAP_DAYS", 5)
 PRICE_LOOKBACK_DAYS = _optional_int("PRICE_LOOKBACK_DAYS", 365)
 
 AI_ENABLED = _optional_flag("AI_ENABLED")
+AI_CHAT_MODEL = os.getenv("AI_CHAT_MODEL", "").strip() or "anthropic:claude-opus-5-5"
+AI_EMBEDDING_MODEL = os.getenv("AI_EMBEDDING_MODEL", "").strip() or "openai:text-embedding-3-small"
+AI_REQUESTS_PER_HOUR = _optional_int("AI_REQUESTS_PER_HOUR", 20)
+AI_DAILY_TOKEN_CAP = _optional_int("AI_DAILY_TOKEN_CAP", 200_000)
 
 PASSWORD_LOCKED_EMAILS = [email.lower() for email in _optional_list("PASSWORD_LOCKED_EMAILS", [])]
 
