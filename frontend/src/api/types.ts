@@ -79,6 +79,7 @@ export interface PeriodReturn {
   portfolio_return: string | null
   /** The date the return is measured from. Null when there is no return. */
   start_date: string | null
+  benchmark_return: string | null
 }
 
 export interface GrowthPoint {
@@ -86,11 +87,13 @@ export interface GrowthPoint {
   date: string
   /** What 1 invested at the start is worth at the end of this date. */
   portfolio: string
+  benchmark: string | null
 }
 
 export interface PortfolioPerformance {
   /** The latest priced date, or null when there is no history. */
   as_of: string | null
+  benchmark: string | null
   periods: PeriodReturn[]
   growth: GrowthPoint[]
 }
