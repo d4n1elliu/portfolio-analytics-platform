@@ -6,12 +6,14 @@ import {
   GridComponent,
   LegendComponent,
   MarkLineComponent,
+  MarkPointComponent,
   TooltipComponent,
 } from 'echarts/components'
 import type {
   GridComponentOption,
   LegendComponentOption,
   MarkLineComponentOption,
+  MarkPointComponentOption,
   TooltipComponentOption,
 } from 'echarts/components'
 import { init, use as register } from 'echarts/core'
@@ -25,6 +27,7 @@ register([
   GridComponent,
   LegendComponent,
   MarkLineComponent,
+  MarkPointComponent,
   TooltipComponent,
   CanvasRenderer,
 ])
@@ -36,10 +39,13 @@ export type ChartOption = ComposeOption<
   | GridComponentOption
   | LegendComponentOption
   | MarkLineComponentOption
+  | MarkPointComponentOption
   | TooltipComponentOption
 >
 
 export type ChartInstance = EChartsType
+
+export type { MarkPointComponentOption }
 
 /** Creates a chart inside an element. Call dispose() on it when the element is removed. */
 export const initChart = init
