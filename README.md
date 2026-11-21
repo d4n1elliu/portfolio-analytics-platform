@@ -119,7 +119,7 @@ Nine tables hold the data.
 | `user_sessions` | One sign in                   | `user_id`, `expires_at`, `ended_at`                                |
 | `ai_usage`    | One AI request                 | `user_id`, `input_tokens`, `output_tokens`                         |
 | `research_documents` | One uploaded research file | `security_id`, `title`, `file_hash` (unique), `document_date`, `uploaded_by_id` |
-| `research_chunks` | One piece of a document's text | `document_id`, `position`, `text`, `embedding` (384 numbers)      |
+| `research_chunks` | One piece of a document's text | `document_id`, `position`, `text`, `embedding` (384 numbers), `search_vector` (its words, filled in by Postgres) |
 
 A security has many trades and many prices. A trade points to the import it came from, in `import_batch_id`. The database enforces the basic rules itself: `side` must be `BUY` or `SELL`, quantities and prices must be greater than zero, fees cannot be negative, and a security can have only one closing price per day.
 
@@ -237,7 +237,15 @@ The model never works out a figure. Its instructions tell it to quote figures ex
 
 **Research.** `POST /research/documents` takes a multipart upload with the file in a field named `file`, and `title`, `ticker` and `document_date` as form fields. The file can be a PDF, Markdown or text file of up to 10 MB. Its text is read, split into chunks of about 1,000 characters that overlap a little, and each chunk is turned into a vector of 384 numbers by the embedding model and stored with pgvector. An upload is all or nothing, and a file whose contents match an earlier upload is refused with `409`.
 
-**Searching research.** The assistant's `search_research` tool turns the question into a vector with the same embedding model and returns the five chunks closest to it, using pgvector's cosine distance. It can be limited to one ticker and to a range of document dates. Each excerpt has a source number, which stays the same for the whole answer, and the assistant cites the ones it uses, like `[1]`. Under the answer, the page lists each cited source with a link to its chunk, such as `/research/3#chunk-2`. That list is built from what the search returned, not from what the model wrote, so it cannot name a document that was not found.
+**Searching research.** The assistant's `search_research` tool finds chunks in three steps and returns the best five:
+
+1. **Two searches.** One by meaning: the question is turned into a vector with the same embedding model, and pgvector's cosine distance finds the closest chunks. One by words: Postgres full-text search finds chunks that share any word with the question. Each returns up to 20 chunks.
+2. **Fusion.** The two lists are combined with reciprocal rank fusion, so a chunk found by both searches rises to the top.
+3. **Reranking.** A small local model, `Xenova/ms-marco-MiniLM-L-6-v2` (about 80 MB, downloaded the first time it is used), reads the question next to each candidate and puts them in a final order. Set `AI_RERANK_MODEL=off` to skip this step.
+
+In a follow-up such as "is its dividend safe?", the search query can depend on the earlier questions. When a conversation has earlier questions, the chat model first rewrites the query so it stands alone, and the tool's result shows what was searched for. This costs one short model call per search, counted in the user's allowance, and is skipped for the first question. If the rewrite fails, the query is searched as asked.
+
+The search can be limited to one ticker and to a range of document dates. Each excerpt has a source number, which stays the same for the whole answer, and the assistant cites the ones it uses, like `[1]`. Under the answer, the page lists each cited source with a link to its chunk, such as `/research/3#chunk-2`. That list is built from what the search returned, not from what the model wrote, so it cannot name a document that was not found.
 
 Text from a document reaches the model only as a quoted field in the tool's result, and the assistant's instructions say that a note is an opinion, that no figure about the portfolio comes from one, and that an instruction inside one is never followed.
 
@@ -253,10 +261,10 @@ Changing to an embedding model with a different vector size needs a migration th
 
 No test calls a real model. The test setup refuses to build one, and the tests use a fake chat model that gives scripted answers and a fake embedding model.
 
-**Evals.** `backend/sample_data/evals/research_questions.json` holds 25 golden questions about the five sample notes. Each names the ticker and a phrase from the passage that answers it, so a question stays valid if the notes are chunked differently. A test checks that every phrase is still in its note.
+**Evals.** `backend/sample_data/evals/golden_questions.json` holds 41 golden questions about the five sample notes: 25 full questions, 10 short keyword searches such as "buy-back", and 6 follow-ups with the questions asked before them. Each names the ticker and a phrase from the passage that answers it, so a question stays valid if the notes are chunked differently. A test checks that every phrase is still in its note.
 
 ```bash
-python -m scripts.run_evals              # search only: free, uses the local embedding model
+python -m scripts.run_evals              # search only: free, uses the local models
 python -m scripts.run_evals --answers    # also judges the assistant's answers: spends API credit
 ```
 
@@ -268,7 +276,15 @@ The script only reads from the database, and needs the sample notes loaded first
 | MRR | Mean reciprocal rank: 1 when the passage is always first, 0.5 when it is always second, and so on |
 | Faithfulness | With `--answers`: the share of answers in which every fact appears in what the tools returned |
 
-With the default embedding model the search scores a hit rate of 100% and an MRR of 0.900. The library is only ten chunks, so finding the passage in the top five is easy, and MRR is the number to watch.
+The script scores each step of the search, so the effect of each can be seen. With the default models, as hit rate and MRR:
+
+| Search | Questions (25) | Keywords (10) | Follow-ups (6) |
+| ------ | -------------- | ------------- | -------------- |
+| Meaning only | 100%, 0.900 | 90%, 0.542 | 100%, 0.867 |
+| Meaning and words | 100%, 0.860 | 100%, 0.925 | 100%, 1.000 |
+| Meaning and words, reranked | 100%, 0.933 | 100%, 1.000 | 100%, 0.917 |
+
+Matching words helps most where meaning is weakest, on short keyword searches. On full questions it is slightly worse by itself, and reranking more than recovers that. The library is only ten chunks, so finding the passage in the top five is easy, MRR is the number to watch, and these results say little about a large library. Follow-ups in this table are searched as asked. With `--answers` they are also rewritten by the chat model and scored again.
 
 For faithfulness the assistant answers each question as it would on the page, and the chat model is then asked whether the answer is supported by the tool results. An answer written without calling a tool counts as unsupported. Each question takes about three model calls, the script prints the tokens it used, and `--limit 5` judges only the first five questions. The model judges its own answers, so treat the number as a guide, not proof.
 
@@ -569,6 +585,7 @@ Real `.env` files are git-ignored and must never be committed. The `.env.example
 | `backend/.env.example`  | `BENCHMARK_TICKER`    | Optional. The security the portfolio's return is compared with. Defaults to `VAS` |
 | `backend/.env.example`  | `AI_ENABLED`          | Optional. Set to `true` to turn on the AI pages and endpoints. Defaults to off |
 | `backend/.env.example`  | `AI_CHAT_MODEL`, `AI_EMBEDDING_MODEL` | Optional. The models to use, each as `provider:model`. Default to `anthropic:claude-opus-5-5` and `fastembed:BAAI/bge-small-en-v1.5` |
+| `backend/.env.example`  | `AI_RERANK_MODEL` | Optional. The local model that reorders search results, or `off`. Defaults to `fastembed:Xenova/ms-marco-MiniLM-L-6-v2` |
 | `backend/.env.example`  | `ANTHROPIC_API_KEY` | The key for the chat model. Needed only when the AI features are on. An embedding model from a provider needs that provider's key too, such as `OPENAI_API_KEY` |
 | `backend/.env.example`  | `RESEARCH_MAX_FILE_BYTES` | Optional. The largest research file that can be uploaded. Defaults to 10 MB |
 | `backend/.env.example`  | `AI_REQUESTS_PER_HOUR`, `AI_DAILY_TOKEN_CAP` | Optional. Each user's AI allowance. Default to 20 requests an hour and 200,000 tokens a day |
