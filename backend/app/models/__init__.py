@@ -8,6 +8,7 @@ Other code can then import everything from one place:
     from app.models import Security, Trade, TradeSide
 """
 
+from app.models.ai_usage import AiUsage
 from app.models.import_batch import ImportBatch
 from app.models.price import Price
 from app.models.security import Security
@@ -15,4 +16,14 @@ from app.models.trade import Trade, TradeSide
 from app.models.user import Role, User
 from app.models.user_session import UserSession
 
-__all__ = ["ImportBatch", "Price", "Role", "Security", "Trade", "TradeSide", "User", "UserSession"]
+__all__ = [
+    "AiUsage",
+    "ImportBatch",
+    "Price",
+    "Role",
+    "Security",
+    "Trade",
+    "TradeSide",
+    "User",
+    "UserSession",
+]

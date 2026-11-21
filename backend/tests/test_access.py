@@ -58,6 +58,40 @@ def test_database_health_check_needs_no_sign_in(client_with_users):
     assert client_with_users(make_user()).get("/health/db").status_code == 200
 
 
+# --- AI endpoints ---
+
+
+def test_ai_endpoints_need_a_sign_in(client_with_users, monkeypatch):
+    monkeypatch.setattr("app.routes.dependencies.AI_ENABLED", True)
+
+    response = client_with_users(make_user()).get("/ai/usage")
+
+    assert response.status_code == 401
+    assert response.json() == NOT_SIGNED_IN
+
+
+def test_ai_endpoints_are_not_found_while_the_ai_features_are_off(client_with_users):
+    response = client_signed_in_as(client_with_users, Role.ANALYST).get("/ai/usage")
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "The AI features are not turned on."}
+
+
+@pytest.mark.parametrize("role", list(Role))
+def test_every_role_can_read_its_ai_usage(client_with_users, monkeypatch, role):
+    monkeypatch.setattr("app.routes.dependencies.AI_ENABLED", True)
+
+    response = client_signed_in_as(client_with_users, role).get("/ai/usage")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "requests_used": 0,
+        "requests_limit": 20,
+        "tokens_used": 0,
+        "tokens_limit": 200000,
+    }
+
+
 # --- POST /trades/import ---
 
 NOT_A_CSV = {"file": ("trades.txt", b"not a csv", "text/plain")}
