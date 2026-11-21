@@ -4,7 +4,7 @@ import type { TradeSide } from '../api/types'
 import { NO_TRADE_FILTERS, TRADE_SIDES, hasTradeFilters } from '../lib/trades'
 import type { TradeFilters as Filters } from '../lib/trades'
 import Button from './Button'
-import DateInput from './DateInput'
+import DateRangeInputs from './DateRangeInputs'
 import Select from './Select'
 
 interface TradeFiltersProps {
@@ -30,17 +30,11 @@ function TradeFilters({ filters, tickers, onChange }: TradeFiltersProps) {
         value={filters.side}
         onChange={(side) => onChange({ ...filters, side: side as TradeSide | '' })}
       />
-      <DateInput
-        label="From"
-        value={filters.dateFrom}
-        max={filters.dateTo || undefined}
-        onChange={(dateFrom) => onChange({ ...filters, dateFrom })}
-      />
-      <DateInput
-        label="To"
-        value={filters.dateTo}
-        min={filters.dateFrom || undefined}
-        onChange={(dateTo) => onChange({ ...filters, dateTo })}
+      <DateRangeInputs
+        from={filters.dateFrom}
+        to={filters.dateTo}
+        onFromChange={(dateFrom) => onChange({ ...filters, dateFrom })}
+        onToChange={(dateTo) => onChange({ ...filters, dateTo })}
       />
       {hasTradeFilters(filters) && (
         <Button variant="secondary" onClick={() => onChange(NO_TRADE_FILTERS)}>

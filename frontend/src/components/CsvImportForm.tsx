@@ -5,6 +5,7 @@ import { messageFrom } from '../api/client'
 import { rowErrorsFrom } from '../api/imports'
 import type { ImportResult, ImportRowError } from '../api/types'
 import { formatCount } from '../lib/format'
+import { FILE_INPUT } from '../lib/styles'
 import Alert from './Alert'
 import Button from './Button'
 
@@ -70,7 +71,7 @@ function CsvImportForm({ upload, singular, plural, onImported, children }: CsvIm
             setFile(event.target.files?.[0] ?? null)
             setState({ status: 'idle' })
           }}
-          className="block text-sm text-slate-700 file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-slate-800 hover:file:bg-slate-200"
+          className={FILE_INPUT}
         />
         <Button type="submit" disabled={!file || uploading}>
           {uploading ? 'Uploading…' : 'Upload'}

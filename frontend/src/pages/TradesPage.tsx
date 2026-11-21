@@ -1,6 +1,5 @@
 import { useCallback, useState } from 'react'
 
-import { listSecurities } from '../api/securities'
 import { exportTrades, listImports, listTrades } from '../api/trades'
 import type { TradeQuery } from '../api/trades'
 import type { TradeSortKey } from '../api/types'
@@ -10,12 +9,13 @@ import ImportHistory from '../components/ImportHistory'
 import LoadError from '../components/LoadError'
 import PageLayout from '../components/PageLayout'
 import Pagination from '../components/Pagination'
+import RoleNote from '../components/RoleNote'
 import TradeFilters from '../components/TradeFilters'
 import TradeImport from '../components/TradeImport'
-import TradeImportNotAllowed from '../components/TradeImportNotAllowed'
 import TradeTable from '../components/TradeTable'
 import { IMPORT_HISTORY_SIZE, PAGE_SIZE } from '../config'
 import { useApiQuery } from '../hooks/useApiQuery'
+import { useTickers } from '../hooks/useTickers'
 import { useAuth } from '../lib/auth'
 import { formatRange } from '../lib/format'
 import { can } from '../lib/roles'
@@ -41,14 +41,12 @@ function TradesPage() {
     keepPreviousData: true,
   })
   const { state: imports, reload: reloadImports } = useApiQuery(loadLatestImports)
-  const { state: securities } = useApiQuery(listSecurities)
+  const tickers = useTickers()
   const { state: auth } = useAuth()
 
   const user = auth.status === 'signedIn' ? auth.user : null
   const canImport = can(user, 'import_trades')
   const canExport = can(user, 'export_trades')
-  const tickers =
-    securities.status === 'loaded' ? securities.data.map((security) => security.ticker) : []
   const page = trades.status === 'loaded' ? trades.data : null
   const filtered = hasTradeFilters(query.filters)
 
@@ -70,7 +68,9 @@ function TradesPage() {
   return (
     <PageLayout title="Trades">
       {canImport && <TradeImport tickers={tickers} onImported={handleImported} />}
-      {user && !canImport && <TradeImportNotAllowed role={user.role} />}
+      {user && !canImport && (
+        <RoleNote title="Import trades" role={user.role} can="view trades" cannot="import them" />
+      )}
 
       <Card
         title="Trades"
