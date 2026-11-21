@@ -14,9 +14,11 @@ import NotFoundNote from '../components/NotFoundNote'
 import PageLayout from '../components/PageLayout'
 import PriceChart from '../components/PriceChart'
 import SecurityPosition from '../components/SecurityPosition'
+import SecurityResearch from '../components/SecurityResearch'
 import TradeTable from '../components/TradeTable'
 import { SECURITY_TRADES_LIMIT } from '../config'
 import { useApiQuery } from '../hooks/useApiQuery'
+import { useAuth } from '../lib/auth'
 import { formatCount } from '../lib/format'
 import { nextSort } from '../lib/sorting'
 import { MUTED_TEXT } from '../lib/styles'
@@ -51,6 +53,8 @@ function SecurityPage() {
 function SecurityDetails({ holding }: { holding: Holding }) {
   const { ticker, currency } = holding
   const [sort, setSort] = useState(NEWEST_FIRST)
+  const { state: auth } = useAuth()
+  const aiEnabled = auth.status === 'signedIn' && auth.user.ai_enabled
 
   const loadPrices = useCallback(
     (signal: AbortSignal) => listSecurityPrices(ticker, signal),
@@ -119,6 +123,8 @@ function SecurityDetails({ holding }: { holding: Holding }) {
           )}
         </LoadState>
       </Card>
+
+      {aiEnabled && <SecurityResearch ticker={ticker} />}
     </>
   )
 }
